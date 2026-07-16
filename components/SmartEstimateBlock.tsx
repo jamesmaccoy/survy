@@ -8,6 +8,7 @@ interface Property {
   title: string;
   slug: string;
   basePricePerNight: number;
+  bookingType?: string;
 }
 
 
@@ -156,13 +157,22 @@ export default function SmartEstimateBlock({
   }, [customFromDate, customToDate, existingBookings, selectedPropertyId]);
 
   // Calculate nights and pricing
-  const nights = Math.max(
+  const isHourly = selectedProperty?.bookingType === "hourly";
+  const stayHours = Math.max(
+    1,
+    Math.ceil(
+      Math.abs(new Date(customToDate).getTime() - new Date(customFromDate).getTime()) /
+        (1000 * 60 * 60)
+    )
+  );
+  const stayNights = Math.max(
     1,
     Math.ceil(
       Math.abs(new Date(customToDate).getTime() - new Date(customFromDate).getTime()) /
         (1000 * 60 * 60 * 24)
     )
   );
+  const nights = isHourly ? stayHours : stayNights;
 
   const basePricePerNight = selectedProperty ? selectedProperty.basePricePerNight : 1500;
   
@@ -268,7 +278,7 @@ export default function SmartEstimateBlock({
         </div>
         <div className="text-right">
           <span className="text-[10px] text-zinc-500 uppercase tracking-wider block font-semibold">Base Price</span>
-          <p className="text-sm font-extrabold text-teal-400">R {basePricePerNight.toLocaleString()}/night</p>
+          <p className="text-sm font-extrabold text-teal-400">R {basePricePerNight.toLocaleString()}/{isHourly ? "hour" : "night"}</p>
         </div>
       </div>
 
@@ -415,11 +425,13 @@ export default function SmartEstimateBlock({
         {bookingMode === "custom" && (
           <div className="rounded-2xl border border-white/5 bg-white/5 p-4 space-y-2">
             <div className="flex justify-between text-xs text-white/60">
-              <span>Nights Selected:</span>
-              <span className="font-bold text-white">{nights} night(s)</span>
+              <span>{isHourly ? "Hours Selected:" : "Nights Selected:"}</span>
+              <span className="font-bold text-white">
+                {isHourly ? `${nights} hour(s)` : `${nights} night(s)`}
+              </span>
             </div>
             <div className="flex justify-between text-xs text-white/60">
-              <span>Base Rate (R {basePricePerNight} × {nights}):</span>
+              <span>{isHourly ? `Base Rate (R ${basePricePerNight} × ${nights} hours):` : `Base Rate (R ${basePricePerNight} × ${nights} nights):`}</span>
               <span className="font-bold text-white">R {(basePricePerNight * nights).toLocaleString()}</span>
             </div>
             <div className="flex justify-between text-xs text-white/60">

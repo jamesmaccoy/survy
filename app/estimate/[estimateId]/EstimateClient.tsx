@@ -26,6 +26,7 @@ interface Property {
   title: string;
   slug: string;
   basePricePerNight: number;
+  bookingType?: string;
 }
 
 interface Package {
@@ -145,7 +146,12 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
 
   const from = new Date(estimate.fromDate);
   const to = new Date(estimate.toDate);
-  const nights = Math.max(1, Math.ceil(Math.abs(to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)));
+
+  const isHourly = property?.bookingType === "hourly";
+  const hours = Math.max(1, Math.ceil(Math.abs(to.getTime() - from.getTime()) / (1000 * 60 * 60)));
+  const stayNights = Math.max(1, Math.ceil(Math.abs(to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)));
+
+  const nights = isHourly ? 1 : stayNights;
 
   return (
     <div className="relative max-w-5xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
@@ -183,11 +189,24 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
                 </span>
               </div>
               <div className="rounded-2xl bg-white dark:bg-black/40 p-4 border border-teal-100/50 dark:border-white/5">
-                <span className="text-[10px] text-teal-850/60 dark:text-zinc-500 uppercase block">Dates</span>
-                <span className="text-sm font-extrabold text-teal-950 dark:text-white mt-1 block">
-                  {formatDisplayDate(from)} - {formatDisplayDate(to)}
+                <span className="text-[10px] text-teal-850/60 dark:text-zinc-500 uppercase block">
+                  {isHourly ? "Booking Date & Time" : "Booking Dates"}
                 </span>
-                <span className="text-[10px] text-teal-800/60 dark:text-zinc-500 font-mono block mt-1">{nights} night(s) stay</span>
+                <span className="text-sm font-extrabold text-teal-950 dark:text-white mt-1 block">
+                  {isHourly ? (
+                    <>
+                      {formatDisplayDate(from)}
+                      <span className="block text-[10px] font-normal text-zinc-400 mt-0.5">
+                        {from.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false})} - {to.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false})}
+                      </span>
+                    </>
+                  ) : (
+                    `${formatDisplayDate(from)} - ${formatDisplayDate(to)}`
+                  )}
+                </span>
+                <span className="text-[10px] text-teal-800/60 dark:text-zinc-500 font-mono block mt-1">
+                  {isHourly ? "1 Slot booking" : `${nights} night(s) stay`}
+                </span>
               </div>
             </div>
           </div>
@@ -273,8 +292,10 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
                 <span className="font-bold text-teal-950 dark:text-white">{estimate.customerName}</span>
               </div>
               <div className="flex justify-between text-teal-900 dark:text-zinc-400">
-                <span>Stay Duration:</span>
-                <span className="font-bold text-teal-950 dark:text-white">{nights} nights</span>
+                <span>{isHourly ? "Booking Duration:" : "Stay Duration:"}</span>
+                <span className="font-bold text-teal-950 dark:text-white">
+                  {isHourly ? "1 Slot" : `${nights} night(s)`}
+                </span>
               </div>
               <div className="flex justify-between text-teal-900 dark:text-zinc-400">
                 <span>Total Price:</span>

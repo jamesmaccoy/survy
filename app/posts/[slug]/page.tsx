@@ -13,6 +13,8 @@ interface Property {
   basePricePerNight: number;
   description?: string;
   images?: string[];
+  bookingType?: string;
+  slots?: string[];
 }
 
 interface PackageData {
@@ -48,6 +50,7 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
   // Date Picker Inputs
   const [fromDate, setFromDate] = useState("2026-06-16");
   const [toDate, setToDate] = useState("2026-06-19");
+  const [selectedSlot, setSelectedSlot] = useState("");
   const [bookings, setBookings] = useState<any[]>([]);
   const [activeImageIndex, setActiveImageIndex] = useState<number>(0);
 
@@ -115,6 +118,26 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
     fetchUserDatesAndEstimate();
   }, [user, authLoading]);
 
+  // Extract saved start time in hourly mode
+  useEffect(() => {
+    if (property?.bookingType === "hourly") {
+      if (savedDates) {
+        try {
+          const fD = new Date(savedDates.fromDate);
+          if (!isNaN(fD.getTime())) {
+            const pad = (num: number) => String(num).padStart(2, "0");
+            const slotTime = `${pad(fD.getHours())}:${pad(fD.getMinutes())}`;
+            setSelectedSlot(slotTime);
+          }
+        } catch (err) {
+          console.error("Failed to parse start time slot:", err);
+        }
+      } else if (property.slots && property.slots.length > 0 && !selectedSlot) {
+        setSelectedSlot(property.slots[0]);
+      }
+    }
+  }, [property, savedDates, selectedSlot]);
+
 
   const handleSaveDates = async () => {
     if (!user) {
@@ -126,8 +149,21 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
       return;
     }
 
-    const start = new Date(fromDate);
-    const end = new Date(toDate);
+    let start: Date;
+    let end: Date;
+
+    if (property.bookingType === "hourly") {
+      const slotTime = selectedSlot || (property.slots && property.slots.length > 0 ? property.slots[0] : "10:00");
+      const [h, m] = slotTime.split(":").map(Number);
+      start = new Date(`${fromDate}T00:00:00`);
+      start.setHours(h, m, 0, 0);
+      
+      end = new Date(start.getTime());
+      end.setHours(end.getHours() + 4); // slot defaults to 4 hours block
+    } else {
+      start = new Date(fromDate);
+      end = new Date(toDate);
+    }
 
     if (isNaN(start.getTime()) || isNaN(end.getTime()) || start >= end) {
       setDateError("Invalid date selection.");
@@ -156,8 +192,13 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
       setSavedDates(result.data);
 
       // Calculate stay duration and total cost for the estimate
-      const stayNights = Math.max(1, Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
-      const estimatedTotal = property.basePricePerNight * stayNights;
+      let estimatedTotal = 0;
+      if (property.bookingType === "hourly") {
+        estimatedTotal = property.basePricePerNight; // flat per slot
+      } else {
+        const stayNights = Math.max(1, Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+        estimatedTotal = property.basePricePerNight * stayNights;
+      }
 
       // Create estimate immediately
       const estRes = await fetch("/api/estimates", {
@@ -219,13 +260,19 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
   // Calculate stay parameters
   const datesLocked = !!savedDates;
   let nights = 0;
+  let hours = 0;
   let baseStayCost = 0;
 
   if (datesLocked && savedDates) {
     const start = new Date(savedDates.fromDate);
     const end = new Date(savedDates.toDate);
-    nights = Math.max(1, Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
-    baseStayCost = property.basePricePerNight * nights;
+    if (property.bookingType === "hourly") {
+      hours = Math.max(1, Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60)));
+      baseStayCost = property.basePricePerNight; // flat per slot
+    } else {
+      nights = Math.max(1, Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+      baseStayCost = property.basePricePerNight * nights;
+    }
   }
 
   return (
@@ -280,8 +327,12 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
 
             <div className="grid grid-cols-2 gap-4 border-t border-teal-100/60 dark:border-white/5 pt-4">
               <div>
-                <span className="text-[10px] text-teal-800/60 dark:text-zinc-500 uppercase">Nightly base price</span>
-                <p className="text-lg font-black text-teal-600 dark:text-teal-400">R {property.basePricePerNight.toLocaleString()}</p>
+                <span className="text-[10px] text-teal-800/60 dark:text-zinc-500 uppercase">
+                  {property.bookingType === "hourly" ? "Hourly slot price" : "Nightly base price"}
+                </span>
+                <p className="text-lg font-black text-teal-600 dark:text-teal-400">
+                  R {property.basePricePerNight.toLocaleString()}{property.bookingType === "hourly" ? "/slot" : ""}
+                </p>
               </div>
               <div>
                 <span className="text-[10px] text-teal-800/60 dark:text-zinc-500 uppercase">Location</span>
@@ -365,15 +416,27 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
             ) : datesLocked ? (
               <div className="space-y-4">
                 <div className="rounded-2xl bg-teal-50 dark:bg-teal-500/5 border border-teal-100 dark:border-teal-500/15 p-4 space-y-2">
-                  <div className="flex justify-between text-xs text-teal-900/80 dark:text-zinc-300">
-                    <span>Selected Range:</span>
-                    <span className="font-bold text-teal-950 dark:text-white">
-                      {formatDisplayDate(savedDates!.fromDate)} - {formatDisplayDate(savedDates!.toDate)}
+                  <div className="flex justify-between items-start text-xs text-teal-900/80 dark:text-zinc-300">
+                    <span>{property.bookingType === "hourly" ? "Selected Booking:" : "Selected Range:"}</span>
+                    <span className="font-bold text-teal-950 dark:text-white text-right">
+                      {property.bookingType === "hourly" ? (
+                        <>
+                          {formatDisplayDate(savedDates!.fromDate)}
+                          <br />
+                          <span className="text-[10px] text-zinc-400">
+                            {new Date(savedDates!.fromDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false})} - {new Date(savedDates!.toDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false})}
+                          </span>
+                        </>
+                      ) : (
+                        `${formatDisplayDate(savedDates!.fromDate)} - ${formatDisplayDate(savedDates!.toDate)}`
+                      )}
                     </span>
                   </div>
                   <div className="flex justify-between text-xs text-teal-900/80 dark:text-zinc-300">
-                    <span>Stay Duration:</span>
-                    <span className="font-bold text-teal-950 dark:text-white">{nights} night(s)</span>
+                    <span>Booking Duration:</span>
+                    <span className="font-bold text-teal-950 dark:text-white">
+                      {property.bookingType === "hourly" ? "1 Slot (4 hours)" : `${nights} night(s)`}
+                    </span>
                   </div>
                   <div className="flex justify-between text-xs text-teal-900/80 dark:text-zinc-300">
                     <span>Estimated Base Cost:</span>
@@ -397,7 +460,9 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
               </div>
             ) : (
               <div className="space-y-4">
-                <p className="text-xs text-teal-900/80 dark:text-zinc-400">Select stay ranges to persist to your guest profile.</p>
+                 <p className="text-xs text-teal-900/80 dark:text-zinc-400">
+                  {property.bookingType === "hourly" ? "Select booking date and time to persist to your profile." : "Select stay ranges to persist to your guest profile."}
+                </p>
 
                 {dateError && (
                   <div className="rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 p-2.5 text-center text-xs text-red-600 dark:text-red-400 font-bold">
@@ -410,18 +475,56 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
                   selectedToDate={toDate}
                   bookings={bookings}
                   singleMonth={true}
+                  bookingType={property.bookingType}
                   onChange={(start, end) => {
                     setFromDate(start);
                     setToDate(end);
                   }}
                 />
 
+                {property.bookingType === "hourly" && (
+                  <div className="rounded-2xl bg-white/5 border border-white/10 p-4 text-xs backdrop-blur-md space-y-2">
+                    <label className="block text-[10px] text-teal-850/60 dark:text-zinc-550 uppercase tracking-wider font-bold">
+                      Available Slots (Flat Booking)
+                    </label>
+                    {property.slots && property.slots.length > 0 ? (
+                      <div className="grid grid-cols-2 gap-2">
+                        {property.slots.map((slotTime) => {
+                          const isSelected = selectedSlot === slotTime;
+                          const [h, m] = slotTime.split(":");
+                          const hourNum = parseInt(h);
+                          const ampm = hourNum >= 12 ? "PM" : "AM";
+                          const displayHour = hourNum % 12 === 0 ? 12 : hourNum % 12;
+                          const label = `${displayHour}:${m} ${ampm} Slot`;
+
+                          return (
+                            <button
+                              key={slotTime}
+                              type="button"
+                              onClick={() => setSelectedSlot(slotTime)}
+                              className={`rounded-xl py-2 px-3 text-xs font-bold border transition-all ${
+                                isSelected
+                                  ? "bg-teal-500/10 border-teal-500 text-teal-400"
+                                  : "bg-black/40 border-white/5 text-zinc-400 hover:text-white"
+                              }`}
+                            >
+                              {label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-[10px] text-zinc-500 italic">No available slots configured by the Pro.</p>
+                    )}
+                  </div>
+                )}
+
                 <button
                   onClick={handleSaveDates}
                   disabled={isSavingDates}
                   className="w-full rounded-xl bg-teal-500 py-3 text-center text-xs font-bold text-white hover:bg-teal-600 transition-all active:scale-95 shadow-md shadow-teal-500/10"
                 >
-                  {isSavingDates ? "Saving date selection..." : "Confirm & Save Dates"}
+                  {isSavingDates ? "Saving selection..." : "Confirm & Save Booking"}
                 </button>
               </div>
             )}

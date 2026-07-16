@@ -57,7 +57,7 @@ function HomePageContent() {
       setHasUpdatedStatus(true);
       try {
         if (isSubscriptionSuccess && paymentUserId) {
-          console.log(`[Client Fallback] Promoting user ${paymentUserId} to host role (subscription success)`);
+          console.log(`[Client Fallback] Promoting user ${paymentUserId} to Pro role (subscription success)`);
           const res = await fetch("/api/subscribe/mock-confirm", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -444,7 +444,7 @@ function HomePageContent() {
 
           {!isLoadingProps && properties.length > 0 && searchParams.get("hostId") && (
             <div className="max-w-md mx-auto mb-6 rounded-2xl bg-teal-500/10 border border-teal-500/20 px-4 py-2.5 text-[10px] font-bold text-teal-400 flex items-center justify-between">
-              <span>🏠 Viewing properties published by Host ID: <strong>{searchParams.get("hostId")}</strong></span>
+              <span>🏠 Viewing properties published by Pro ID: <strong>{searchParams.get("hostId")}</strong></span>
               <a href="/" className="underline hover:text-white transition-colors">Reset View</a>
             </div>
           )}

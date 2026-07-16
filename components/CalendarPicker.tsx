@@ -21,6 +21,7 @@ interface CalendarPickerProps {
   bookings: Booking[];
   onChange: (fromDate: string, toDate: string) => void;
   singleMonth?: boolean;
+  bookingType?: string;
 }
 
 export default function CalendarPicker({
@@ -29,6 +30,7 @@ export default function CalendarPicker({
   bookings,
   onChange,
   singleMonth = false,
+  bookingType = "nightly",
 }: CalendarPickerProps) {
   // Current calendar month view (starts with the check-in date's month or current month)
   const initialDate = selectedFromDate ? new Date(selectedFromDate) : new Date();
@@ -66,7 +68,6 @@ export default function CalendarPicker({
     }
   };
 
-  // Check if a specific date is booked, returning the booking record
   const getBookingForDate = (year: number, month: number, day: number): Booking | null => {
     const date = new Date(year, month, day);
     const time = date.getTime();
@@ -79,9 +80,15 @@ export default function CalendarPicker({
       const startTime = new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime();
       const endTime = new Date(end.getFullYear(), end.getMonth(), end.getDate()).getTime();
 
-      // Block night of check-in up to night before check-out
-      if (time >= startTime && time < endTime) {
-        return b;
+      if (bookingType === "hourly") {
+        if (time === startTime) {
+          return b;
+        }
+      } else {
+        // Block night of check-in up to night before check-out
+        if (time >= startTime && time < endTime) {
+          return b;
+        }
       }
     }
     return null;
@@ -132,36 +139,40 @@ export default function CalendarPicker({
       const handleDayClick = () => {
         if (isBooked) return;
 
-        // Selection Logic
-        if (!selectedFromDate || (selectedFromDate && selectedToDate)) {
-          // Select Check-in
-          onChange(dateStr, "");
+        if (bookingType === "hourly") {
+          onChange(dateStr, dateStr);
         } else {
-          // Select Check-out
-          if (dateStr > selectedFromDate) {
-            // Ensure no booked days inside the selected range
-            let hasOverlap = false;
-            let current = new Date(selectedFromDate);
-            const target = new Date(dateStr);
-
-            while (current < target) {
-              const checkB = getBookingForDate(current.getFullYear(), current.getMonth(), current.getDate());
-              if (checkB) {
-                hasOverlap = true;
-                break;
-              }
-              current.setDate(current.getDate() + 1);
-            }
-
-            if (hasOverlap) {
-              alert("The selected range overlaps with an existing booking. Please choose another range.");
-              onChange(dateStr, "");
-            } else {
-              onChange(selectedFromDate, dateStr);
-            }
-          } else {
-            // Selected a date before check-in date: reset check-in to this date
+          // Selection Logic
+          if (!selectedFromDate || (selectedFromDate && selectedToDate)) {
+            // Select Check-in
             onChange(dateStr, "");
+          } else {
+            // Select Check-out
+            if (dateStr > selectedFromDate) {
+              // Ensure no booked days inside the selected range
+              let hasOverlap = false;
+              let current = new Date(selectedFromDate);
+              const target = new Date(dateStr);
+
+              while (current < target) {
+                const checkB = getBookingForDate(current.getFullYear(), current.getMonth(), current.getDate());
+                if (checkB) {
+                  hasOverlap = true;
+                  break;
+                }
+                current.setDate(current.getDate() + 1);
+              }
+
+              if (hasOverlap) {
+                alert("The selected range overlaps with an existing booking. Please choose another range.");
+                onChange(dateStr, "");
+              } else {
+                onChange(selectedFromDate, dateStr);
+              }
+            } else {
+              // Selected a date before check-in date: reset check-in to this date
+              onChange(dateStr, "");
+            }
           }
         }
       };
@@ -261,7 +272,7 @@ export default function CalendarPicker({
         </button>
 
         <span className="text-xs font-extrabold uppercase tracking-widest text-teal-600 dark:text-teal-400 flex items-center gap-2">
-          <span>📅</span> Availability calendar
+          <span>📅</span> {bookingType === "hourly" ? "Time-Specific Calendar" : "Availability Calendar"}
         </span>
 
         <button
@@ -296,8 +307,14 @@ export default function CalendarPicker({
 
         {selectedFromDate && (
           <div className="text-teal-600 dark:text-teal-300 font-medium">
-            Stay: <strong className="text-teal-950 dark:text-white">{selectedFromDate}</strong>
-            {selectedToDate ? <> to <strong className="text-teal-950 dark:text-white">{selectedToDate}</strong></> : " (Select Check-out)"}
+            {bookingType === "hourly" ? (
+              <>Selected Date: <strong className="text-teal-950 dark:text-white">{selectedFromDate}</strong></>
+            ) : (
+              <>
+                Stay: <strong className="text-teal-950 dark:text-white">{selectedFromDate}</strong>
+                {selectedToDate ? <> to <strong className="text-teal-950 dark:text-white">{selectedToDate}</strong></> : " (Select Check-out)"}
+              </>
+            )}
           </div>
         )}
       </div>

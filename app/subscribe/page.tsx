@@ -44,7 +44,7 @@ function SubscribeContent() {
     }
   };
 
-  // Developer Bypass to become Host instantly (in mock mode or development)
+  // Developer Bypass to become Pro instantly (in mock mode or development)
   const handleMockBypass = async () => {
     if (!user) return;
     setIsRedirecting(true);
@@ -57,7 +57,7 @@ function SubscribeContent() {
       });
       const result = await res.json();
       if (res.ok && result.success) {
-        setStatusMessage({ type: "success", text: "Success! Promoted to Host. Reloading session..." });
+        setStatusMessage({ type: "success", text: "Success! Promoted to Pro. Reloading session..." });
         setTimeout(() => {
           window.location.href = "/admin/properties";
         }, 1500);
@@ -91,7 +91,7 @@ function SubscribeContent() {
             ← Back to Home
           </Link>
           <h1 className="text-4xl sm:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-r from-white via-zinc-200 to-zinc-400 leading-tight">
-            Become a Host
+            Become a Pro
           </h1>
           <p className="text-xs sm:text-sm text-zinc-400 mt-2 max-w-lg mx-auto">
             Choose a plan, unlock listing capabilities, and manage high-resolution imagery with direct Cloudflare R2 bucket integration.
@@ -112,16 +112,16 @@ function SubscribeContent() {
         {user && user.isAdmin ? (
           <div className="max-w-md mx-auto rounded-3xl border border-teal-500/20 bg-teal-500/5 p-8 text-center backdrop-blur-md">
             <span className="text-5xl block mb-4">🎉</span>
-            <h2 className="text-xl font-black text-white">You are a Host!</h2>
+            <h2 className="text-xl font-black text-white">You are a Pro User!</h2>
             <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
-              Your account has listing management and R2 upload privileges. Go to the Host Portal to create and publish stays.
+              Your account has listing management and R2 upload privileges. Go to the Pro Portal to create and publish stays.
             </p>
             <div className="mt-6 flex flex-col gap-2">
               <Link
                 href="/admin/properties"
                 className="w-full rounded-xl bg-teal-500 py-3 text-center text-xs font-bold text-white hover:bg-teal-600 transition-all shadow-md shadow-teal-500/10"
               >
-                Go to Host Dashboard
+                Go to Pro Dashboard
               </Link>
               <Link
                 href="/"
@@ -140,7 +140,7 @@ function SubscribeContent() {
                   <span className="rounded bg-teal-500/10 border border-teal-500/20 px-2 py-0.5 text-[10px] font-bold text-teal-400 uppercase tracking-wide">
                     Standard
                   </span>
-                  <h3 className="text-xl font-bold text-white mt-3">Storefront Host</h3>
+                  <h3 className="text-xl font-bold text-white mt-3">Storefront Pro</h3>
                   <div className="mt-4 flex items-baseline">
                     <span className="text-4xl font-black text-white">R 150</span>
                     <span className="text-xs text-zinc-550 ml-1">/ month</span>
@@ -246,7 +246,7 @@ function SubscribeContent() {
                   disabled={isRedirecting}
                   className="rounded-xl border border-teal-500/30 bg-teal-500/10 hover:bg-teal-500/20 px-5 py-2.5 text-xs font-bold text-teal-400 hover:text-white transition-all active:scale-95"
                 >
-                  Become Host Instantly (Dev Bypass)
+                  Become Pro Instantly (Dev Bypass)
                 </button>
               </div>
             )}

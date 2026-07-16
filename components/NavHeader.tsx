@@ -24,7 +24,7 @@ export default function NavHeader() {
           </Link>
           {!user?.isAdmin && (
             <Link href="/subscribe" className="hover:text-teal-950 dark:hover:text-white transition-colors text-teal-500">
-              Become Host
+              Become Pro
             </Link>
           )}
           {user?.isAdmin && (

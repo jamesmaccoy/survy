@@ -12,6 +12,7 @@ interface Property {
   title: string;
   slug: string;
   basePricePerNight: number;
+  bookingType?: string;
 }
 
 interface PackageData {
@@ -229,7 +230,12 @@ function BookingsCheckoutContent() {
   // Calculate stay duration
   const from = savedDates ? new Date(savedDates.fromDate) : new Date();
   const to = savedDates ? new Date(savedDates.toDate) : new Date();
-  const nights = savedDates ? Math.max(1, Math.ceil(Math.abs(to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24))) : 0;
+  
+  const isHourly = property?.bookingType === "hourly";
+  const hours = savedDates ? Math.max(1, Math.ceil(Math.abs(to.getTime() - from.getTime()) / (1000 * 60 * 60))) : 0;
+  const stayNights = savedDates ? Math.max(1, Math.ceil(Math.abs(to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24))) : 0;
+  
+  const nights = isHourly ? 1 : stayNights;
 
   const basePricePerNight = property ? property.basePricePerNight : 1500;
   const selectedPackage = packages.find(p => p.id === selectedPackageId);
@@ -495,9 +501,16 @@ function BookingsCheckoutContent() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {displayBookings.map((b) => {
-              const checkIn = formatDisplayDate(b.fromDate);
-              const checkOut = formatDisplayDate(b.toDate);
+              const propertyForBooking = propertiesList.find((p) => p.id === b.propertyId);
+              const isHourlyBooking = propertyForBooking?.bookingType === "hourly";
+              const checkIn = isHourlyBooking 
+                ? `${formatDisplayDate(b.fromDate)} ${new Date(b.fromDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false})}`
+                : formatDisplayDate(b.fromDate);
+              const checkOut = isHourlyBooking 
+                ? `${formatDisplayDate(b.toDate)} ${new Date(b.toDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false})}`
+                : formatDisplayDate(b.toDate);
               const stayNights = Math.max(1, Math.ceil(Math.abs(new Date(b.toDate).getTime() - new Date(b.fromDate).getTime()) / (1000 * 60 * 60 * 24)));
+              const stayHours = Math.max(1, Math.ceil(Math.abs(new Date(b.toDate).getTime() - new Date(b.fromDate).getTime()) / (1000 * 60 * 60)));
               const propName = propertiesList.find((p) => p.id === b.propertyId)?.title || b.propertyId;
               const countdown = getCountdownLabel(b);
 
@@ -625,7 +638,9 @@ function BookingsCheckoutContent() {
                         View Details →
                       </Link>
                       <span className="text-[10px] text-teal-800/60 dark:text-zinc-500 uppercase block">Duration</span>
-                      <span className="font-bold text-teal-950 dark:text-white block mt-0.5">{stayNights} night(s) stay</span>
+                      <span className="font-bold text-teal-950 dark:text-white block mt-0.5">
+                        {isHourlyBooking ? "1 Slot booking" : `${stayNights} night(s) stay`}
+                      </span>
                     </div>
                     <div className="text-right">
                       <span className="text-[10px] text-teal-800/60 dark:text-zinc-500 uppercase">Paid Total</span>
@@ -675,11 +690,24 @@ function BookingsCheckoutContent() {
                 <span className="text-[10px] text-teal-800/60 dark:text-zinc-500 font-mono">id: {propertyId}</span>
               </div>
               <div className="rounded-2xl bg-white dark:bg-black/40 p-4 border border-teal-100/50 dark:border-white/5">
-                <span className="text-[10px] text-teal-850/60 dark:text-zinc-500 uppercase block">Booking Dates</span>
-                <span className="text-sm font-extrabold text-teal-950 dark:text-white mt-1 block">
-                  {formatDisplayDate(from)} - {formatDisplayDate(to)}
+                <span className="text-[10px] text-teal-850/60 dark:text-zinc-500 uppercase block">
+                  {isHourly ? "Booking Date & Time" : "Booking Dates"}
                 </span>
-                <span className="text-[10px] text-teal-800/60 dark:text-zinc-500 font-mono">{nights} night(s) stay</span>
+                <span className="text-sm font-extrabold text-teal-950 dark:text-white mt-1 block">
+                  {isHourly ? (
+                    <>
+                      {formatDisplayDate(from)}
+                      <span className="block text-[10px] font-normal text-zinc-400 mt-0.5">
+                        {from.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false})} - {to.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false})}
+                      </span>
+                    </>
+                  ) : (
+                    `${formatDisplayDate(from)} - ${formatDisplayDate(to)}`
+                  )}
+                </span>
+                <span className="text-[10px] text-teal-800/60 dark:text-zinc-500 font-mono">
+                  {isHourly ? "1 Slot booking" : `${nights} night(s) stay`}
+                </span>
               </div>
             </div>
           </div>
@@ -731,11 +759,13 @@ function BookingsCheckoutContent() {
 
             <div className="space-y-3 text-xs">
               <div className="flex justify-between text-teal-900 dark:text-zinc-400">
-                <span>Stay Duration:</span>
-                <span className="font-bold text-teal-950 dark:text-white">{nights} nights</span>
+                <span>{isHourly ? "Booking Duration:" : "Stay Duration:"}</span>
+                <span className="font-bold text-teal-950 dark:text-white">
+                  {isHourly ? "1 Slot" : `${nights} night(s)`}
+                </span>
               </div>
               <div className="flex justify-between text-teal-900 dark:text-zinc-400">
-                <span>Nightly Cost (R {basePricePerNight} × {nights}):</span>
+                <span>{isHourly ? `Slot Cost (R ${basePricePerNight} × 1 slot):` : `Nightly Cost (R ${basePricePerNight} × ${nights}):`}</span>
                 <span className="font-bold text-teal-950 dark:text-white">R {baseCost.toLocaleString()}</span>
               </div>
               {selectedPackage && (
@@ -767,13 +797,14 @@ function BookingsCheckoutContent() {
                 </div>
                 <div className="rounded-3xl border border-teal-100 dark:border-white/5 bg-teal-50/10 dark:bg-zinc-950 p-4 space-y-3">
                   <p className="text-[11px] text-teal-800/80 dark:text-zinc-400 leading-relaxed">
-                    Select an available date range on the calendar below to update your stay dates:
+                    {isHourly ? "Select an available date on the calendar below to update your booking date:" : "Select an available date range on the calendar below to update your stay dates:"}
                   </p>
                   <CalendarPicker
                     selectedFromDate={savedDates?.fromDate.split("T")[0] || ""}
                     selectedToDate={savedDates?.toDate.split("T")[0] || ""}
                     bookings={bookingsList}
                     singleMonth={true}
+                    bookingType={property?.bookingType}
                     onChange={handleUpdateDates}
                   />
                 </div>

@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     const proto = request.headers.get("x-forwarded-proto") || (host.includes("localhost") ? "http" : "https");
     const siteUrl = host ? `${proto}://${host}` : request.nextUrl.origin;
 
-    const description = `${plan === "standard" ? "Standard" : "Pro"} Host Subscription Plan`;
+    const description = `${plan === "standard" ? "Standard" : "Pro"} Pro Subscription Plan`;
 
     // Initialize Yoco checkout flow with "subscription" metadata
     const redirectUrl = await createCheckout({

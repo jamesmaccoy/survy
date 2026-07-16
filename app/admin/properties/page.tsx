@@ -13,6 +13,8 @@ interface Property {
   googleCalendarUrl?: string;
   images?: string[];
   description?: string;
+  bookingType?: string;
+  slots?: string[];
 }
 
 export default function AdminPropertiesPage() {
@@ -31,6 +33,8 @@ export default function AdminPropertiesPage() {
   const [description, setDescription] = useState("");
   const [images, setImages] = useState<string[]>([]);
   const [uploadingFiles, setUploadingFiles] = useState<{ name: string; progress: number }[]>([]);
+  const [bookingType, setBookingType] = useState("nightly");
+  const [slots, setSlots] = useState<string[]>(["10:00", "14:00"]);
 
   const fetchProperties = async () => {
     if (!user) return;
@@ -151,7 +155,9 @@ export default function AdminPropertiesPage() {
           googleCalendarUrl,
           description,
           images,
-          hostId: user?.uid
+          hostId: user?.uid,
+          bookingType,
+          slots
         })
       });
 
@@ -169,6 +175,8 @@ export default function AdminPropertiesPage() {
       setGoogleCalendarUrl("");
       setDescription("");
       setImages([]);
+      setBookingType("nightly");
+      setSlots(["10:00", "14:00"]);
       fetchProperties(); // reload list
     } catch (err: any) {
       setStatusMessage({ type: "error", text: err.message || "An error occurred." });
@@ -223,12 +231,12 @@ export default function AdminPropertiesPage() {
         <header className="mb-10 flex items-center justify-between border-b border-white/10 pb-6">
           <div>
             <h1 className="text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-white via-zinc-200 to-zinc-400">
-              Host Portal
+              Pro Portal
             </h1>
             <p className="text-xs text-zinc-400 mt-1">Properties & Listings Management</p>
           </div>
           <span className="rounded-lg bg-teal-500/10 border border-teal-500/20 px-3 py-1 text-xs font-semibold text-teal-400">
-            🔐 Host Access
+            🔐 Pro Access
           </span>
         </header>
 
@@ -280,16 +288,86 @@ export default function AdminPropertiesPage() {
 
               <div>
                 <label className="mb-1 block text-xs text-zinc-400 font-semibold uppercase tracking-wider">
-                  Base Price Per Night (ZAR)
+                  {bookingType === "hourly" ? "Base Price Per Hour (ZAR)" : "Base Price Per Night (ZAR)"}
                 </label>
                 <input
                   type="number"
-                  placeholder="e.g. 1500"
+                  placeholder={bookingType === "hourly" ? "e.g. 250" : "e.g. 1500"}
                   value={basePrice}
                   onChange={(e) => setBasePrice(e.target.value)}
                   className="w-full rounded-xl border border-white/10 bg-black/40 px-3.5 py-2.5 text-sm text-white focus:border-teal-500 focus:outline-none placeholder:text-zinc-600"
                 />
               </div>
+
+              <div>
+                <label className="mb-1 block text-xs text-zinc-400 font-semibold uppercase tracking-wider">
+                  Booking Type
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setBookingType("nightly")}
+                    className={`flex-1 rounded-xl py-2.5 text-xs font-bold transition-all border ${
+                      bookingType === "nightly"
+                        ? "bg-teal-550/15 border-teal-500/50 text-teal-400"
+                        : "bg-black/40 border-white/10 text-zinc-400 hover:text-white"
+                    }`}
+                  >
+                    🌙 Nightly Stay
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBookingType("hourly")}
+                    className={`flex-1 rounded-xl py-2.5 text-xs font-bold transition-all border ${
+                      bookingType === "hourly"
+                        ? "bg-teal-550/15 border-teal-500/50 text-teal-400"
+                        : "bg-black/40 border-white/10 text-zinc-400 hover:text-white"
+                    }`}
+                  >
+                    🕒 Time Specific (Hourly)
+                  </button>
+                </div>
+              </div>
+
+              {bookingType === "hourly" && (
+                <div>
+                  <label className="mb-2 block text-xs text-zinc-400 font-semibold uppercase tracking-wider">
+                    Available Time Slots
+                  </label>
+                  <div className="grid grid-cols-3 gap-2 bg-black/20 border border-white/10 p-3 rounded-xl">
+                    {["08:00", "10:00", "12:00", "14:00", "16:00", "18:00"].map((slotTime) => {
+                      const isSelected = slots.includes(slotTime);
+                      const toggleSlot = () => {
+                        if (isSelected) {
+                          setSlots(prev => prev.filter(s => s !== slotTime));
+                        } else {
+                          setSlots(prev => [...prev, slotTime].sort());
+                        }
+                      };
+                      const [h, m] = slotTime.split(":");
+                      const hourNum = parseInt(h);
+                      const ampm = hourNum >= 12 ? "PM" : "AM";
+                      const displayHour = hourNum % 12 === 0 ? 12 : hourNum % 12;
+                      const label = `${displayHour}:${m} ${ampm}`;
+
+                      return (
+                        <button
+                          key={slotTime}
+                          type="button"
+                          onClick={toggleSlot}
+                          className={`rounded-lg py-1.5 px-2 text-[10px] font-bold border transition-all ${
+                            isSelected
+                              ? "bg-teal-500/10 border-teal-500 text-teal-400"
+                              : "bg-zinc-900 border-white/5 text-zinc-500 hover:text-zinc-300"
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               <div>
                 <label className="mb-1 block text-xs text-zinc-400 font-semibold uppercase tracking-wider">
@@ -427,12 +505,18 @@ export default function AdminPropertiesPage() {
                         )}
                         <div>
                           <h3 className="text-sm font-bold text-white">{p.title}</h3>
-                          <span className="text-[10px] text-zinc-500 block font-mono">id: {p.id} | slug: {p.slug}</span>
+                          <span className="text-[10px] text-zinc-550 block font-mono">
+                            id: {p.id} | slug: {p.slug} | {p.bookingType === "hourly" ? `🕒 Hourly Slots: ${(p.slots || []).join(", ")}` : "🌙 Nightly"}
+                          </span>
                         </div>
                       </div>
                       <div className="text-right">
-                        <span className="text-[10px] text-zinc-550">Price/Night</span>
-                        <p className="text-sm font-black text-teal-400">R {p.basePricePerNight.toLocaleString()}</p>
+                        <span className="text-[10px] text-zinc-550">
+                          {p.bookingType === "hourly" ? "Price/Hour" : "Price/Night"}
+                        </span>
+                        <p className="text-sm font-black text-teal-400">
+                          R {p.basePricePerNight.toLocaleString()}{p.bookingType === "hourly" ? "/hr" : ""}
+                        </p>
                       </div>
                     </div>
 

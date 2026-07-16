@@ -121,6 +121,8 @@ export async function createProperty(data: {
   images?: string[];
   createdAt?: string;
   updatedAt?: string;
+  bookingType?: string;
+  slots?: string[];
 }): Promise<any> {
   const db = getFirestore();
   const id = data.id || data.slug.trim().toLowerCase();
