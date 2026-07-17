@@ -14,6 +14,8 @@ interface Property {
   hostId?: string;
   images?: string[];
   description?: string;
+  bookingType?: string;
+  slots?: string[];
 }
 
 function HomePageContent() {
@@ -199,11 +201,26 @@ function HomePageContent() {
       return;
     }
 
-    const start = new Date(fromDate);
-    const end = new Date(toDate);
+    let start: Date;
+    let end: Date;
+
+    const isHourlySaved = savedDates && savedDates.fromDate.split("T")[0] === savedDates.toDate.split("T")[0];
+
+    if (isHourlySaved && savedDates) {
+      const oldFrom = new Date(savedDates.fromDate);
+      const oldTo = new Date(savedDates.toDate);
+      start = new Date(`${fromDate}T00:00:00`);
+      start.setHours(oldFrom.getHours(), oldFrom.getMinutes(), 0, 0);
+      
+      end = new Date(`${fromDate}T00:00:00`);
+      end.setHours(oldTo.getHours(), oldTo.getMinutes(), 0, 0);
+    } else {
+      start = new Date(fromDate);
+      end = new Date(toDate);
+    }
 
     if (isNaN(start.getTime()) || isNaN(end.getTime()) || start >= end) {
-      alert("Please select valid check-in and check-out dates.");
+      alert(isHourlySaved ? "Please select a valid date." : "Please select valid check-in and check-out dates.");
       return;
     }
 
@@ -236,6 +253,8 @@ function HomePageContent() {
       setIsSavingDates(false);
     }
   };
+
+  const isHourlySaved = !!(savedDates && savedDates.fromDate.split("T")[0] === savedDates.toDate.split("T")[0]);
 
   return (
     <div className="min-h-screen bg-background text-foreground font-sans selection:bg-teal-500/30 selection:text-teal-200">
@@ -329,8 +348,9 @@ function HomePageContent() {
               )}
             </div>
 
-            <p className="text-xs text-teal-800/80 dark:text-zinc-400 leading-relaxed">
+             <p className="text-xs text-teal-800/80 dark:text-zinc-400 leading-relaxed">
               Define check-in and check-out ranges. Dates must be persistent to user profiles before package selection is enabled.
+              <span className="block mt-1 font-medium text-teal-600 dark:text-teal-400">Note: For time-specific (hourly) listings, you can choose custom slots directly on their detail pages.</span>
             </p>
 
             <div className="grid grid-cols-2 gap-4">
@@ -341,38 +361,57 @@ function HomePageContent() {
                   value={fromDate}
                   onChange={(e) => {
                     setFromDate(e.target.value);
-                    const d = new Date(e.target.value);
-                    if (!isNaN(d.getTime())) {
-                      d.setDate(d.getDate() + nights);
-                      setToDate(d.toISOString().split("T")[0]);
+                    if (isHourlySaved && savedDates) {
+                      setToDate(e.target.value);
+                    } else {
+                      const d = new Date(e.target.value);
+                      if (!isNaN(d.getTime())) {
+                        d.setDate(d.getDate() + nights);
+                        setToDate(d.toISOString().split("T")[0]);
+                      }
                     }
                   }}
                   className="w-full rounded-xl border border-teal-150 dark:border-white/10 bg-white dark:bg-black/40 px-3.5 py-2.5 text-sm text-teal-950 dark:text-white focus:border-teal-500 focus:outline-none"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-[10px] text-teal-800/60 dark:text-zinc-500 uppercase tracking-wider font-semibold">Nights of Stay</label>
-                <input
-                  type="number"
-                  min="1"
-                  max="30"
-                  value={nights}
-                  onChange={(e) => {
-                    const val = Math.max(1, parseInt(e.target.value) || 1);
-                    setNights(val);
-                    const d = new Date(fromDate);
-                    if (!isNaN(d.getTime())) {
-                      d.setDate(d.getDate() + val);
-                      setToDate(d.toISOString().split("T")[0]);
-                    }
-                  }}
-                  className="w-full rounded-xl border border-teal-150 dark:border-white/10 bg-white dark:bg-black/40 px-3.5 py-2.5 text-sm text-teal-950 dark:text-white focus:border-teal-500 focus:outline-none"
-                />
+                {isHourlySaved && savedDates ? (
+                  <div>
+                    <label className="mb-1 block text-[10px] text-teal-800/60 dark:text-zinc-500 uppercase tracking-wider font-semibold">Booking Slot</label>
+                    <div className="w-full rounded-xl border border-teal-150 dark:border-white/10 bg-teal-500/5 px-3.5 py-2.5 text-xs font-bold text-teal-600 dark:text-teal-400 flex items-center h-[42px]">
+                      🕒 {new Date(savedDates.fromDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false})} - {new Date(savedDates.toDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false})}
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="mb-1 block text-[10px] text-teal-800/60 dark:text-zinc-500 uppercase tracking-wider font-semibold">Nights of Stay</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="30"
+                      value={nights}
+                      onChange={(e) => {
+                        const val = Math.max(1, parseInt(e.target.value) || 1);
+                        setNights(val);
+                        const d = new Date(fromDate);
+                        if (!isNaN(d.getTime())) {
+                          d.setDate(d.getDate() + val);
+                          setToDate(d.toISOString().split("T")[0]);
+                        }
+                      }}
+                      className="w-full rounded-xl border border-teal-150 dark:border-white/10 bg-white dark:bg-black/40 px-3.5 py-2.5 text-sm text-teal-950 dark:text-white focus:border-teal-500 focus:outline-none"
+                    />
+                  </div>
+                )}
               </div>
             </div>
 
             <div className="text-[11px] text-teal-800 dark:text-zinc-400">
-              Selected Check-out: <strong className="text-teal-950 dark:text-white">{toDate ? formatDisplayDate(toDate) : "-"}</strong>
+              {isHourlySaved && savedDates ? (
+                <>Selected Date: <strong className="text-teal-950 dark:text-white">{fromDate ? formatDisplayDate(fromDate) : "-"}</strong></>
+              ) : (
+                <>Selected Check-out: <strong className="text-teal-950 dark:text-white">{toDate ? formatDisplayDate(toDate) : "-"}</strong></>
+              )}
             </div>
 
             {/* Latest Estimate Display */}
@@ -477,24 +516,43 @@ function HomePageContent() {
                         </div>
                       )}
                       <span className="inline-block rounded-md bg-teal-500/10 px-2.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-teal-600 dark:text-teal-400">
-                        Stay Listing
+                        {p.bookingType === "hourly" ? "Hourly Slot Listing" : "Stay Listing"}
                       </span>
                       <h3 className="text-lg font-extrabold text-teal-950 dark:text-white mt-2 group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">
                         {p.title}
                       </h3>
                       <p className="text-[10px] font-mono text-teal-800/60 dark:text-zinc-500 mt-0.5">slug: {p.slug}</p>
 
-                      {datesLocked && (
-                        <div className="mt-4 rounded-xl bg-teal-55/5 dark:bg-teal-500/5 border border-teal-100 dark:border-teal-500/10 p-3 text-[11px] text-teal-850 dark:text-teal-300">
-                          📅 Selected: <strong className="text-teal-950 dark:text-white">{formatDisplayDate(savedDates.fromDate)}</strong> to <strong className="text-teal-950 dark:text-white">{formatDisplayDate(savedDates.toDate)}</strong>
+                      {datesLocked && savedDates && (
+                        <div className="mt-4 rounded-xl bg-teal-55/5 dark:bg-teal-500/5 border border-teal-100 dark:border-teal-500/10 p-3 text-[11px] text-teal-855 dark:text-teal-300">
+                          {p.bookingType === "hourly" ? (
+                            <>
+                              {savedDates.fromDate.split("T")[0] === savedDates.toDate.split("T")[0] ? (
+                                <>
+                                  📅 Selected Slot: <strong className="text-teal-950 dark:text-white">{formatDisplayDate(savedDates.fromDate)}</strong>
+                                  <span className="block text-[10px] text-zinc-400 mt-0.5">
+                                    🕒 {new Date(savedDates.fromDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false})} - {new Date(savedDates.toDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false})}
+                                  </span>
+                                </>
+                              ) : (
+                                <>📅 Selected Date: <strong className="text-teal-950 dark:text-white">{formatDisplayDate(savedDates.fromDate)}</strong> <span className="text-[10px] text-zinc-400">(Select Slot)</span></>
+                              )}
+                            </>
+                          ) : (
+                            <>📅 Selected: <strong className="text-teal-950 dark:text-white">{formatDisplayDate(savedDates.fromDate)}</strong> to <strong className="text-teal-950 dark:text-white">{formatDisplayDate(savedDates.toDate)}</strong></>
+                          )}
                         </div>
                       )}
                     </div>
 
                     <div className="mt-6 border-t border-teal-100 dark:border-white/5 pt-4 flex items-center justify-between">
                       <div>
-                        <span className="text-[10px] text-teal-800/60 dark:text-zinc-500 block uppercase">Nightly Cost</span>
-                        <span className="text-base font-black text-teal-600 dark:text-teal-400">R {p.basePricePerNight.toLocaleString()}</span>
+                        <span className="text-[10px] text-teal-800/60 dark:text-zinc-500 block uppercase">
+                          {p.bookingType === "hourly" ? "Hourly Slot Price" : "Nightly Cost"}
+                        </span>
+                        <span className="text-base font-black text-teal-600 dark:text-teal-400">
+                          {`R ${p.basePricePerNight.toLocaleString()}${p.bookingType === "hourly" ? "/slot" : ""}`}
+                        </span>
                       </div>
 
                       <Link
