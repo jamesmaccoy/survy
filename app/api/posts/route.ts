@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const { hostId, name, title, slug, basePricePerNight, description, images, airbnbCalendarUrl, googleCalendarUrl, bookingType, slots } = body;
+    const { hostId, name, title, slug, basePricePerNight, description, images, airbnbCalendarUrl, googleCalendarUrl, bookingType, slots, location } = body;
 
     // Use passed hostId or fallback to headers
     const activeHostId = hostId || userId;
@@ -54,7 +54,8 @@ export async function POST(request: NextRequest) {
       description: description || "",
       images: images || [],
       bookingType: bookingType || "nightly",
-      slots: slots || []
+      slots: slots || [],
+      location: location || ""
     });
 
     return NextResponse.json({ success: true, data: property, id: property.id }, { status: 201 });

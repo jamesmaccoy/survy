@@ -17,6 +17,7 @@ interface Property {
   hostId?: string;
   bookingType?: string;
   slots?: string[];
+  location?: string;
 }
 
 function EditPropertyContent({ id }: { id: string }) {
@@ -31,6 +32,7 @@ function EditPropertyContent({ id }: { id: string }) {
   // Form Fields
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
+  const [location, setLocation] = useState("");
   const [basePrice, setBasePrice] = useState("");
   const [airbnbCalendarUrl, setAirbnbCalendarUrl] = useState("");
   const [googleCalendarUrl, setGoogleCalendarUrl] = useState("");
@@ -56,6 +58,7 @@ function EditPropertyContent({ id }: { id: string }) {
           setImages(result.data.images || []);
           setBookingType(result.data.bookingType || "nightly");
           setSlots(result.data.slots || ["10:00", "14:00"]);
+          setLocation(result.data.location || "");
         } else {
           setStatusMessage({ type: "error", text: result.error || "Property not found." });
         }
@@ -156,7 +159,8 @@ function EditPropertyContent({ id }: { id: string }) {
           description,
           images,
           bookingType,
-          slots
+          slots,
+          location
         })
       });
 
@@ -314,7 +318,20 @@ function EditPropertyContent({ id }: { id: string }) {
                   placeholder="e.g. llandudno-cliffside-shack"
                   value={slug}
                   onChange={(e) => setSlug(e.target.value)}
-                  className="w-full rounded-xl border border-white/10 bg-black/40 px-3.5 py-2.5 text-sm text-white focus:border-teal-500 focus:outline-none placeholder:text-zinc-650"
+                  className="w-full rounded-xl border border-white/10 bg-black/40 px-3.5 py-2.5 text-sm text-white focus:border-teal-500 focus:outline-none placeholder:text-zinc-655"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs text-zinc-400 font-semibold uppercase tracking-wider">
+                  Location
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. 🏖 Llandudno, Cape Town"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  className="w-full rounded-xl border border-white/10 bg-black/40 px-3.5 py-2.5 text-sm text-white focus:border-teal-500 focus:outline-none placeholder:text-zinc-655"
                 />
               </div>
 

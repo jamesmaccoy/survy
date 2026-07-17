@@ -123,6 +123,7 @@ export async function createProperty(data: {
   updatedAt?: string;
   bookingType?: string;
   slots?: string[];
+  location?: string;
 }): Promise<any> {
   const db = getFirestore();
   const id = data.id || data.slug.trim().toLowerCase();
@@ -152,6 +153,7 @@ export async function createProperty(data: {
     hostId: data.hostId || existing?.hostId || "mock_admin_example_com",
     description: data.description || existing?.description || "",
     images: data.images || existing?.images || [],
+    location: data.location || existing?.location || "",
     airbnbCalendarUrl: data.airbnbCalendarUrl || existing?.airbnbCalendarUrl || "",
     googleCalendarUrl: data.googleCalendarUrl || existing?.googleCalendarUrl || "",
     createdAt: existing?.createdAt || data.createdAt || now,

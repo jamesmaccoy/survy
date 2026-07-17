@@ -15,6 +15,7 @@ interface Property {
   images?: string[];
   bookingType?: string;
   slots?: string[];
+  location?: string;
 }
 
 interface PackageData {
@@ -336,7 +337,9 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
               </div>
               <div>
                 <span className="text-[10px] text-teal-800/60 dark:text-zinc-500 uppercase">Location</span>
-                <p className="text-sm font-semibold text-teal-950 dark:text-white mt-1">🏖 Llandudno, Cape Town</p>
+                <p className="text-sm font-semibold text-teal-950 dark:text-white mt-1">
+                  {property.location || "🏖 Llandudno, Cape Town"}
+                </p>
               </div>
             </div>
 

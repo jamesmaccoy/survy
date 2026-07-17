@@ -15,6 +15,7 @@ interface Property {
   description?: string;
   bookingType?: string;
   slots?: string[];
+  location?: string;
 }
 
 export default function AdminPropertiesPage() {
@@ -27,6 +28,7 @@ export default function AdminPropertiesPage() {
   // Form Fields
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
+  const [location, setLocation] = useState("");
   const [basePrice, setBasePrice] = useState("");
   const [airbnbCalendarUrl, setAirbnbCalendarUrl] = useState("");
   const [googleCalendarUrl, setGoogleCalendarUrl] = useState("");
@@ -157,7 +159,8 @@ export default function AdminPropertiesPage() {
           images,
           hostId: user?.uid,
           bookingType,
-          slots
+          slots,
+          location
         })
       });
 
@@ -170,6 +173,7 @@ export default function AdminPropertiesPage() {
       setStatusMessage({ type: "success", text: "Property created successfully!" });
       setTitle("");
       setSlug("");
+      setLocation("");
       setBasePrice("");
       setAirbnbCalendarUrl("");
       setGoogleCalendarUrl("");
@@ -282,7 +286,20 @@ export default function AdminPropertiesPage() {
                   placeholder="e.g. llandudno-cliffside-shack"
                   value={slug}
                   onChange={(e) => setSlug(e.target.value)}
-                  className="w-full rounded-xl border border-white/10 bg-black/40 px-3.5 py-2.5 text-sm text-white/60 focus:border-teal-500 focus:outline-none placeholder:text-zinc-600"
+                  className="w-full rounded-xl border border-white/10 bg-black/40 px-3.5 py-2.5 text-sm text-white/60 focus:border-teal-500 focus:outline-none placeholder:text-zinc-660"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs text-zinc-400 font-semibold uppercase tracking-wider">
+                  Location
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. 🏖 Llandudno, Cape Town"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  className="w-full rounded-xl border border-white/10 bg-black/40 px-3.5 py-2.5 text-sm text-white focus:border-teal-500 focus:outline-none placeholder:text-zinc-660"
                 />
               </div>
 
@@ -505,7 +522,12 @@ export default function AdminPropertiesPage() {
                         )}
                         <div>
                           <h3 className="text-sm font-bold text-white">{p.title}</h3>
-                          <span className="text-[10px] text-zinc-550 block font-mono">
+                          {p.location && (
+                            <span className="text-[11px] text-teal-400 block font-semibold mt-0.5">
+                              {p.location}
+                            </span>
+                          )}
+                          <span className="text-[10px] text-zinc-550 block font-mono mt-0.5">
                             id: {p.id} | slug: {p.slug} | {p.bookingType === "hourly" ? `🕒 Hourly Slots: ${(p.slots || []).join(", ")}` : "🌙 Nightly"}
                           </span>
                         </div>
