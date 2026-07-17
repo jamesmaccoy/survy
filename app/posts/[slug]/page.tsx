@@ -63,7 +63,7 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
       if (propResult.success && propResult.data) {
         const found = propResult.data;
         setProperty(found);
-        
+
         // 2. Fetch Packages for this property
         const pkgRes = await fetch(`/api/packages?propertyId=${found.id}`);
         const pkgResult = await pkgRes.json();
@@ -158,7 +158,7 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
       const [h, m] = slotTime.split(":").map(Number);
       start = new Date(`${fromDate}T00:00:00`);
       start.setHours(h, m, 0, 0);
-      
+
       end = new Date(start.getTime());
       end.setHours(end.getHours() + 4); // slot defaults to 4 hours block
     } else {
@@ -306,9 +306,8 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
                       <button
                         key={idx}
                         onClick={() => setActiveImageIndex(idx)}
-                        className={`relative w-20 aspect-video rounded-lg overflow-hidden border-2 shrink-0 transition-all ${
-                          idx === activeImageIndex ? "border-teal-500 scale-95" : "border-transparent opacity-60 hover:opacity-100"
-                        }`}
+                        className={`relative w-20 aspect-video rounded-lg overflow-hidden border-2 shrink-0 transition-all ${idx === activeImageIndex ? "border-teal-500 scale-95" : "border-transparent opacity-60 hover:opacity-100"
+                          }`}
                       >
                         <img src={img} alt="" className="w-full h-full object-cover" />
                       </button>
@@ -427,7 +426,7 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
                           {formatDisplayDate(savedDates!.fromDate)}
                           <br />
                           <span className="text-[10px] text-zinc-400">
-                            {new Date(savedDates!.fromDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false})} - {new Date(savedDates!.toDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false})}
+                            {new Date(savedDates!.fromDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })} - {new Date(savedDates!.toDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
                           </span>
                         </>
                       ) : (
@@ -463,7 +462,7 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
               </div>
             ) : (
               <div className="space-y-4">
-                 <p className="text-xs text-teal-900/80 dark:text-zinc-400">
+                <p className="text-xs text-teal-900/80 dark:text-zinc-400">
                   {property.bookingType === "hourly" ? "Select booking date and time to persist to your profile." : "Select stay ranges to persist to your guest profile."}
                 </p>
 
@@ -505,11 +504,10 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
                               key={slotTime}
                               type="button"
                               onClick={() => setSelectedSlot(slotTime)}
-                              className={`rounded-xl py-2 px-3 text-xs font-bold border transition-all ${
-                                isSelected
-                                  ? "bg-teal-500/10 border-teal-500 text-teal-400"
-                                  : "bg-black/40 border-white/5 text-zinc-400 hover:text-white"
-                              }`}
+                              className={`rounded-xl py-2 px-3 text-xs font-bold border transition-all ${isSelected
+                                ? "bg-teal-500/10 border-teal-500 text-teal-400"
+                                : "bg-black/30 border-white/5 text-zinc-500 hover:text-white"
+                                }`}
                             >
                               {label}
                             </button>

@@ -192,11 +192,11 @@ export default function CalendarPicker({
       }
 
       // Styles
-      let dayClass = "w-full aspect-square max-w-[44px] flex items-center justify-center text-xs font-semibold rounded-xl relative cursor-pointer transition-all duration-200 ";
+      let dayClass = "w-full aspect-square max-w-[44px] flex items-center justify-center text-xs font-semibold rounded-sm relative cursor-pointer transition-all duration-200 ";
       if (isBooked) {
         dayClass += "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-500/20 cursor-not-allowed hover:bg-red-100 dark:hover:bg-red-500/20";
       } else if (isSelectedFrom || isSelectedTo) {
-        dayClass += "bg-teal-500 text-white shadow-md shadow-teal-500/20 scale-105 z-10 font-bold";
+        dayClass += "bg-teal-500 text-white shadow-lg shadow-teal-500/20 scale-105 z-10 font-bold mx-1 -my-1";
       } else if (isSelectedRange) {
         dayClass += "bg-teal-100/50 dark:bg-teal-500/20 text-teal-900 dark:text-teal-200 border border-teal-200 dark:border-teal-500/10";
       } else if (isToday) {
