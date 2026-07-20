@@ -351,7 +351,7 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
           </div>
 
           {/* Package deals list */}
-          <div className="rounded-3xl border border-teal-100/80 dark:border-white/10 bg-teal-50/15 dark:bg-white/5 p-6 backdrop-blur-md space-y-4">
+          <div className="rounded-3xl border border-teal-100/80 dark:border-white/10 bg-teal-50/15 dark:bg-white/5 p-3 backdrop-blur-md space-y-1">
             <h3 className="text-base font-bold text-teal-950 dark:text-white">Available Packages for this Listing</h3>
 
             {packages.filter(pkg => pkg.category !== "addon").length === 0 ? (
@@ -380,7 +380,7 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
 
         {/* Right Side: Stay Scheduler Block */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="rounded-3xl border border-teal-100/80 dark:border-white/10 bg-teal-50/15 dark:bg-white/5 p-6 backdrop-blur-md shadow-xl space-y-4">
+          <div className="rounded-3xl border border-teal-100/80 dark:border-white/10 bg-teal-50/15 dark:bg-white/5 p-3 backdrop-blur-md shadow-xl space-y-2">
             <div className="flex justify-between items-center w-full border-b border-teal-100/50 dark:border-white/15 pb-2">
               <h3 className="text-base font-bold text-teal-950 dark:text-white flex items-center gap-2">
                 📅 Stay Dates Planner
