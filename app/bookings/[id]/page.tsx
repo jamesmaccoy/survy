@@ -275,7 +275,7 @@ function BookingDetailsContent({ id }: { id: string }) {
                   <div className="flex flex-wrap gap-2">
                     {booking.guests.map((gUid, idx) => (
                       <span key={idx} className="rounded bg-white/5 border border-white/10 px-3 py-1 text-xs font-mono text-zinc-300">
-                        👤 {user.displayName} {gUid === user.uid ? "You" : gUid.substring(0, 8) + "..."}
+                        👤 {gUid === user.uid ? "You" : gUid.substring(0, 8) + "..."}
                       </span>
                     ))}
                   </div>
