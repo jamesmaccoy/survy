@@ -235,7 +235,7 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
     return (
       <div className="flex min-h-[400px] flex-col items-center justify-center text-teal-950 dark:text-white">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-t-teal-500 border-teal-150 dark:border-white/10" />
-        <span className="mt-3 text-xs text-teal-800/60 dark:text-zinc-500">Retrieving Listing Information...</span>
+        <span className="mt-3 text-sm text-teal-800/60 dark:text-zinc-500">Retrieving Listing Information...</span>
       </div>
     );
   }
@@ -250,7 +250,7 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
         </p>
         <Link
           href="/"
-          className="mt-6 inline-block w-full rounded-xl bg-teal-500 py-3 text-center text-xs font-bold text-white hover:bg-teal-600 transition-all"
+          className="mt-6 inline-block w-full rounded-xl bg-teal-500 py-3 text-center text-sm font-bold text-white hover:bg-teal-600 transition-all"
         >
           Return to Listings
         </Link>
@@ -283,7 +283,7 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
         <div className="absolute -top-[10%] left-[20%] w-[60%] h-[60%] rounded-full bg-teal-500/10 blur-[120px]" />
       </div>
 
-      <Link href="/" className="text-xs text-teal-800 dark:text-zinc-500 hover:text-teal-950 dark:hover:text-white transition-colors mb-6 inline-block">
+      <Link href="/" className="text-sm text-teal-800 dark:text-zinc-500 hover:text-teal-950 dark:hover:text-white transition-colors mb-6 inline-block">
         ← Back to Listings
       </Link>
 
@@ -330,13 +330,13 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
                 <span className="text-[10px] text-teal-800/60 dark:text-zinc-500 uppercase">
                   {property.bookingType === "hourly" ? "Hourly slot price" : "Nightly base price"}
                 </span>
-                <p className="text-lg font-black text-teal-600 dark:text-teal-400">
+                <p className="text-xl font-black text-teal-600 dark:text-teal-400">
                   R {property.basePricePerNight.toLocaleString()}{property.bookingType === "hourly" ? "/slot" : ""}
                 </p>
               </div>
               <div>
                 <span className="text-[10px] text-teal-800/60 dark:text-zinc-500 uppercase">Location</span>
-                <p className="text-sm font-semibold text-teal-950 dark:text-white mt-1">
+                <p className="text-ml font-semibold text-teal-950 dark:text-white mt-1">
                   {property.location || "🏖 Llandudno, Cape Town"}
                 </p>
               </div>
@@ -344,7 +344,7 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
 
             <div className="border-t border-teal-100/60 dark:border-white/5 pt-4">
               <span className="text-[10px] text-teal-800/60 dark:text-zinc-500 uppercase block">About this property</span>
-              <p className="text-xs text-teal-900/90 dark:text-zinc-300 leading-relaxed mt-1 whitespace-pre-line">
+              <p className="text-md text-teal-900/90 dark:text-zinc-300 leading-relaxed mt-1 whitespace-pre-line">
                 {property.description || "Experience Llandudno at its finest. This property features unparalleled coastline scenery, proximity to the beach, luxury amenities, and private decks. Connect package options and addons at checkout."}
               </p>
             </div>
@@ -355,21 +355,21 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
             <h3 className="text-base font-bold text-teal-950 dark:text-white">Available Packages for this Listing</h3>
 
             {packages.filter(pkg => pkg.category !== "addon").length === 0 ? (
-              <p className="text-xs text-teal-800/60 dark:text-zinc-500">No specific packages config created for this property yet.</p>
+              <p className="text-md text-teal-800/60 dark:text-zinc-500">No specific packages config created for this property yet.</p>
             ) : (
               <div className="grid grid-cols-1 gap-3">
                 {packages.filter(pkg => pkg.category !== "addon").map((pkg) => (
                   <div key={pkg.id} className="rounded-2xl bg-teal-50/40 dark:bg-black/40 p-4 border border-teal-100/50 dark:border-white/5 flex items-center justify-between">
                     <div>
-                      <span className="inline-block rounded bg-teal-100/60 dark:bg-white/5 border border-teal-200 dark:border-white/10 px-1.5 py-0.5 text-[8px] font-bold text-teal-800 dark:text-zinc-400 uppercase tracking-wide">
+                      <span className="inline-block rounded bg-teal-100/60 dark:bg-white/5 border border-teal-200 dark:border-white/10 px-1.5 py-0.5 text-[10px] font-bold text-teal-800 dark:text-zinc-400 uppercase tracking-wide">
                         {pkg.category} Category
                       </span>
-                      <h4 className="text-xs font-bold text-teal-950 dark:text-white mt-1">{pkg.name}</h4>
-                      {pkg.description && <p className="text-[10px] text-teal-900/80 dark:text-zinc-400 mt-1 leading-relaxed">{pkg.description}</p>}
+                      <h4 className="text-md font-bold text-teal-950 dark:text-white mt-1">{pkg.name}</h4>
+                      {pkg.description && <p className="text-[12px] text-teal-900/80 dark:text-zinc-400 mt-1 leading-relaxed">{pkg.description}</p>}
                     </div>
                     <div className="text-right pl-4">
                       <span className="text-[9px] text-teal-850/60 dark:text-zinc-500 block uppercase">Price</span>
-                      <p className="text-sm font-extrabold text-teal-600 dark:text-teal-400">R {pkg.price.toLocaleString()}</p>
+                      <p className="text-md font-extrabold text-teal-600 dark:text-teal-400">R {pkg.price.toLocaleString()}</p>
                     </div>
                   </div>
                 ))}
@@ -405,12 +405,12 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
 
             {!user ? (
               <div className="text-center py-4 space-y-3">
-                <p className="text-xs text-teal-900/80 dark:text-zinc-400 leading-relaxed">
+                <p className="text-md text-teal-900/80 dark:text-zinc-400 leading-relaxed">
                   Sign in or register to lock check-in dates and access package booking options.
                 </p>
                 <Link
                   href="/login"
-                  className="inline-block w-full rounded-xl bg-teal-500 py-3 text-center text-xs font-bold text-white hover:bg-teal-600 transition-all shadow-md shadow-teal-500/10"
+                  className="inline-block w-full rounded-xl bg-teal-500 py-3 text-center text-md font-bold text-white hover:bg-teal-600 transition-all shadow-md shadow-teal-500/10"
                 >
                   Sign In to Book
                 </Link>
@@ -418,14 +418,14 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
             ) : datesLocked ? (
               <div className="space-y-4">
                 <div className="rounded-2xl bg-teal-50 dark:bg-teal-500/5 border border-teal-100 dark:border-teal-500/15 p-4 space-y-2">
-                  <div className="flex justify-between items-start text-xs text-teal-900/80 dark:text-zinc-300">
+                  <div className="flex justify-between items-start text-md text-teal-900/80 dark:text-zinc-300">
                     <span>{property.bookingType === "hourly" ? "Selected Booking:" : "Selected Range:"}</span>
                     <span className="font-bold text-teal-950 dark:text-white text-right">
                       {property.bookingType === "hourly" ? (
                         <>
                           {formatDisplayDate(savedDates!.fromDate)}
                           <br />
-                          <span className="text-[10px] text-zinc-400">
+                          <span className="text-[11px] text-zinc-400">
                             {new Date(savedDates!.fromDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })} - {new Date(savedDates!.toDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
                           </span>
                         </>
@@ -434,13 +434,13 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
                       )}
                     </span>
                   </div>
-                  <div className="flex justify-between text-xs text-teal-900/80 dark:text-zinc-300">
+                  <div className="flex justify-between text-md text-teal-900/80 dark:text-zinc-300">
                     <span>Booking Duration:</span>
                     <span className="font-bold text-teal-950 dark:text-white">
                       {property.bookingType === "hourly" ? "1 Slot (4 hours)" : `${nights} night(s)`}
                     </span>
                   </div>
-                  <div className="flex justify-between text-xs text-teal-900/80 dark:text-zinc-300">
+                  <div className="flex justify-between text-md text-teal-900/80 dark:text-zinc-300">
                     <span>Estimated Base Cost:</span>
                     <span className="font-bold text-teal-600 dark:text-teal-400">R {baseStayCost.toLocaleString()}</span>
                   </div>
@@ -448,14 +448,14 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
 
                 <Link
                   href={`/bookings?propertyId=${property.id}`}
-                  className="block w-full rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 py-3 text-center text-xs font-bold text-white hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-teal-500/10"
+                  className="block w-full rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 py-3 text-center text-sm font-bold text-white hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-teal-500/10"
                 >
                   Proceed to Package Selection & Pay →
                 </Link>
 
                 <button
                   onClick={() => setSavedDates(null)}
-                  className="w-full text-center text-[10px] text-teal-800 dark:text-zinc-500 hover:text-teal-950 dark:hover:text-zinc-300 font-bold"
+                  className="w-full text-center text-[11px] text-teal-800 dark:text-zinc-500 hover:text-teal-950 dark:hover:text-zinc-300 font-bold"
                 >
                   Change Stay Dates
                 </button>
@@ -485,7 +485,7 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
                 />
 
                 {property.bookingType === "hourly" && (
-                  <div className="rounded-2xl bg-white/5 border border-white/10 p-4 text-xs backdrop-blur-md space-y-2">
+                  <div className="rounded-2xl bg-white/5 border border-white/10 p-4 text-sm backdrop-blur-md space-y-2">
                     <label className="block text-[10px] text-teal-850/60 dark:text-zinc-550 uppercase tracking-wider font-bold">
                       Available Slots (Flat Booking)
                     </label>
@@ -504,7 +504,7 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
                               key={slotTime}
                               type="button"
                               onClick={() => setSelectedSlot(slotTime)}
-                              className={`rounded-xl py-2 px-3 text-xs font-bold border transition-all ${isSelected
+                              className={`rounded-xl py-2 px-3 text-sm font-bold border transition-all ${isSelected
                                 ? "bg-teal-500/10 border-teal-500 text-teal-400"
                                 : "bg-black/30 border-white/5 text-zinc-500 hover:text-white"
                                 }`}
@@ -523,7 +523,7 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
                 <button
                   onClick={handleSaveDates}
                   disabled={isSavingDates}
-                  className="w-full rounded-xl bg-teal-500 py-3 text-center text-xs font-bold text-white hover:bg-teal-600 transition-all active:scale-95 shadow-md shadow-teal-500/10"
+                  className="w-full rounded-xl bg-teal-500 py-3 text-center text-md font-bold text-white hover:bg-teal-600 transition-all active:scale-95 shadow-md shadow-teal-500/10"
                 >
                   {isSavingDates ? "Saving selection..." : "Confirm & Save Booking"}
                 </button>
