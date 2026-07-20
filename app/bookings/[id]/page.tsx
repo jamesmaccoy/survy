@@ -313,7 +313,7 @@ function BookingDetailsContent({ id }: { id: string }) {
 
             {/* In-App Add-ons purchases */}
             {(booking.paymentStatus === "paid" || booking.paymentStatus === "success") && (
-              <div className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-md shadow-xl space-y-4">
+              <div className="rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur-md shadow-xl space-y-2">
                 <h3 className="text-base font-bold text-white border-b border-white/15 pb-2">Enhance Your Stay (Add-ons)</h3>
 
                 {addonsList.length === 0 ? (
