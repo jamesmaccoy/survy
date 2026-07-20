@@ -116,7 +116,7 @@ function BookingDetailsContent({ id }: { id: string }) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-950 text-white">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-t-teal-500 border-white/10" />
-        <span className="mt-3 text-xs text-zinc-550">Loading Booking Details...</span>
+        <span className="mt-3 text-md text-zinc-550">Loading Booking Details...</span>
       </div>
     );
   }
@@ -127,7 +127,7 @@ function BookingDetailsContent({ id }: { id: string }) {
         <div className="max-w-md w-full rounded-3xl border border-white/10 bg-white/5 p-8 text-center backdrop-blur-md">
           <span className="text-4xl">🔐</span>
           <h2 className="text-xl font-black text-white mt-4">Authentication Required</h2>
-          <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
+          <p className="text-md text-zinc-400 mt-2 leading-relaxed">
             Please log in to view booking information.
           </p>
           <Link
@@ -147,7 +147,7 @@ function BookingDetailsContent({ id }: { id: string }) {
         <div className="max-w-md w-full rounded-3xl border border-white/10 bg-white/5 p-8 text-center backdrop-blur-md">
           <span className="text-4xl">⚠️</span>
           <h2 className="text-xl font-black text-white mt-4">Booking Not Found</h2>
-          <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
+          <p className="text-md text-zinc-400 mt-2 leading-relaxed">
             The booking details could not be retrieved. Please check the URL reference and try again.
           </p>
           <Link
@@ -172,7 +172,7 @@ function BookingDetailsContent({ id }: { id: string }) {
         <div className="max-w-md w-full rounded-3xl border border-white/10 bg-white/5 p-8 text-center backdrop-blur-md">
           <span className="text-4xl">🔐</span>
           <h2 className="text-xl font-black text-white mt-4">Access Denied</h2>
-          <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
+          <p className="text-md text-zinc-400 mt-2 leading-relaxed">
             You do not have permissions to view this booking ledger sheet.
           </p>
           <Link
@@ -203,8 +203,8 @@ function BookingDetailsContent({ id }: { id: string }) {
       <div className="relative max-w-5xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
         <header className="mb-10 border-b border-white/10 pb-6 flex items-center justify-between">
           <div>
-            <span className="text-[10px] text-teal-400 font-extrabold uppercase tracking-wide">Stay Ledger Details</span>
-            <h1 className="text-3xl font-black text-white mt-1">Booking Detail View</h1>
+            <span className="text-[10px] text-teal-400 font-extrabold uppercase tracking-wide">Stay Ledger</span>
+            <h1 className="text-3xl font-black text-white mt-1">Booking Details</h1>
           </div>
           <Link
             href="/bookings"
@@ -226,20 +226,20 @@ function BookingDetailsContent({ id }: { id: string }) {
                 <p className="text-[10px] font-mono text-zinc-500 mt-1">Booking ID: {booking.id}</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 border-t border-white/5 pt-4 text-xs">
+              <div className="grid grid-cols-2 gap-4 border-t border-white/5 pt-2 text-md">
                 <div className="rounded-2xl bg-black/40 p-4 border border-white/5">
                   <span className="text-[10px] text-zinc-500 uppercase block">Check-in</span>
                   <span className="text-sm font-bold text-white mt-1 block">{checkIn}</span>
-                  <span className="text-[9px] text-zinc-500 block mt-1">14:00 onwards</span>
+                  <span className="text-[11px] text-zinc-500 block mt-1">14:00 onwards</span>
                 </div>
                 <div className="rounded-2xl bg-black/40 p-4 border border-white/5">
                   <span className="text-[10px] text-zinc-500 uppercase block">Check-out</span>
                   <span className="text-sm font-bold text-white mt-1 block">{checkOut}</span>
-                  <span className="text-[9px] text-zinc-500 block mt-1">Before 10:00 AM</span>
+                  <span className="text-[11px] text-zinc-500 block mt-1">Before 10:00 AM</span>
                 </div>
               </div>
 
-              <div className="border-t border-white/5 pt-4 text-xs space-y-2">
+              <div className="border-t border-white/5 pt-2 text-md space-y-1">
                 <div className="flex justify-between">
                   <span className="text-zinc-400">Reserved Guest:</span>
                   <span className="font-bold text-white">{booking.customerName} ({booking.customerEmail})</span>
@@ -264,7 +264,7 @@ function BookingDetailsContent({ id }: { id: string }) {
                         navigator.clipboard.writeText(inviteUrl);
                         alert("📋 Invite URL copied to clipboard: " + inviteUrl);
                       }}
-                      className="flex items-center gap-1 rounded bg-teal-500/10 px-2.5 py-1 text-[9px] font-bold text-teal-400 hover:bg-teal-500/20 transition-all active:scale-95 border border-teal-500/25"
+                      className="flex items-center gap-1 rounded bg-teal-500/10 px-2.5 py-1 text-[11px] font-bold text-teal-400 hover:bg-teal-500/20 transition-all active:scale-95 border border-teal-500/25"
                     >
                       Invite More Guests
                     </button>
@@ -275,7 +275,7 @@ function BookingDetailsContent({ id }: { id: string }) {
                   <div className="flex flex-wrap gap-2">
                     {booking.guests.map((gUid, idx) => (
                       <span key={idx} className="rounded bg-white/5 border border-white/10 px-3 py-1 text-xs font-mono text-zinc-300">
-                        👤 {gUid === user.uid ? "You" : gUid.substring(0, 8) + "..."}
+                        👤 {user.displayName} {gUid === user.uid ? "You" : gUid.substring(0, 8) + "..."}
                       </span>
                     ))}
                   </div>
@@ -291,16 +291,15 @@ function BookingDetailsContent({ id }: { id: string }) {
             <div className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-md shadow-xl space-y-4">
               <h3 className="text-base font-bold text-white border-b border-white/15 pb-2">Cost & Payment</h3>
 
-              <div className="space-y-3 text-xs">
+              <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
                   <span className="text-zinc-400">Status:</span>
-                  <span className={`rounded-full px-2.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide border ${
-                    booking.paymentStatus === "paid" || booking.paymentStatus === "success"
-                      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/25"
-                      : booking.paymentStatus === "failed"
+                  <span className={`rounded-full px-2.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide border ${booking.paymentStatus === "paid" || booking.paymentStatus === "success"
+                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/25"
+                    : booking.paymentStatus === "failed"
                       ? "bg-red-500/10 text-red-400 border-red-500/25"
                       : "bg-orange-500/10 text-orange-400 border-orange-500/25"
-                  }`}>
+                    }`}>
                     {booking.paymentStatus}
                   </span>
                 </div>
@@ -316,7 +315,7 @@ function BookingDetailsContent({ id }: { id: string }) {
             {(booking.paymentStatus === "paid" || booking.paymentStatus === "success") && (
               <div className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-md shadow-xl space-y-4">
                 <h3 className="text-base font-bold text-white border-b border-white/15 pb-2">Enhance Your Stay (Add-ons)</h3>
-                
+
                 {addonsList.length === 0 ? (
                   <p className="text-xs text-zinc-550 italic">No add-ons available for this listing.</p>
                 ) : (
@@ -327,15 +326,15 @@ function BookingDetailsContent({ id }: { id: string }) {
                         className="flex flex-col justify-between p-4 rounded-2xl bg-black/40 border border-white/5 hover:border-white/10 transition-all gap-3"
                       >
                         <div>
-                          <h4 className="text-xs font-bold text-white">{addon.name}</h4>
+                          <h4 className="text-sm font-bold text-white">{addon.name}</h4>
                           {addon.description && (
-                            <p className="text-[10px] text-zinc-400 mt-1 leading-relaxed">
+                            <p className="text-[14px] text-zinc-400 mt-1 leading-relaxed">
                               {addon.description}
                             </p>
                           )}
                         </div>
                         <div className="flex items-center justify-between pt-2 border-t border-white/5">
-                          <span className="text-xs font-black text-teal-400">
+                          <span className="text-lg font-black text-teal-400">
                             R {addon.price.toLocaleString()}
                           </span>
                           <button
