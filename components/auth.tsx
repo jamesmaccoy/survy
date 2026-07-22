@@ -31,6 +31,21 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+const isMockAllowed = () => {
+  if (process.env.NODE_ENV === "production") return false;
+  if (typeof window !== "undefined") {
+    const hostname = window.location.hostname;
+    return (
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname.startsWith("192.168.") ||
+      hostname.startsWith("10.") ||
+      hostname.startsWith("172.")
+    );
+  }
+  return true;
+};
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -63,7 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         } else {
           // Check local storage mock session as fallback
-          const localSession = localStorage.getItem("auth:mock_session");
+          const localSession = isMockAllowed() ? localStorage.getItem("auth:mock_session") : null;
           if (localSession) {
             const parsedUser = JSON.parse(localSession);
             setUser(parsedUser);
@@ -97,10 +112,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return unsubscribe;
     } catch (err) {
       console.warn("⚠️ Firebase Auth client failed to load. Toggling offline fallback provider.");
-      const localSession = localStorage.getItem("auth:mock_session");
-      if (localSession) {
-        setUser(JSON.parse(localSession));
-        setIsMockUser(true);
+      if (isMockAllowed()) {
+        const localSession = localStorage.getItem("auth:mock_session");
+        if (localSession) {
+          setUser(JSON.parse(localSession));
+          setIsMockUser(true);
+        }
       }
       setLoading(false);
     }
@@ -111,7 +128,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await signInWithEmailAndPassword(auth, email, pass);
     } catch (err: any) {
-      console.warn(`[Firebase Auth] Failed, trying offline mock login: ${err.message}`);
+      console.warn(`[Firebase Auth] Failed: ${err.message}`);
+      if (!isMockAllowed()) {
+        throw err;
+      }
+      console.warn(`[Firebase Auth] Trying offline mock login fallback.`);
       // Fallback: Create mock session
       const isUserAdminMock = email.toLowerCase().includes("admin") || email.toLowerCase() === "thankyou.digital@gmail.com";
       const mockSession: AuthUser = {
@@ -134,7 +155,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await createUserWithEmailAndPassword(auth, email, pass);
     } catch (err: any) {
-      console.warn(`[Firebase Auth] Signup failed, fall back to mock signup: ${err.message}`);
+      console.warn(`[Firebase Auth] Signup failed: ${err.message}`);
+      if (!isMockAllowed()) {
+        throw err;
+      }
+      console.warn(`[Firebase Auth] Trying offline mock signup fallback.`);
       const isUserAdminMock = email.toLowerCase().includes("admin") || email.toLowerCase() === "thankyou.digital@gmail.com";
       const mockSession: AuthUser = {
         uid: `mock_${email.replace(/[^\w]/g, "_")}`,
@@ -157,12 +182,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
     } catch (err) {
-      console.warn(`[Firebase Auth] Google login failed, fallback to mock: ${err instanceof Error ? err.message : String(err)}`);
+      console.warn(`[Firebase Auth] Google login failed: ${err instanceof Error ? err.message : String(err)}`);
+      if (!isMockAllowed()) {
+        throw err;
+      }
+      console.warn(`[Firebase Auth] Trying offline mock Google login fallback.`);
+      
+      // Prompt for email in dev to allow mock sign-in with specific developer emails if needed
+      let devEmail = "google-guest@example.com";
+      if (typeof window !== "undefined") {
+        const entered = prompt("Enter email for mock Google sign-in:", "google-guest@example.com");
+        if (entered) {
+          devEmail = entered;
+        }
+      }
+      
       // Fallback: Create mock session
       const mockSession: AuthUser = {
         uid: "mock_google_user",
-        email: "google-guest@example.com",
-        displayName: "Google Guest",
+        email: devEmail,
+        displayName: devEmail.split("@")[0] || "Google Guest",
         isAnonymous: false,
         isAdmin: false
       };
