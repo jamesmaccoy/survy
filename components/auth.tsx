@@ -7,7 +7,8 @@ import {
   createUserWithEmailAndPassword, 
   signOut,
   GoogleAuthProvider,
-  signInWithPopup
+  signInWithRedirect,
+  getRedirectResult
 } from "firebase/auth";
 import { auth } from "@/lib/clientApp";
 
@@ -52,6 +53,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isMockUser, setIsMockUser] = useState<boolean>(false);
 
   useEffect(() => {
+    // Process redirect result if returning from Google Sign-In
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result) {
+          console.log("Successfully signed in via Google redirect:", result.user.email);
+        }
+      })
+      .catch((err) => {
+        console.error("Error during Google redirect sign-in:", err);
+      });
+
     try {
       const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
         if (firebaseUser) {
@@ -180,7 +192,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
     try {
       const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
+      await signInWithRedirect(auth, provider);
     } catch (err) {
       console.warn(`[Firebase Auth] Google login failed: ${err instanceof Error ? err.message : String(err)}`);
       if (!isMockAllowed()) {
