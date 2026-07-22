@@ -43,6 +43,7 @@ function HomePageContent() {
   const [nights, setNights] = useState<number>(3);
   const [hasUpdatedStatus, setHasUpdatedStatus] = useState(false);
   const [latestEstimate, setLatestEstimate] = useState<any | null>(null);
+  const [estimatePropertyTitle, setEstimatePropertyTitle] = useState("");
 
   // Client-side payment status update fallback (useful for localhost testing where webhooks can't reach)
   useEffect(() => {
@@ -186,6 +187,15 @@ function HomePageContent() {
         const result = await res.json();
         if (result.success && result.data) {
           setLatestEstimate(result.data);
+          try {
+            const propRes = await fetch(`/api/posts/${result.data.propertyId}`);
+            const propResult = await propRes.json();
+            if (propResult.success && propResult.data) {
+              setEstimatePropertyTitle(propResult.data.title || propResult.data.name || "");
+            }
+          } catch (propErr) {
+            console.error("Failed to fetch estimate property details:", propErr);
+          }
         }
       } catch (err) {
         console.error("Failed to fetch latest estimate:", err);
@@ -430,7 +440,7 @@ function HomePageContent() {
                 </div>
                 <div className="text-xs space-y-1">
                   <p className="font-bold text-teal-950 dark:text-white">
-                    Stay at {latestEstimate.propertyId === "shack" ? "The Shack" : latestEstimate.propertyId === "cottage" ? "The Cottage" : "Llandudno Stay"}
+                    Stay at {estimatePropertyTitle || "Llandudno Stay"}
                   </p>
                   <p className="text-teal-800/80 dark:text-zinc-400 text-[11px]">
                     Dates: {formatDisplayDate(latestEstimate.fromDate)} - {formatDisplayDate(latestEstimate.toDate)}
