@@ -254,8 +254,8 @@ export default function AdminPropertiesPage() {
             {statusMessage && (
               <div
                 className={`mb-4 rounded-xl border p-3.5 text-center text-xs font-bold ${statusMessage.type === "success"
-                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
-                    : "border-red-500/30 bg-red-500/10 text-red-400"
+                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                  : "border-red-500/30 bg-red-500/10 text-red-400"
                   }`}
               >
                 {statusMessage.text}
@@ -324,8 +324,8 @@ export default function AdminPropertiesPage() {
                     type="button"
                     onClick={() => setBookingType("nightly")}
                     className={`flex-1 rounded-xl py-2.5 text-xs font-bold transition-all border ${bookingType === "nightly"
-                        ? "bg-teal-550/15 border-teal-500/50 text-teal-400"
-                        : "bg-black/40 border-white/10 text-zinc-400 hover:text-white"
+                      ? "bg-teal-550/15 border-teal-500/50 text-teal-400"
+                      : "bg-black/40 border-white/10 text-zinc-400 hover:text-white"
                       }`}
                   >
                     🌙 Long booking
@@ -334,8 +334,8 @@ export default function AdminPropertiesPage() {
                     type="button"
                     onClick={() => setBookingType("hourly")}
                     className={`flex-1 rounded-xl py-2.5 text-xs font-bold transition-all border ${bookingType === "hourly"
-                        ? "bg-teal-550/15 border-teal-500/50 text-teal-400"
-                        : "bg-black/40 border-white/10 text-zinc-400 hover:text-white"
+                      ? "bg-teal-550/15 border-teal-500/50 text-teal-400"
+                      : "bg-black/40 border-white/10 text-zinc-400 hover:text-white"
                       }`}
                   >
                     🕒 Short bookings
@@ -370,8 +370,8 @@ export default function AdminPropertiesPage() {
                           type="button"
                           onClick={toggleSlot}
                           className={`rounded-lg py-1.5 px-2 text-[10px] font-bold border transition-all ${isSelected
-                              ? "bg-teal-500/10 border-teal-500 text-teal-400"
-                              : "bg-zinc-900 border-white/5 text-zinc-500 hover:text-zinc-300"
+                            ? "bg-teal-500/10 border-teal-500 text-teal-400"
+                            : "bg-zinc-900 border-white/5 text-zinc-500 hover:text-zinc-300"
                             }`}
                         >
                           {label}

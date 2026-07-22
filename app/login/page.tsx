@@ -28,7 +28,7 @@ export default function LoginPage() {
       <div className="relative w-full max-w-md">
         <div className="text-center mb-8">
           <span className="text-2xl">🗝</span>
-          <h1 className="text-2xl font-black text-white mt-3">Llandudno Stays Account</h1>
+          <h1 className="text-2xl font-black text-white mt-3">Exclusive Packages for Inaccessible Locations</h1>
           <p className="text-xs text-zinc-500 mt-1.5">Sign in to configure dates and lock bookings</p>
         </div>
 
