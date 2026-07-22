@@ -28,6 +28,8 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<void>;
   logOut: () => Promise<void>;
   isMockUser: boolean;
+  authError: string | null;
+  clearAuthError: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -51,6 +53,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [isMockUser, setIsMockUser] = useState<boolean>(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  const clearAuthError = () => setAuthError(null);
 
   useEffect(() => {
     // Process redirect result if returning from Google Sign-In
@@ -62,6 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
       .catch((err) => {
         console.error("Error during Google redirect sign-in:", err);
+        setAuthError(err instanceof Error ? err.message : String(err));
       });
 
     try {
@@ -239,7 +245,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signInWithGoogle, logOut, isMockUser }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signUp, signInWithGoogle, logOut, isMockUser, authError, clearAuthError }}>
       {children}
     </AuthContext.Provider>
   );
@@ -255,7 +261,7 @@ export function useAuth() {
 
 // Authentication Forms Component
 export function AuthCard() {
-  const { user, signIn, signUp, signInWithGoogle, logOut, loading, isMockUser } = useAuth();
+  const { user, signIn, signUp, signInWithGoogle, logOut, loading, isMockUser, authError, clearAuthError } = useAuth();
   const [isSignUpMode, setIsSignUpMode] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -324,7 +330,7 @@ export function AuthCard() {
       <div className="mb-5 grid grid-cols-2 gap-1 rounded-xl bg-white/5 p-1 border border-white/5">
         <button
           type="button"
-          onClick={() => { setIsSignUpMode(false); setFormError(null); }}
+          onClick={() => { setIsSignUpMode(false); setFormError(null); clearAuthError(); }}
           className={`rounded-lg py-2 text-xs font-bold transition-all ${
             !isSignUpMode ? "bg-white text-black shadow-md" : "text-white/60 hover:text-white"
           }`}
@@ -333,7 +339,7 @@ export function AuthCard() {
         </button>
         <button
           type="button"
-          onClick={() => { setIsSignUpMode(true); setFormError(null); }}
+          onClick={() => { setIsSignUpMode(true); setFormError(null); clearAuthError(); }}
           className={`rounded-lg py-2 text-xs font-bold transition-all ${
             isSignUpMode ? "bg-white text-black shadow-md" : "text-white/60 hover:text-white"
           }`}
@@ -346,9 +352,9 @@ export function AuthCard() {
         {isSignUpMode ? "Create a Guest Profile" : "Access Your Booking Account"}
       </h3>
 
-      {formError && (
+      {(formError || authError) && (
         <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-center text-xs text-red-400">
-          ⚠️ {formError}
+          ⚠️ {formError || authError}
         </div>
       )}
 
