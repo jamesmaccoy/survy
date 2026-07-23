@@ -245,6 +245,44 @@ export default function AdminPropertiesPage() {
     }
   };
 
+  const handleDeleteProperty = async () => {
+    if (!editingPropertyId) return;
+    if (!window.confirm("Are you sure you want to delete this property? All associated packages will also be deleted.")) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setStatusMessage(null);
+
+    try {
+      const response = await fetch(`/api/posts/${editingPropertyId}`, {
+        method: "DELETE",
+        headers: {
+          "x-user-id": user?.uid || "",
+          "x-user-email": user?.email || "",
+        },
+      });
+
+      const resJson = await response.json();
+      if (!response.ok || !resJson.success) {
+        throw new Error(resJson.error || "Failed to delete property.");
+      }
+
+      setStatusMessage({
+        type: "success",
+        text: "Property deleted successfully!",
+      });
+
+      closeForm();
+      fetchProperties();
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "An error occurred.";
+      setStatusMessage({ type: "error", text: errorMessage });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-white flex items-center justify-center">
@@ -306,6 +344,24 @@ export default function AdminPropertiesPage() {
             </span>
           </div>
         </header>
+
+        {/* Tab Selection */}
+        <div className="border-b border-slate-200 dark:border-white/10">
+          <nav className="-mb-px flex gap-6" aria-label="Tabs">
+            <Link
+              href="/admin/properties"
+              className="border-teal-500 text-teal-600 dark:text-teal-400 border-b-2 py-4 px-1 text-sm font-bold flex items-center gap-2"
+            >
+              <span>🏢</span> Properties
+            </Link>
+            <Link
+              href="/admin/packages"
+              className="border-transparent text-slate-500 dark:text-zinc-400 hover:text-slate-705 dark:hover:text-zinc-300 hover:border-slate-300 dark:hover:border-white/20 border-b-2 py-4 px-1 text-sm font-bold flex items-center gap-2"
+            >
+              <span>📦</span> Packages
+            </Link>
+          </nav>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
@@ -692,19 +748,31 @@ export default function AdminPropertiesPage() {
                     />
                   </div>
 
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="w-full rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 py-3 text-center text-xs font-bold text-white shadow-lg shadow-teal-500/20 hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
-                  >
-                    {isSubmitting
-                      ? editingPropertyId
-                        ? "Saving changes..."
-                        : "Creating property..."
-                      : editingPropertyId
-                        ? "Save Property Changes"
-                        : "Publish Property"}
-                  </button>
+                  <div className="flex gap-4 pt-2">
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="flex-grow rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 py-3 text-center text-xs font-bold text-white shadow-lg shadow-teal-500/20 hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
+                    >
+                      {isSubmitting
+                        ? editingPropertyId
+                          ? "Saving changes..."
+                          : "Creating property..."
+                        : editingPropertyId
+                          ? "Save Property Changes"
+                          : "Publish Property"}
+                    </button>
+                    {editingPropertyId && (
+                      <button
+                        type="button"
+                        onClick={handleDeleteProperty}
+                        disabled={isSubmitting}
+                        className="rounded-xl bg-red-500/10 border border-red-500/20 px-5 py-3 text-center text-xs font-bold text-red-650 dark:text-red-400 hover:bg-red-500 hover:text-white transition-all active:scale-95 disabled:opacity-50"
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </div>
                 </form>
               </div>
             )}

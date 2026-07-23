@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createProperty, listProperties, isUserAdmin } from "@/lib/firebase";
+import { createProperty, listProperties, isUserAdmin, getUserProfile } from "@/lib/firebase";
 
 export async function GET(req: NextRequest) {
   try {
@@ -21,6 +21,20 @@ export async function POST(request: NextRequest) {
     const email = request.headers.get("x-user-email");
     if (!userId || !(await isUserAdmin(userId, email))) {
       return NextResponse.json({ success: false, error: "Unauthorized access: admin privileges required.", data: "Unauthorized access: admin privileges required." }, { status: 403 });
+    }
+
+    // Verify property limit for standard subscription (max 3 properties)
+    const profile = await getUserProfile(userId);
+    const userPlan = profile?.plan || "standard";
+    if (userPlan === "standard") {
+      const existingListings = await listProperties(userId);
+      if (existingListings.length >= 3) {
+        return NextResponse.json({
+          success: false,
+          error: "Property limit reached. Standard subscription plan is limited to 3 properties. Upgrade to Pro for unlimited listings.",
+          data: "Property limit reached."
+        }, { status: 403 });
+      }
     }
 
     const body = await request.json().catch(() => ({}));

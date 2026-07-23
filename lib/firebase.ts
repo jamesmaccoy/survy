@@ -886,24 +886,50 @@ export async function getBooking(id: string): Promise<any | null> {
   return null;
 }
 
-export async function promoteUserToAdmin(uid: string): Promise<boolean> {
+export async function promoteUserToAdmin(uid: string, plan?: string): Promise<boolean> {
   const db = getFirestore();
   if (isMockMode || !db) {
     const dbData = readMockDb();
     dbData.userProfiles = dbData.userProfiles || {};
     dbData.userProfiles[uid] = dbData.userProfiles[uid] || {};
     dbData.userProfiles[uid].isAdmin = true;
+    if (plan) {
+      dbData.userProfiles[uid].plan = plan;
+    }
     writeMockDb(dbData);
     return true;
   }
 
   try {
-    await db.collection("users").doc(uid).set({ isAdmin: true }, { merge: true });
+    const updateData: any = { isAdmin: true };
+    if (plan) {
+      updateData.plan = plan;
+    }
+    await db.collection("users").doc(uid).set(updateData, { merge: true });
     return true;
   } catch (err) {
     console.error("[Firebase] promoteUserToAdmin error:", err);
     return false;
   }
+}
+
+export async function getUserProfile(uid: string): Promise<any> {
+  const db = getFirestore();
+  if (isMockMode || !db) {
+    const dbData = readMockDb();
+    const userProfiles = dbData.userProfiles || {};
+    return userProfiles[uid] || null;
+  }
+
+  try {
+    const doc = await db.collection("users").doc(uid).get();
+    if (doc.exists) {
+      return doc.data();
+    }
+  } catch (err) {
+    console.error("[Firebase] getUserProfile error:", err);
+  }
+  return null;
 }
 
 

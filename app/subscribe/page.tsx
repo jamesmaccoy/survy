@@ -45,7 +45,7 @@ function SubscribeContent() {
   };
 
   // Developer Bypass to become Pro instantly (in mock mode or development)
-  const handleMockBypass = async () => {
+  const handleMockBypass = async (plan: "standard" | "pro") => {
     if (!user) return;
     setIsRedirecting(true);
     setStatusMessage(null);
@@ -53,11 +53,11 @@ function SubscribeContent() {
       const res = await fetch("/api/subscribe/mock-confirm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.uid })
+        body: JSON.stringify({ userId: user.uid, plan })
       });
       const result = await res.json();
       if (res.ok && result.success) {
-        setStatusMessage({ type: "success", text: "Success! Promoted to Pro. Reloading session..." });
+        setStatusMessage({ type: "success", text: `Success! Promoted to ${plan === 'standard' ? 'Standard Pro' : 'Professional Portfolio Manager'}. Reloading session...` });
         setTimeout(() => {
           window.location.href = "/admin/properties";
         }, 1500);
@@ -236,18 +236,28 @@ function SubscribeContent() {
             {/* Local Developer Bypass block */}
             {process.env.NODE_ENV !== 'production' && user && (
               <div className="max-w-md mx-auto rounded-2xl border border-white/5 bg-white/5 p-6 text-center">
-                <span className="text-xs text-zinc-550 block font-bold tracking-wider uppercase mb-3">🛠 Local Dev Control</span>
-                <p className="text-[10px] text-zinc-500 leading-normal mb-4">
-                  For testing, you can bypass the checkout gateway and upgrade this account to a host role instantly.
+                <span className="text-xs text-zinc-500 block font-bold tracking-wider uppercase mb-3">🛠 Local Dev Control</span>
+                <p className="text-[10px] text-zinc-400 leading-normal mb-4">
+                  For testing, you can bypass the checkout gateway and upgrade this account instantly.
                 </p>
-                <button
-                  type="button"
-                  onClick={handleMockBypass}
-                  disabled={isRedirecting}
-                  className="rounded-xl border border-teal-500/30 bg-teal-500/10 hover:bg-teal-500/20 px-5 py-2.5 text-xs font-bold text-teal-400 hover:text-white transition-all active:scale-95"
-                >
-                  Become Pro Instantly (Dev Bypass)
-                </button>
+                <div className="flex flex-col sm:flex-row justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleMockBypass("standard")}
+                    disabled={isRedirecting}
+                    className="flex-1 rounded-xl border border-teal-500/30 bg-teal-550/10 hover:bg-teal-500/20 px-4 py-2.5 text-xs font-bold text-teal-400 hover:text-white transition-all active:scale-95"
+                  >
+                    Bypass as Standard
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleMockBypass("pro")}
+                    disabled={isRedirecting}
+                    className="flex-1 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 px-4 py-2.5 text-xs font-bold text-white hover:brightness-110 transition-all active:scale-95"
+                  >
+                    Bypass as Pro
+                  </button>
+                </div>
               </div>
             )}
           </div>

@@ -18,8 +18,9 @@ export async function POST(request: NextRequest) {
 
     if (intent === "subscription" && userId) {
       if (eventType === "payment.succeeded" || eventType === "checkout.succeeded" || eventType === "charge.succeeded") {
-        console.log(`[Yoco Webhook] Subscription payment succeeded for user ${userId}. Promoting to Pro.`);
-        await promoteUserToAdmin(userId);
+        const plan = metadata.plan || "standard";
+        console.log(`[Yoco Webhook] Subscription payment succeeded for user ${userId} with plan ${plan}. Promoting.`);
+        await promoteUserToAdmin(userId, plan);
       }
       return NextResponse.json({ success: true, message: "Subscription processed successfully." });
     }

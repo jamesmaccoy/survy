@@ -28,14 +28,9 @@ export default function NavHeader() {
             </Link>
           )}
           {user?.isAdmin && (
-            <>
-              <Link href="/admin/properties" className="hover:text-teal-950 dark:hover:text-white transition-colors">
-                Properties
-              </Link>
-              <Link href="/admin/packages" className="hover:text-teal-950 dark:hover:text-white transition-colors">
-                Packages
-              </Link>
-            </>
+            <Link href="/admin/properties" className="hover:text-teal-950 dark:hover:text-white transition-colors">
+              Dashboard
+            </Link>
           )}
 
           {/* Auth State Button */}
