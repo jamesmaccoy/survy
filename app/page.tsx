@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { AuthProvider, useAuth, AuthCard } from "@/components/auth";
+import { AuthProvider, useAuth } from "@/components/auth";
 import Link from "next/link";
 import { formatDisplayDate } from "@/lib/utils";
 
@@ -34,7 +34,7 @@ function HomePageContent() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [isLoadingProps, setIsLoadingProps] = useState(true);
 
-  // Date Selection (Step 1 - Saved to profile)
+  // Date Selection
   const [fromDate, setFromDate] = useState("2026-06-16");
   const [toDate, setToDate] = useState("2026-06-19");
   const [isSavingDates, setIsSavingDates] = useState(false);
@@ -44,31 +44,34 @@ function HomePageContent() {
   const [hasUpdatedStatus, setHasUpdatedStatus] = useState(false);
   const [latestEstimate, setLatestEstimate] = useState<any | null>(null);
   const [estimatePropertyTitle, setEstimatePropertyTitle] = useState("");
+  const [copiedEstimateUrl, setCopiedEstimateUrl] = useState(false);
 
-  // Client-side payment status update fallback (useful for localhost testing where webhooks can't reach)
+  // Client-side payment status fallback
   useEffect(() => {
-    const isLocalhost = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+    const isLocalhost =
+      typeof window !== "undefined" &&
+      (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
     const intent = searchParams.get("intent");
     const paymentUserId = searchParams.get("userId") || (user ? user.uid : null);
-    
-    // Check if it's a subscription success
-    const isSubscriptionSuccess = paymentStatus === "success" && (intent === "subscription" || (!bookingId && !estimateId && isLocalhost && user));
 
-    if ((!bookingId && !estimateId && !isSubscriptionSuccess) || !paymentStatus || hasUpdatedStatus) return;
+    const isSubscriptionSuccess =
+      paymentStatus === "success" &&
+      (intent === "subscription" || (!bookingId && !estimateId && isLocalhost && user));
+
+    if ((!bookingId && !estimateId && !isSubscriptionSuccess) || !paymentStatus || hasUpdatedStatus)
+      return;
 
     const updateStatus = async () => {
       setHasUpdatedStatus(true);
       try {
         if (isSubscriptionSuccess && paymentUserId) {
-          console.log(`[Client Fallback] Promoting user ${paymentUserId} to Pro role (subscription success)`);
           const res = await fetch("/api/subscribe/mock-confirm", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ userId: paymentUserId })
+            body: JSON.stringify({ userId: paymentUserId }),
           });
           const result = await res.json();
           if (result.success) {
-            // Update local storage mock session if exists
             const localSession = localStorage.getItem("auth:mock_session");
             if (localSession) {
               const session = JSON.parse(localSession);
@@ -77,7 +80,6 @@ function HomePageContent() {
                 localStorage.setItem("auth:mock_session", JSON.stringify(session));
               }
             }
-            // Redirect to admin properties dashboard
             window.location.href = "/admin/properties";
           }
           return;
@@ -96,13 +98,13 @@ function HomePageContent() {
           await fetch("/api/bookings/confirm", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ estimateId, paymentStatus: "paid" })
+            body: JSON.stringify({ estimateId, paymentStatus: "paid" }),
           });
         } else if (bookingId) {
           await fetch("/api/bookings", {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ bookingId, paymentStatus: statusToSet })
+            body: JSON.stringify({ bookingId, paymentStatus: statusToSet }),
           });
         }
       } catch (err) {
@@ -115,7 +117,6 @@ function HomePageContent() {
     }
   }, [bookingId, estimateId, paymentStatus, hasUpdatedStatus, user, authLoading, searchParams]);
 
-
   // Load properties
   useEffect(() => {
     const fetchProperties = async () => {
@@ -123,7 +124,6 @@ function HomePageContent() {
         const params = new URLSearchParams(window.location.search);
         const queryHostId = params.get("hostId");
 
-        // Load all properties by default for public visitors, or filter by queryHostId if provided
         const url = queryHostId ? `/api/posts?hostId=${queryHostId}` : "/api/posts";
         const res = await fetch(url);
         const result = await res.json();
@@ -141,7 +141,7 @@ function HomePageContent() {
     }
   }, [user, authLoading]);
 
-  // Load properties
+  // Load saved user dates
   useEffect(() => {
     if (authLoading || !user) {
       setSavedDates(null);
@@ -159,7 +159,6 @@ function HomePageContent() {
           setFromDate(startStr);
           setToDate(endStr);
 
-          // Compute nights
           const start = new Date(startStr);
           const end = new Date(endStr);
           if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
@@ -176,7 +175,7 @@ function HomePageContent() {
 
   // Load latest estimate
   useEffect(() => {
-    if (!user || !savedDates) {
+    if (!user) {
       setLatestEstimate(null);
       return;
     }
@@ -202,8 +201,7 @@ function HomePageContent() {
       }
     };
     fetchLatestEstimate();
-  }, [user, savedDates]);
-
+  }, [user]);
 
   const handleSaveDates = async () => {
     if (!user) {
@@ -221,7 +219,7 @@ function HomePageContent() {
       const oldTo = new Date(savedDates.toDate);
       start = new Date(`${fromDate}T00:00:00`);
       start.setHours(oldFrom.getHours(), oldFrom.getMinutes(), 0, 0);
-      
+
       end = new Date(`${fromDate}T00:00:00`);
       end.setHours(oldTo.getHours(), oldTo.getMinutes(), 0, 0);
     } else {
@@ -244,8 +242,8 @@ function HomePageContent() {
         body: JSON.stringify({
           userId: user.uid,
           fromDate: start.toISOString(),
-          toDate: end.toISOString()
-        })
+          toDate: end.toISOString(),
+        }),
       });
 
       const result = await response.json();
@@ -255,77 +253,56 @@ function HomePageContent() {
       }
 
       setSavedDates(result.data);
-      setSaveStatus("✅ Date selection saved successfully to your guest profile!");
+      setSaveStatus("Saved ✓");
       setTimeout(() => setSaveStatus(null), 3000);
     } catch (err: any) {
-      setSaveStatus(`❌ Error: ${err.message}`);
+      setSaveStatus(`Error`);
     } finally {
       setIsSavingDates(false);
     }
   };
 
+  const handleShareEstimate = () => {
+    if (!latestEstimate) return;
+    const inviteUrl = `${window.location.origin}/i/${latestEstimate.token}`;
+    navigator.clipboard.writeText(inviteUrl);
+    setCopiedEstimateUrl(true);
+    setTimeout(() => setCopiedEstimateUrl(false), 2500);
+  };
+
   const isHourlySaved = !!(savedDates && savedDates.fromDate.split("T")[0] === savedDates.toDate.split("T")[0]);
 
   return (
-    <div className="min-h-screen bg-background text-foreground font-sans selection:bg-teal-500/30 selection:text-teal-200">
+    <div className="min-h-screen bg-background text-foreground font-sans selection:bg-teal-500/30 selection:text-teal-200 pb-20">
       {/* Background gradients */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-30">
         <div className="absolute -top-[40%] -left-[20%] w-[85%] h-[85%] rounded-full bg-emerald-500/5 blur-[130px]" />
         <div className="absolute -bottom-[20%] -right-[10%] w-[70%] h-[75%] rounded-full bg-teal-500/5 blur-[130px]" />
       </div>
 
-      <div className="relative max-w-5xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
-        {/* Intro Header */}
-        <header className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-50/50 dark:bg-white/5 border border-teal-100 dark:border-white/10 text-[10px] font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400 mb-4">
+      <div className="relative max-w-5xl mx-auto px-4 py-10 sm:px-6 lg:px-8 space-y-8">
+        {/* Header */}
+        <header className="text-center space-y-3">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-50/50 dark:bg-white/5 border border-teal-100 dark:border-white/10 text-[10px] font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400">
             <span>✨ Surf Yoga Community</span>
           </div>
           <h1 className="text-4xl sm:text-5xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-teal-950 via-zinc-800 to-zinc-600 dark:from-white dark:via-zinc-200 dark:to-zinc-400">
-            Unique Packages
+            Find Your Retreat
           </h1>
-          <p className="mt-4 text-sm text-teal-900/80 dark:text-zinc-400 max-w-lg mx-auto leading-relaxed">
-            Begin by choosing your stay dates and authenticating. Your selections will be saved dynamically to configure package checkouts.
-          </p>
         </header>
 
-        {/* Payment confirmation banners */}
+        {/* Payment Banners */}
         {paymentStatus && (
-          <div className="w-full max-w-3xl mx-auto mb-8 animate-fade-in">
+          <div className="w-full max-w-3xl mx-auto animate-fade-in">
             {paymentStatus === "success" && (
-              <div className="rounded-3xl border border-emerald-500/30 bg-emerald-500/10 p-6 flex flex-col md:flex-row items-center gap-4 text-center md:text-left">
-                <div className="h-12 w-12 rounded-full bg-emerald-500 flex items-center justify-center text-2xl">
+              <div className="rounded-3xl border border-emerald-500/30 bg-emerald-500/10 p-5 flex items-center gap-4 text-left">
+                <div className="h-10 w-10 rounded-full bg-emerald-500 flex items-center justify-center text-xl text-white shrink-0">
                   ✓
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-white">Payment Received Successfully!</h3>
-                  <p className="text-xs text-zinc-300 mt-1 leading-relaxed">
-                    Stay booking secured for <strong className="text-emerald-400">R {amountPaid}</strong>. The package reservation for <strong>"{packageType}"</strong> has been processed successfully.
-                  </p>
-                </div>
-              </div>
-            )}
-            {paymentStatus === "cancel" && (
-              <div className="rounded-3xl border border-zinc-800 bg-zinc-900/40 p-6 flex flex-col md:flex-row items-center gap-4 text-center md:text-left">
-                <div className="h-12 w-12 rounded-full bg-zinc-800 flex items-center justify-center text-lg">
-                  🗙
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-white">Booking Checkout Cancelled</h3>
-                  <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
-                    You cancelled the checkout session. Your booking for <strong>"{packageType}"</strong> has been discarded. You can retry booking below.
-                  </p>
-                </div>
-              </div>
-            )}
-            {paymentStatus === "failed" && (
-              <div className="rounded-3xl border border-red-500/30 bg-red-500/10 p-6 flex flex-col md:flex-row items-center gap-4 text-center md:text-left">
-                <div className="h-12 w-12 rounded-full bg-red-500 flex items-center justify-center text-lg">
-                  ⚠
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-white">Payment Checkout Failed</h3>
-                  <p className="text-xs text-red-400 mt-1 leading-relaxed">
-                    The payment gateway reported a failed transaction for package <strong>"{packageType}"</strong>. Please try again.
+                  <h3 className="text-sm font-bold text-white">Payment Received!</h3>
+                  <p className="text-xs text-zinc-300 mt-0.5">
+                    Stay booking secured for <strong className="text-emerald-400">R {amountPaid}</strong>.
                   </p>
                 </div>
               </div>
@@ -333,68 +310,109 @@ function HomePageContent() {
           </div>
         )}
 
-        {/* Step 1: Dates Selector */}
-        <div className="w-full max-w-xl mx-auto mb-12 border-b border-teal-100 dark:border-white/5 pb-12">
-          {/* Date Picker Selector */}
-          <div className="rounded-3xl border border-teal-100/80 dark:border-white/10 bg-teal-50/15 dark:bg-white/5 p-6 shadow-xl backdrop-blur-md space-y-4">
-            <div className="flex justify-between items-center w-full border-b border-teal-100/50 dark:border-white/15 pb-2">
-              <h2 className="text-base font-bold text-teal-950 dark:text-white flex items-center gap-2">
-                <span className="text-teal-600 dark:text-teal-400">📅</span> Step 1: Set Stay Dates
-              </h2>
-              {latestEstimate && (
-                <button
-                  onClick={() => {
-                    const inviteUrl = `${window.location.origin}/i/${latestEstimate.token}`;
-                    navigator.clipboard.writeText(inviteUrl);
-                    alert("📋 Invite URL copied to clipboard: " + inviteUrl);
-                  }}
-                  title="Share Estimate Invitation"
-                  className="rounded-full bg-teal-50 dark:bg-white/5 border border-teal-100 dark:border-white/10 p-2 text-teal-600 dark:text-teal-400 hover:bg-teal-500/10 transition-all active:scale-95 flex items-center justify-center"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186l5.57 3.285m-5.57-3.285l5.57-3.285M13.5 18.75a2.25 2.25 0 100-4.5 2.25 2.25 0 000 4.5zM13.5 9.75a2.25 2.25 0 100-4.5 2.25 2.25 0 000 4.5z" />
-                  </svg>
-                </button>
-              )}
-            </div>
-
-             <p className="text-xs text-teal-800/80 dark:text-zinc-400 leading-relaxed">
-              Define check-in and check-out ranges. Dates must be persistent to user profiles before package selection is enabled.
-              <span className="block mt-1 font-medium text-teal-600 dark:text-teal-400">Note: For time-specific (hourly) listings, you can choose custom slots directly on their detail pages.</span>
-            </p>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="mb-1 block text-[10px] text-teal-800/60 dark:text-zinc-500 uppercase tracking-wider font-semibold">Check-in Date</label>
-                <input
-                  type="date"
-                  value={fromDate}
-                  onChange={(e) => {
-                    setFromDate(e.target.value);
-                    if (isHourlySaved && savedDates) {
-                      setToDate(e.target.value);
-                    } else {
-                      const d = new Date(e.target.value);
-                      if (!isNaN(d.getTime())) {
-                        d.setDate(d.getDate() + nights);
-                        setToDate(d.toISOString().split("T")[0]);
-                      }
-                    }
-                  }}
-                  className="w-full rounded-xl border border-teal-150 dark:border-white/10 bg-white dark:bg-black/40 px-3.5 py-2.5 text-sm text-teal-950 dark:text-white focus:border-teal-500 focus:outline-none"
-                />
+        {/* Active Estimate Banner */}
+        {user && latestEstimate && (
+          <div className="w-full max-w-3xl mx-auto rounded-3xl border border-teal-500/30 bg-gradient-to-r from-teal-500/10 via-teal-500/5 to-transparent p-5 shadow-lg backdrop-blur-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className="h-10 w-10 rounded-2xl bg-teal-500 flex items-center justify-center text-lg text-white shrink-0">
+                📌
               </div>
               <div>
-                {isHourlySaved && savedDates ? (
-                  <div>
-                    <label className="mb-1 block text-[10px] text-teal-800/60 dark:text-zinc-500 uppercase tracking-wider font-semibold">Booking Slot</label>
-                    <div className="w-full rounded-xl border border-teal-150 dark:border-white/10 bg-teal-500/5 px-3.5 py-2.5 text-xs font-bold text-teal-600 dark:text-teal-400 flex items-center h-[42px]">
-                      🕒 {new Date(savedDates.fromDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false})} - {new Date(savedDates.toDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false})}
-                    </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-teal-600 dark:text-teal-400">
+                    Latest Active Estimate
+                  </span>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${latestEstimate.paymentStatus === "paid" || latestEstimate.paymentStatus === "success"
+                        ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
+                        : "bg-amber-500/15 border-amber-500/30 text-amber-600 dark:text-amber-400"
+                      }`}
+                  >
+                    {latestEstimate.paymentStatus === "paid" ? "Paid" : "Pending"}
+                  </span>
+                </div>
+                <h3 className="text-base font-black text-teal-950 dark:text-white mt-0.5">
+                  {estimatePropertyTitle || "Llandudno Stay"}{" "}
+                  <span className="text-xs font-normal text-teal-800/80 dark:text-zinc-400">
+                    • R {latestEstimate.total.toLocaleString()}
+                  </span>
+                </h3>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <Link
+                href={`/estimate/${latestEstimate.id}`}
+                className="flex-1 sm:flex-none text-center rounded-xl bg-teal-500 hover:bg-teal-600 px-4 py-2 text-xs font-bold text-white transition-all"
+              >
+                Resume →
+              </Link>
+              <button
+                onClick={handleShareEstimate}
+                className="rounded-xl border border-teal-500/30 bg-white/5 hover:bg-teal-500/10 p-2 text-xs font-bold text-teal-700 dark:text-teal-300 transition-all"
+                title="Share Link"
+              >
+                {copiedEstimateUrl ? "✓ Copied" : "🔗 Share"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Date Search Bar */}
+        <div className="sticky top-4 z-30 w-full max-w-3xl mx-auto">
+          <div className="rounded-2xl border border-teal-200/80 dark:border-white/15 bg-white/90 dark:bg-zinc-900/90 shadow-2xl backdrop-blur-xl p-2 sm:p-2.5 flex flex-col sm:flex-row items-center gap-2">
+            {/* Check-in input */}
+            <div className="flex-1 w-full bg-teal-50/50 dark:bg-white/5 rounded-xl px-3 py-1.5 border border-teal-100/60 dark:border-white/5 h-[42px] flex flex-col justify-center">
+              <label className="block text-[8px] font-black uppercase tracking-wider text-teal-800/60 dark:text-zinc-400 leading-none mb-0.5">
+                Check-in Date
+              </label>
+              <input
+                type="date"
+                value={fromDate}
+                onChange={(e) => {
+                  setFromDate(e.target.value);
+                  if (isHourlySaved && savedDates) {
+                    setToDate(e.target.value);
+                  } else {
+                    const d = new Date(e.target.value);
+                    if (!isNaN(d.getTime())) {
+                      d.setDate(d.getDate() + nights);
+                      setToDate(d.toISOString().split("T")[0]);
+                    }
+                  }
+                }}
+                className="w-full bg-transparent text-xs font-bold text-teal-950 dark:text-white focus:outline-none cursor-pointer leading-tight"
+              />
+            </div>
+
+            {/* Duration or Slot field */}
+            <div className="flex-1 w-full bg-teal-50/50 dark:bg-white/5 rounded-xl px-3 py-1.5 border border-teal-100/60 dark:border-white/5 h-[42px] flex flex-col justify-center">
+              {isHourlySaved && savedDates ? (
+                <>
+                  <label className="block text-[8px] font-black uppercase tracking-wider text-teal-800/60 dark:text-zinc-400 leading-none mb-0.5">
+                    Slot Window
+                  </label>
+                  <div className="text-xs font-bold text-teal-600 dark:text-teal-400 leading-tight">
+                    🕒{" "}
+                    {new Date(savedDates.fromDate).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      hour12: false,
+                    })}{" "}
+                    -{" "}
+                    {new Date(savedDates.toDate).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      hour12: false,
+                    })}
                   </div>
-                ) : (
-                  <div>
-                    <label className="mb-1 block text-[10px] text-teal-800/60 dark:text-zinc-500 uppercase tracking-wider font-semibold">Nights of Stay</label>
+                </>
+              ) : (
+                <>
+                  <label className="block text-[8px] font-black uppercase tracking-wider text-teal-800/60 dark:text-zinc-400 leading-none mb-0.5">
+                    Duration
+                  </label>
+                  <div className="flex items-center gap-1 leading-tight">
                     <input
                       type="number"
                       min="1"
@@ -409,168 +427,164 @@ function HomePageContent() {
                           setToDate(d.toISOString().split("T")[0]);
                         }
                       }}
-                      className="w-full rounded-xl border border-teal-150 dark:border-white/10 bg-white dark:bg-black/40 px-3.5 py-2.5 text-sm text-teal-950 dark:text-white focus:border-teal-500 focus:outline-none"
+                      className="w-10 bg-transparent text-xs font-bold text-teal-950 dark:text-white focus:outline-none"
                     />
+                    <span className="text-xs text-teal-800/70 dark:text-zinc-400 font-medium">Nights</span>
                   </div>
-                )}
-              </div>
-            </div>
-
-            <div className="text-[11px] text-teal-800 dark:text-zinc-400">
-              {isHourlySaved && savedDates ? (
-                <>Selected Date: <strong className="text-teal-950 dark:text-white">{fromDate ? formatDisplayDate(fromDate) : "-"}</strong></>
-              ) : (
-                <>Selected Check-out: <strong className="text-teal-950 dark:text-white">{toDate ? formatDisplayDate(toDate) : "-"}</strong></>
+                </>
               )}
             </div>
 
-            {/* Latest Estimate Display */}
-            {savedDates && latestEstimate && (
-              <div className="mt-4 p-4 rounded-2xl bg-teal-500/5 dark:bg-white/5 border border-teal-500/10 dark:border-white/10 space-y-2.5">
-                <div className="flex justify-between items-center">
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-teal-600 dark:text-teal-400">
-                    📌 Your Latest Estimate
-                  </span>
-                  <span className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full ${latestEstimate.paymentStatus === "paid"
-                    ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                    : "bg-orange-50/50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400"
-                    }`}>
-                    {latestEstimate.paymentStatus}
-                  </span>
-                </div>
-                <div className="text-xs space-y-1">
-                  <p className="font-bold text-teal-950 dark:text-white">
-                    Stay at {estimatePropertyTitle || "Llandudno Stay"}
-                  </p>
-                  <p className="text-teal-800/80 dark:text-zinc-400 text-[11px]">
-                    Dates: {formatDisplayDate(latestEstimate.fromDate)} - {formatDisplayDate(latestEstimate.toDate)}
-                  </p>
-                  <p className="text-teal-800/80 dark:text-zinc-400 text-[11px]">
-                    Total: <strong className="text-teal-600 dark:text-teal-400">R {latestEstimate.total.toLocaleString()}</strong>
-                  </p>
-                </div>
-                <Link
-                  href={`/estimate/${latestEstimate.id}`}
-                  className="mt-2 block w-full text-center rounded-xl bg-teal-550/10 dark:bg-white/5 hover:bg-teal-500/10 py-2 text-xs font-bold text-teal-600 dark:text-teal-400 transition-all border border-teal-500/20"
-                >
-                  View, Share or Pay Estimate →
-                </Link>
-              </div>
-            )}
-
-
-            {saveStatus && (
-              <div className="text-center text-[10px] font-bold text-teal-800 dark:text-zinc-300 bg-teal-50/50 dark:bg-white/5 py-2.5 rounded-xl border border-teal-100 dark:border-white/5 animate-pulse">
-                {saveStatus}
-              </div>
-            )}
-
+            {/* Sync Schedule Button */}
             <button
               onClick={handleSaveDates}
               disabled={isSavingDates || authLoading}
-              className={`w-full rounded-xl py-3 text-center text-xs font-bold text-white transition-all ${!user
-                ? "bg-neutral-800 text-white/35 cursor-not-allowed border border-neutral-700"
-                : "bg-gradient-to-r from-teal-500 to-emerald-500 shadow-md shadow-teal-500/10 hover:brightness-110 active:scale-95"
+              className={`w-full sm:w-auto h-[42px] px-5 rounded-xl text-xs font-extrabold transition-all shrink-0 flex items-center justify-center gap-1.5 ${!user
+                  ? "bg-zinc-800 text-zinc-400 cursor-not-allowed border border-transparent"
+                  : "border-2 border-teal-500/80 bg-teal-500/10 text-teal-700 dark:text-teal-300 hover:bg-teal-500/20 active:scale-95"
                 }`}
             >
-              {!user
-                ? "🔒 Authenticate first to lock dates"
-                : isSavingDates
-                  ? "Saving Date Profile..."
-                  : "Confirm & Save Dates"}
+              {!user ? "🔒 Login to Apply" : isSavingDates ? "Syncing..." : saveStatus ? saveStatus : "Sync Schedule"}
             </button>
           </div>
         </div>
 
-        {/* Step 2: Property Listings Selection */}
-        <div className="space-y-6">
-          <h2 className="text-lg font-black text-center text-teal-950 dark:text-white flex items-center justify-center gap-2">
-            <span>🏡</span> Select Destination Property
-          </h2>
-          <p className="text-xs text-teal-800/80 dark:text-zinc-400 text-center max-w-md mx-auto leading-relaxed">
-            After configuring check-in dates, select a property to view options and book your package.
-          </p>
-
-          {!isLoadingProps && properties.length > 0 && searchParams.get("hostId") && (
-            <div className="max-w-md mx-auto mb-6 rounded-2xl bg-teal-500/10 border border-teal-500/20 px-4 py-2.5 text-[10px] font-bold text-teal-400 flex items-center justify-between">
-              <span>🏠 Viewing properties published by Pro ID: <strong>{searchParams.get("hostId")}</strong></span>
-              <a href="/" className="underline hover:text-white transition-colors">Reset View</a>
-            </div>
-          )}
+        {/* Listings Section */}
+        <div className="space-y-6 pt-4">
+          <div className="flex items-center justify-between max-w-5xl mx-auto px-1">
+            <h2 className="text-lg font-black text-teal-950 dark:text-white flex items-center gap-2">
+              <span>🏡</span> Destination Listings
+            </h2>
+            <span className="text-xs text-teal-800/60 dark:text-zinc-400 font-medium">
+              {properties.length} locations available
+            </span>
+          </div>
 
           {isLoadingProps ? (
-            <div className="flex flex-col items-center py-12 justify-center">
+            <div className="flex items-center py-12 justify-center">
               <div className="h-6 w-6 animate-spin rounded-full border-2 border-t-teal-500 border-teal-150 dark:border-white/10" />
             </div>
           ) : properties.length === 0 ? (
-            <div className="text-center py-10 rounded-3xl border border-teal-100 dark:border-white/5 bg-teal-50/15 dark:bg-white/5 text-teal-855/60 dark:text-zinc-500 text-xs">
+            <div className="text-center py-10 rounded-3xl border border-teal-100 dark:border-white/5 bg-teal-50/15 dark:bg-white/5 text-teal-850 dark:text-zinc-500 text-xs">
               No destination properties available.
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {properties.map((p) => {
-                const datesLocked = !!savedDates;
+                const isHourly = p.bookingType === "hourly";
                 return (
                   <div
                     key={p.id}
-                    className="group rounded-3xl border border-teal-100/60 dark:border-white/5 bg-teal-55/15 dark:bg-white/5 p-6 hover:border-teal-200 dark:hover:border-white/10 hover:bg-teal-55/30 dark:hover:bg-white/10 transition-all flex flex-col justify-between"
+                    className="group relative rounded-3xl border border-teal-100/80 dark:border-white/10 bg-white dark:bg-zinc-900/80 p-5 hover:border-teal-400 dark:hover:border-teal-500/50 hover:shadow-2xl transition-all duration-300 flex flex-col justify-between overflow-hidden cursor-pointer"
                   >
+                    {/* Full Card Overlay Link */}
+                    <Link href={`/posts/${p.slug}`} className="absolute inset-0 z-10" aria-label={p.title} />
+
                     <div>
-                      {p.images && p.images.length > 0 && (
-                        <div className="relative aspect-video rounded-2xl overflow-hidden mb-4 border border-teal-100/40 dark:border-white/5 bg-zinc-950">
+                      {/* Image Banner with Title Overlay */}
+                      <div className="relative aspect-video rounded-2xl overflow-hidden mb-4 border border-teal-100/40 dark:border-white/5 bg-zinc-950">
+                        {p.images && p.images.length > 0 ? (
                           <img
                             src={p.images[0]}
                             alt={p.title}
                             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                           />
-                        </div>
-                      )}
-                      <span className="inline-block rounded-md bg-teal-500/10 px-2.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-teal-600 dark:text-teal-400">
-                        {p.bookingType === "hourly" ? "Hourly Slot Listing" : "Stay Listing"}
-                      </span>
-                      <h3 className="text-lg font-extrabold text-teal-950 dark:text-white mt-2 group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">
-                        {p.title}
-                      </h3>
-                      <p className="text-[10px] font-mono text-teal-800/60 dark:text-zinc-500 mt-0.5">slug: {p.slug}</p>
+                        ) : (
+                          <div className="w-full h-full bg-zinc-800 flex items-center justify-center text-zinc-500 text-xs font-medium">
+                            No image preview
+                          </div>
+                        )}
 
-                      {datesLocked && savedDates && (
-                        <div className="mt-4 rounded-xl bg-teal-55/5 dark:bg-teal-500/5 border border-teal-100 dark:border-teal-500/10 p-3 text-[11px] text-teal-855 dark:text-teal-300">
-                          {p.bookingType === "hourly" ? (
-                            <>
-                              {savedDates.fromDate.split("T")[0] === savedDates.toDate.split("T")[0] ? (
-                                <>
-                                  📅 Selected Slot: <strong className="text-teal-950 dark:text-white">{formatDisplayDate(savedDates.fromDate)}</strong>
-                                  <span className="block text-[10px] text-zinc-400 mt-0.5">
-                                    🕒 {new Date(savedDates.fromDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false})} - {new Date(savedDates.toDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false})}
-                                  </span>
-                                </>
-                              ) : (
-                                <>📅 Selected Date: <strong className="text-teal-950 dark:text-white">{formatDisplayDate(savedDates.fromDate)}</strong> <span className="text-[10px] text-zinc-400">(Select Slot)</span></>
-                              )}
-                            </>
-                          ) : (
-                            <>📅 Selected: <strong className="text-teal-950 dark:text-white">{formatDisplayDate(savedDates.fromDate)}</strong> to <strong className="text-teal-950 dark:text-white">{formatDisplayDate(savedDates.toDate)}</strong></>
+                        {/* Top Badge */}
+                        <span className="absolute top-3 left-3 rounded-full bg-black/60 backdrop-blur-md border border-white/20 px-2.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-white z-0">
+                          {isHourly ? "Hourly Slot" : "Nightly Stay"}
+                        </span>
+
+                        {/* Bottom Gradient Overlay for Title */}
+                        <div className="absolute inset-x-0 bottom-0 pt-12 pb-3 px-4 bg-gradient-to-t from-black/85 via-black/40 to-transparent flex flex-col justify-end">
+                          <h3 className="text-lg font-black text-white group-hover:text-teal-300 transition-colors drop-shadow-sm">
+                            {p.title}
+                          </h3>
+                          <p className="text-[10px] font-mono text-zinc-300/80">
+                            slug: {p.slug}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Integrated Date/Slot Schedule Display */}
+                      <div className="mt-2 rounded-2xl bg-teal-50/60 dark:bg-teal-500/10 border border-teal-100 dark:border-teal-500/20 p-3 space-y-1.5">
+                        <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-wider text-teal-700 dark:text-teal-400">
+                          <span>{isHourly ? "⏰ Applied Slot" : "🗓️ Schedule Window"}</span>
+                          {savedDates && !isHourly && (
+                            <span className="bg-teal-500/15 px-2 py-0.5 rounded-full border border-teal-500/20">
+                              {nights} Night{nights > 1 ? "s" : ""}
+                            </span>
                           )}
                         </div>
-                      )}
+
+                        {savedDates ? (
+                          isHourly ? (
+                            <div className="flex items-center justify-between text-xs font-mono bg-white dark:bg-black/40 px-3 py-1.5 rounded-xl border border-teal-100/80 dark:border-white/5">
+                              <span className="font-bold text-teal-950 dark:text-white">
+                                {formatDisplayDate(savedDates.fromDate)}
+                              </span>
+                              <span className="bg-teal-500/10 text-teal-600 dark:text-teal-300 font-extrabold px-2 py-0.5 rounded-md border border-teal-500/20 text-[10px]">
+                                🕒{" "}
+                                {new Date(savedDates.fromDate).toLocaleTimeString([], {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                  hour12: false,
+                                })}{" "}
+                                -{" "}
+                                {new Date(savedDates.toDate).toLocaleTimeString([], {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                  hour12: false,
+                                })}
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                              <div className="bg-white dark:bg-black/40 px-3 py-1.5 rounded-xl border border-teal-100/80 dark:border-white/5">
+                                <span className="text-[8px] text-teal-800/60 dark:text-zinc-500 font-bold block uppercase">
+                                  Check-In
+                                </span>
+                                <span className="font-extrabold text-teal-950 dark:text-white">
+                                  {formatDisplayDate(savedDates.fromDate)}
+                                </span>
+                              </div>
+                              <div className="bg-white dark:bg-black/40 px-3 py-1.5 rounded-xl border border-teal-100/80 dark:border-white/5">
+                                <span className="text-[8px] text-teal-800/60 dark:text-zinc-500 font-bold block uppercase">
+                                  Check-Out
+                                </span>
+                                <span className="font-extrabold text-teal-950 dark:text-white">
+                                  {formatDisplayDate(savedDates.toDate)}
+                                </span>
+                              </div>
+                            </div>
+                          )
+                        ) : (
+                          <div className="text-xs text-teal-800/60 dark:text-zinc-400 font-medium italic">
+                            Sync dates above to configure pricing.
+                          </div>
+                        )}
+                      </div>
                     </div>
 
-                    <div className="mt-6 border-t border-teal-100 dark:border-white/5 pt-4 flex items-center justify-between">
+                    {/* Bottom Action Area */}
+                    <div className="mt-5 border-t border-teal-100/60 dark:border-white/5 pt-3.5 flex items-center justify-between">
                       <div>
-                        <span className="text-[10px] text-teal-800/60 dark:text-zinc-500 block uppercase">
-                          {p.bookingType === "hourly" ? "Hourly Slot Price" : "Nightly Cost"}
+                        <span className="text-[9px] text-teal-800/60 dark:text-zinc-500 block uppercase font-bold">
+                          {isHourly ? "Hourly Rate" : "Nightly Rate"}
                         </span>
                         <span className="text-base font-black text-teal-600 dark:text-teal-400">
-                          {`R ${p.basePricePerNight.toLocaleString()}${p.bookingType === "hourly" ? "/slot" : ""}`}
+                          {`R ${p.basePricePerNight.toLocaleString()}${isHourly ? "/slot" : "/night"}`}
                         </span>
                       </div>
 
-                      <Link
-                        href={`/posts/${p.slug}`}
-                        className="rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 px-4 py-2.5 text-xs font-bold text-white hover:brightness-110 active:scale-95 transition-all shadow-md shadow-teal-500/10"
-                      >
+                      <span className="relative z-20 pointer-events-none rounded-xl bg-teal-500 group-hover:bg-teal-600 px-4 py-2 text-xs font-extrabold text-white transition-all shadow-md shadow-teal-500/20">
                         View Details →
-                      </Link>
+                      </span>
                     </div>
                   </div>
                 );
@@ -585,11 +599,13 @@ function HomePageContent() {
 
 export default function HomePage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-t-teal-500 border-teal-150 dark:border-white/10" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-t-teal-500 border-teal-150 dark:border-white/10" />
+        </div>
+      }
+    >
       <AuthProvider>
         <HomePageContent />
       </AuthProvider>
