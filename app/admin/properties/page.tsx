@@ -19,38 +19,10 @@ interface Property {
   location?: string;
 }
 
-interface UploadingFile {
-  id: string;
-  name: string;
-  progress: number;
-}
-
 export default function AdminPropertiesPage() {
   const { user, loading } = useAuth();
   const [properties, setProperties] = useState<Property[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [statusMessage, setStatusMessage] = useState<{
-    type: "success" | "error";
-    text: string;
-  } | null>(null);
-
-  // Form visibility state (hidden by default)
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingPropertyId, setEditingPropertyId] = useState<string | null>(null);
-
-  // Form Fields
-  const [title, setTitle] = useState("");
-  const [slug, setSlug] = useState("");
-  const [location, setLocation] = useState("");
-  const [basePrice, setBasePrice] = useState("");
-  const [airbnbCalendarUrl, setAirbnbCalendarUrl] = useState("");
-  const [googleCalendarUrl, setGoogleCalendarUrl] = useState("");
-  const [description, setDescription] = useState("");
-  const [images, setImages] = useState<string[]>([]);
-  const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
-  const [bookingType, setBookingType] = useState<"nightly" | "hourly">("nightly");
-  const [slots, setSlots] = useState<string[]>(["10:00", "14:00"]);
 
   const fetchProperties = useCallback(async () => {
     if (!user) return;
@@ -73,217 +45,7 @@ export default function AdminPropertiesPage() {
     }
   }, [user, fetchProperties]);
 
-  // Auto-generate slug from title
-  const handleTitleChange = (val: string) => {
-    setTitle(val);
-    if (!editingPropertyId) {
-      setSlug(
-        val
-          .toLowerCase()
-          .replace(/[^\w\s-]/g, "")
-          .replace(/\s+/g, "-")
-          .replace(/--+/g, "-")
-          .trim()
-      );
-    }
-  };
-
-  const resetForm = () => {
-    setEditingPropertyId(null);
-    setTitle("");
-    setSlug("");
-    setLocation("");
-    setBasePrice("");
-    setAirbnbCalendarUrl("");
-    setGoogleCalendarUrl("");
-    setDescription("");
-    setImages([]);
-    setBookingType("nightly");
-    setSlots(["10:00", "14:00"]);
-    setStatusMessage(null);
-  };
-
-  const closeForm = () => {
-    resetForm();
-    setIsFormOpen(false);
-  };
-
-  const startEditProperty = (p: Property) => {
-    setEditingPropertyId(p.id);
-    setTitle(p.title);
-    setSlug(p.slug);
-    setLocation(p.location || "");
-    setBasePrice(String(p.basePricePerNight));
-    setAirbnbCalendarUrl(p.airbnbCalendarUrl || "");
-    setGoogleCalendarUrl(p.googleCalendarUrl || "");
-    setDescription(p.description || "");
-    setImages(p.images || []);
-    setBookingType((p.bookingType as "nightly" | "hourly") || "nightly");
-    setSlots(p.slots || ["10:00", "14:00"]);
-    setStatusMessage(null);
-    setIsFormOpen(true);
-  };
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0 || !user) return;
-
-    const fileList = Array.from(files);
-
-    for (const file of fileList) {
-      const uploadId = `${file.name}-${Date.now()}`;
-
-      setUploadingFiles((prev) => [
-        ...prev,
-        { id: uploadId, name: file.name, progress: 10 },
-      ]);
-
-      try {
-        const presignRes = await fetch("/api/media/presign", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            hostId: user.uid,
-            filename: file.name,
-            contentType: file.type,
-            propertyId: slug || "draft",
-          }),
-        });
-
-        if (!presignRes.ok) throw new Error("Failed to get presigned URL");
-        const { presignedUrl, publicUrl } = await presignRes.json();
-
-        setUploadingFiles((prev) =>
-          prev.map((item) =>
-            item.id === uploadId ? { ...item, progress: 50 } : item
-          )
-        );
-
-        const uploadRes = await fetch(presignedUrl, {
-          method: "PUT",
-          headers: { "Content-Type": file.type },
-          body: file,
-        });
-
-        if (!uploadRes.ok) throw new Error("Failed to upload image file");
-
-        setImages((prev) => [...prev, publicUrl]);
-      } catch (err: unknown) {
-        const errorMessage = err instanceof Error ? err.message : "Upload error";
-        console.error("Upload failed for file:", file.name, err);
-        setStatusMessage({
-          type: "error",
-          text: `Upload failed for ${file.name}: ${errorMessage}`,
-        });
-      } finally {
-        setUploadingFiles((prev) => prev.filter((item) => item.id !== uploadId));
-      }
-    }
-
-    e.target.value = "";
-  };
-
-  const handleRemoveImage = (url: string) => {
-    setImages((prev) => prev.filter((img) => img !== url));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title || !slug || !basePrice) {
-      setStatusMessage({ type: "error", text: "Please fill in all required fields." });
-      return;
-    }
-
-    setIsSubmitting(true);
-    setStatusMessage(null);
-
-    try {
-      const response = await fetch("/api/posts", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-user-id": user?.uid || "",
-          "x-user-email": user?.email || "",
-        },
-        body: JSON.stringify({
-          id: editingPropertyId || undefined,
-          title,
-          name: title,
-          slug,
-          basePricePerNight: Number(basePrice),
-          airbnbCalendarUrl,
-          googleCalendarUrl,
-          description,
-          images,
-          hostId: user?.uid,
-          bookingType,
-          slots: bookingType === "hourly" ? slots : [],
-          location,
-        }),
-      });
-
-      const resJson = await response.json();
-
-      if (!response.ok || !resJson.success) {
-        throw new Error(resJson.error || resJson.data || "Failed to save property.");
-      }
-
-      setStatusMessage({
-        type: "success",
-        text: editingPropertyId
-          ? "Property updated successfully!"
-          : "Property created successfully!",
-      });
-
-      closeForm();
-      fetchProperties();
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : "An error occurred.";
-      setStatusMessage({ type: "error", text: errorMessage });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleDeleteProperty = async () => {
-    if (!editingPropertyId) return;
-    if (!window.confirm("Are you sure you want to delete this property? All associated packages will also be deleted.")) {
-      return;
-    }
-
-    setIsSubmitting(true);
-    setStatusMessage(null);
-
-    try {
-      const response = await fetch(`/api/posts/${editingPropertyId}`, {
-        method: "DELETE",
-        headers: {
-          "x-user-id": user?.uid || "",
-          "x-user-email": user?.email || "",
-        },
-      });
-
-      const resJson = await response.json();
-      if (!response.ok || !resJson.success) {
-        throw new Error(resJson.error || "Failed to delete property.");
-      }
-
-      setStatusMessage({
-        type: "success",
-        text: "Property deleted successfully!",
-      });
-
-      closeForm();
-      fetchProperties();
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : "An error occurred.";
-      setStatusMessage({ type: "error", text: errorMessage });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  if (loading) {
+  if (loading || isLoading) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-white flex items-center justify-center">
         <div className="h-6 w-6 animate-spin rounded-full border-2 border-t-teal-500 border-teal-500/20" />
@@ -345,424 +107,104 @@ export default function AdminPropertiesPage() {
             </Link>
           </nav>
           
-          <button
-            onClick={() => {
-              resetForm();
-              setIsFormOpen(true);
-            }}
+          <Link
+            href="/admin/properties/new"
             className="sm:mb-2 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 px-4 py-2 text-xs font-bold text-white hover:brightness-110 shadow-md shadow-teal-500/10 transition-all flex items-center gap-1.5 shrink-0"
           >
             <span>✙</span> New Property
-          </button>
+          </Link>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {properties.length === 0 ? (
+          <div className="text-center py-20 rounded-3xl border border-slate-200 dark:border-white/5 bg-white dark:bg-white/5 p-6 shadow-sm max-w-lg mx-auto">
+            <span className="text-4xl block mb-3">🏡</span>
+            <p className="text-sm text-slate-500 dark:text-zinc-400 mb-4">
+              No properties published yet. Create one to get started.
+            </p>
+            <Link
+              href="/admin/properties/new"
+              className="inline-flex rounded-xl bg-teal-500 px-5 py-2.5 text-xs font-bold text-white hover:bg-teal-650 transition-all"
+            >
+              ✙ Create First Property
+            </Link>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {properties.map((p) => (
+              <div
+                key={p.id}
+                className="rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 overflow-hidden flex flex-col justify-between shadow-sm hover:shadow-md hover:border-slate-350 dark:hover:border-white/20 transition-all duration-200"
+              >
+                {/* Card Top Image */}
+                <div className="relative aspect-video w-full bg-slate-200 dark:bg-zinc-900 border-b border-slate-200 dark:border-white/5">
+                  {p.images && p.images.length > 0 ? (
+                    <Image
+                      src={p.images[0]}
+                      alt={p.title}
+                      fill
+                      unoptimized
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 dark:text-zinc-650 gap-1.5">
+                      <span className="text-3xl">📷</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider">No Imagery Uploaded</span>
+                    </div>
+                  )}
+                </div>
 
-          {/* LEFT COLUMN: LISTINGS SIDEBAR */}
-          <div className="lg:col-span-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-black uppercase tracking-wider text-slate-900 dark:text-zinc-300 flex items-center gap-2">
-                <span>🏢</span> Published Listings ({properties.length})
-              </h2>
-            </div>
-
-            {isLoading ? (
-              <div className="flex flex-col items-center py-12 justify-center">
-                <div className="h-6 w-6 animate-spin rounded-full border-2 border-t-teal-500 border-teal-500/20" />
-              </div>
-            ) : properties.length === 0 ? (
-              <div className="text-center py-12 rounded-3xl border border-slate-200 dark:border-white/5 bg-white dark:bg-white/5 p-6 shadow-sm">
-                <p className="text-xs text-slate-500 dark:text-zinc-400 mb-4">
-                  No properties published yet. Create one to get started.
-                </p>
-                <button
-                  onClick={() => {
-                    resetForm();
-                    setIsFormOpen(true);
-                  }}
-                  className="inline-flex rounded-xl bg-teal-500 px-4 py-2 text-xs font-bold text-white hover:bg-teal-600 transition-all"
-                >
-                  ✙ Create First Property
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-3 max-h-[750px] overflow-y-auto pr-1">
-                {properties.map((p) => (
-                  <div
-                    key={p.id}
-                    className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 p-4 transition-all flex flex-col gap-3 shadow-sm hover:border-slate-300 dark:hover:border-white/20"
-                  >
-                    <div className="flex items-center gap-3">
-                      {p.images && p.images.length > 0 ? (
-                        <div className="relative w-12 h-12 rounded-xl overflow-hidden border border-slate-200 dark:border-white/10 shrink-0 bg-slate-100 dark:bg-zinc-900">
-                          <Image
-                            src={p.images[0]}
-                            alt={p.title}
-                            fill
-                            unoptimized
-                            className="object-cover"
-                          />
-                        </div>
-                      ) : (
-                        <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-white/10 flex items-center justify-center text-xs text-slate-400 dark:text-zinc-600 shrink-0">
-                          📷
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                {/* Card Content Body */}
+                <div className="p-5 flex-grow flex flex-col justify-between gap-4">
+                  <div className="space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <h3 className="text-sm font-extrabold text-slate-900 dark:text-white truncate">
                           {p.title}
                         </h3>
                         {p.location && (
-                          <span className="text-[11px] text-teal-600 dark:text-teal-400 block font-semibold truncate">
+                          <span className="text-[10px] font-bold text-teal-600 dark:text-teal-400 block mt-0.5">
                             {p.location}
                           </span>
                         )}
-                        <span className="text-[10px] text-slate-500 dark:text-zinc-500 block font-mono truncate">
-                          id: {p.id} | slug: {p.slug}
-                        </span>
                       </div>
                       <div className="text-right shrink-0">
-                        <span className="text-[9px] text-slate-500 dark:text-zinc-500 uppercase font-bold block">
-                          {p.bookingType === "hourly" ? "Rate/Hr" : "Rate/Night"}
+                        <span className="text-[8px] text-slate-500 dark:text-zinc-500 uppercase font-black block leading-none">
+                          {p.bookingType === "hourly" ? "Rate/Hour" : "Rate/Night"}
                         </span>
-                        <p className="text-xs font-black text-teal-600 dark:text-teal-400">
+                        <span className="text-sm font-black text-teal-650 dark:text-teal-400">
                           R {p.basePricePerNight.toLocaleString()}
-                        </p>
+                        </span>
                       </div>
                     </div>
 
-                    {p.description && (
-                      <p className="text-[11px] text-slate-600 dark:text-zinc-400 line-clamp-2 leading-relaxed italic border-t border-slate-100 dark:border-white/5 pt-2">
+                    {p.description ? (
+                      <p className="text-[11px] text-slate-550 dark:text-zinc-400 line-clamp-3 leading-relaxed">
                         {p.description}
                       </p>
-                    )}
-
-                    <div className="flex items-center justify-between border-t border-slate-100 dark:border-white/5 pt-2">
-                      <span className="text-[9px] text-slate-500 dark:text-zinc-500 uppercase tracking-wider font-bold">
-                        {p.bookingType === "hourly" ? "🕒 Short bookings" : "🌙 Long booking"}
-                      </span>
-                      <button
-                        onClick={() => startEditProperty(p)}
-                        className="rounded-lg bg-teal-500/10 border border-teal-500/20 px-2.5 py-1 text-[10px] font-bold text-teal-600 dark:text-teal-400 hover:bg-teal-500 hover:text-white transition-all active:scale-95"
-                      >
-                        Edit Config →
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* RIGHT COLUMN: HIDDEN / EXPANDABLE FORM & DASHBOARD CONTENT */}
-          <div className="lg:col-span-7 space-y-6">
-
-            {/* Banner when Form is Closed */}
-            {!isFormOpen && (
-              <div className="rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 p-8 text-center shadow-sm backdrop-blur-md space-y-4">
-                <span className="text-3xl block">🏡</span>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                  Property Configuration Center
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-zinc-400 max-w-md mx-auto leading-relaxed">
-                  Select any listing from the left sidebar to edit its details, or click below to publish a brand new stay.
-                </p>
-                <button
-                  onClick={() => {
-                    resetForm();
-                    setIsFormOpen(true);
-                  }}
-                  className="inline-flex rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 px-5 py-2.5 text-xs font-bold text-white hover:brightness-110 shadow-md shadow-teal-500/10 transition-all gap-1.5"
-                >
-                  <span>✙</span> Create New Property
-                </button>
-              </div>
-            )}
-
-            {/* Collapsible Form */}
-            {isFormOpen && (
-              <div className="rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 p-6 shadow-xl backdrop-blur-md space-y-5 transition-all">
-                <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/10 pb-4">
-                  <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <span>{editingPropertyId ? "✎" : "✙"}</span>
-                    {editingPropertyId ? "Update Property Details" : "Create New Property"}
-                  </h2>
-                  <button
-                    onClick={closeForm}
-                    className="text-xs text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white font-bold transition-colors bg-slate-100 dark:bg-white/5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-white/10"
-                  >
-                    ✕ Close / Cancel
-                  </button>
-                </div>
-
-                {statusMessage && (
-                  <div
-                    className={`rounded-xl border p-3.5 text-center text-xs font-bold ${statusMessage.type === "success"
-                        ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                        : "border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400"
-                      }`}
-                  >
-                    {statusMessage.text}
-                  </div>
-                )}
-
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div>
-                    <label className="mb-1 block text-xs text-slate-500 dark:text-zinc-400 font-semibold uppercase tracking-wider">
-                      Property Title *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Llandudno Cliffside Shack"
-                      value={title}
-                      onChange={(e) => handleTitleChange(e.target.value)}
-                      className="w-full rounded-xl border border-slate-300 dark:border-white/10 bg-slate-100 dark:bg-black/40 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:border-teal-500 focus:outline-none placeholder:text-slate-400 dark:placeholder:text-zinc-600"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-xs text-slate-500 dark:text-zinc-400 font-semibold uppercase tracking-wider">
-                      Slug (Auto-generated) *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. llandudno-cliffside-shack"
-                      value={slug}
-                      onChange={(e) => setSlug(e.target.value)}
-                      className="w-full rounded-xl border border-slate-300 dark:border-white/10 bg-slate-100 dark:bg-black/40 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white/60 focus:border-teal-500 focus:outline-none placeholder:text-slate-400 dark:placeholder:text-zinc-600"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-xs text-slate-500 dark:text-zinc-400 font-semibold uppercase tracking-wider">
-                      Location
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 🏖 Llandudno, Cape Town"
-                      value={location}
-                      onChange={(e) => setLocation(e.target.value)}
-                      className="w-full rounded-xl border border-slate-300 dark:border-white/10 bg-slate-100 dark:bg-black/40 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:border-teal-500 focus:outline-none placeholder:text-slate-400 dark:placeholder:text-zinc-600"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-xs text-slate-500 dark:text-zinc-400 font-semibold uppercase tracking-wider">
-                      {bookingType === "hourly" ? "Base Price Per Hour (ZAR) *" : "Base Price Per Night (ZAR) *"}
-                    </label>
-                    <input
-                      type="number"
-                      required
-                      placeholder={bookingType === "hourly" ? "e.g. 250" : "e.g. 1500"}
-                      value={basePrice}
-                      onChange={(e) => setBasePrice(e.target.value)}
-                      className="w-full rounded-xl border border-slate-300 dark:border-white/10 bg-slate-100 dark:bg-black/40 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:border-teal-500 focus:outline-none placeholder:text-slate-400 dark:placeholder:text-zinc-600"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-xs text-slate-500 dark:text-zinc-400 font-semibold uppercase tracking-wider">
-                      Booking Type
-                    </label>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setBookingType("nightly")}
-                        className={`flex-1 rounded-xl py-2.5 text-xs font-bold transition-all border ${bookingType === "nightly"
-                            ? "bg-teal-500/10 border-teal-500 text-teal-600 dark:text-teal-400"
-                            : "bg-slate-100 dark:bg-black/40 border-slate-200 dark:border-white/10 text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white"
-                          }`}
-                      >
-                        🌙 Long booking
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setBookingType("hourly")}
-                        className={`flex-1 rounded-xl py-2.5 text-xs font-bold transition-all border ${bookingType === "hourly"
-                            ? "bg-teal-500/10 border-teal-500 text-teal-600 dark:text-teal-400"
-                            : "bg-slate-100 dark:bg-black/40 border-slate-200 dark:border-white/10 text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white"
-                          }`}
-                      >
-                        🕒 Short bookings
-                      </button>
-                    </div>
-                  </div>
-
-                  {bookingType === "hourly" && (
-                    <div>
-                      <label className="mb-2 block text-xs text-slate-500 dark:text-zinc-400 font-semibold uppercase tracking-wider">
-                        Available Time Slots
-                      </label>
-                      <div className="grid grid-cols-3 gap-2 bg-slate-100 dark:bg-black/20 border border-slate-200 dark:border-white/10 p-3 rounded-xl">
-                        {["08:00", "10:00", "12:00", "14:00", "16:00", "18:00"].map((slotTime) => {
-                          const isSelected = slots.includes(slotTime);
-                          const toggleSlot = () => {
-                            if (isSelected) {
-                              setSlots((prev) => prev.filter((s) => s !== slotTime));
-                            } else {
-                              setSlots((prev) => [...prev, slotTime].sort());
-                            }
-                          };
-                          const [h, m] = slotTime.split(":");
-                          const hourNum = parseInt(h, 10);
-                          const ampm = hourNum >= 12 ? "PM" : "AM";
-                          const displayHour = hourNum % 12 === 0 ? 12 : hourNum % 12;
-                          const label = `${displayHour}:${m} ${ampm}`;
-
-                          return (
-                            <button
-                              key={slotTime}
-                              type="button"
-                              onClick={toggleSlot}
-                              className={`rounded-lg py-1.5 px-2 text-[10px] font-bold border transition-all ${isSelected
-                                  ? "bg-teal-500/10 border-teal-500 text-teal-600 dark:text-teal-400"
-                                  : "bg-white dark:bg-zinc-900 border-slate-200 dark:border-white/5 text-slate-500 dark:text-zinc-500 hover:text-slate-800 dark:hover:text-zinc-300"
-                                }`}
-                            >
-                              {label}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  <div>
-                    <label className="mb-1 block text-xs text-slate-500 dark:text-zinc-400 font-semibold uppercase tracking-wider">
-                      Description / About Stay
-                    </label>
-                    <textarea
-                      placeholder="Describe your stay, amenities, views, scenery..."
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      rows={3}
-                      className="w-full rounded-xl border border-slate-300 dark:border-white/10 bg-slate-100 dark:bg-black/40 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:border-teal-500 focus:outline-none placeholder:text-slate-400 dark:placeholder:text-zinc-600 resize-y"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-xs text-slate-500 dark:text-zinc-400 font-semibold uppercase tracking-wider">
-                      High-Resolution Imagery
-                    </label>
-                    <div className="relative group border-2 border-dashed border-slate-300 dark:border-white/10 rounded-2xl p-6 hover:border-teal-500/50 bg-slate-50 dark:bg-black/20 hover:bg-slate-100/50 dark:hover:bg-black/40 transition-all cursor-pointer text-center">
-                      <input
-                        type="file"
-                        multiple
-                        accept="image/*"
-                        onChange={handleFileUpload}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                      />
-                      <div className="space-y-1">
-                        <span className="text-2xl block">📸</span>
-                        <span className="text-xs font-bold text-slate-700 dark:text-zinc-300 block">
-                          Drag & drop files or click to upload
-                        </span>
-                        <span className="text-[10px] text-slate-500 dark:text-zinc-500 block">
-                          PNG, JPG, WEBP up to 10MB
-                        </span>
-                      </div>
-                    </div>
-
-                    {uploadingFiles.length > 0 && (
-                      <div className="mt-3 space-y-2">
-                        {uploadingFiles.map((file) => (
-                          <div
-                            key={file.id}
-                            className="flex items-center justify-between text-xs bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/5 rounded-lg p-2 font-mono"
-                          >
-                            <span className="truncate max-w-[180px]">{file.name}</span>
-                            <span className="text-teal-600 dark:text-teal-400 font-bold">{file.progress}%</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {images.length > 0 && (
-                      <div className="grid grid-cols-4 gap-2 mt-3.5">
-                        {images.map((url, index) => (
-                          <div
-                            key={index}
-                            className="group relative aspect-square rounded-xl overflow-hidden border border-slate-200 dark:border-white/10 bg-slate-200 dark:bg-zinc-900"
-                          >
-                            <Image
-                              src={url}
-                              alt={`Upload ${index}`}
-                              fill
-                              unoptimized
-                              className="object-cover"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveImage(url)}
-                              className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 text-[8px] leading-none opacity-0 group-hover:opacity-100 transition-opacity active:scale-95 shadow-md shadow-black/20 z-10"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        ))}
-                      </div>
+                    ) : (
+                      <p className="text-[11px] text-slate-400 dark:text-zinc-600 italic">
+                        No description specified for this property listing.
+                      </p>
                     )}
                   </div>
 
-                  <div>
-                    <label className="mb-1 block text-xs text-slate-500 dark:text-zinc-400 font-semibold uppercase tracking-wider">
-                      Airbnb iCal URL (Optional)
-                    </label>
-                    <input
-                      type="url"
-                      placeholder="https://www.airbnb.co.za/calendar/ical/..."
-                      value={airbnbCalendarUrl}
-                      onChange={(e) => setAirbnbCalendarUrl(e.target.value)}
-                      className="w-full rounded-xl border border-slate-300 dark:border-white/10 bg-slate-100 dark:bg-black/40 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:border-teal-500 focus:outline-none placeholder:text-slate-400 dark:placeholder:text-zinc-600 text-xs"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-xs text-slate-500 dark:text-zinc-400 font-semibold uppercase tracking-wider">
-                      Google Calendar iCal URL (Optional)
-                    </label>
-                    <input
-                      type="url"
-                      placeholder="https://calendar.google.com/calendar/ical/..."
-                      value={googleCalendarUrl}
-                      onChange={(e) => setGoogleCalendarUrl(e.target.value)}
-                      className="w-full rounded-xl border border-slate-300 dark:border-white/10 bg-slate-100 dark:bg-black/40 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:border-teal-500 focus:outline-none placeholder:text-slate-400 dark:placeholder:text-zinc-600 text-xs"
-                    />
-                  </div>
-
-                  <div className="flex gap-4 pt-2">
-                    <button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="flex-grow rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 py-3 text-center text-xs font-bold text-white shadow-lg shadow-teal-500/20 hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
+                  {/* Card Footer Actions */}
+                  <div className="flex items-center justify-between border-t border-slate-100 dark:border-white/5 pt-4">
+                    <span className="rounded bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 px-2 py-0.5 text-[8px] text-slate-600 dark:text-zinc-400 font-bold uppercase tracking-wider">
+                      {p.bookingType === "hourly" ? "🕒 Short bookings" : "🌙 Long booking"}
+                    </span>
+                    <Link
+                      href={`/admin/properties/${p.id}`}
+                      className="rounded-lg bg-teal-500/10 border border-teal-500/20 px-3 py-1.5 text-[10px] font-bold text-teal-600 dark:text-teal-400 hover:bg-teal-500 hover:text-white transition-all active:scale-95 shadow-sm"
                     >
-                      {isSubmitting
-                        ? editingPropertyId
-                          ? "Saving changes..."
-                          : "Creating property..."
-                        : editingPropertyId
-                          ? "Save Property Changes"
-                          : "Publish Property"}
-                    </button>
-                    {editingPropertyId && (
-                      <button
-                        type="button"
-                        onClick={handleDeleteProperty}
-                        disabled={isSubmitting}
-                        className="rounded-xl bg-red-500/10 border border-red-500/20 px-5 py-3 text-center text-xs font-bold text-red-650 dark:text-red-400 hover:bg-red-500 hover:text-white transition-all active:scale-95 disabled:opacity-50"
-                      >
-                        Delete
-                      </button>
-                    )}
+                      Edit Config →
+                    </Link>
                   </div>
-                </form>
+                </div>
               </div>
-            )}
-
+            ))}
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

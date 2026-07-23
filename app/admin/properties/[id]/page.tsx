@@ -24,6 +24,8 @@ function EditPropertyContent({ id }: { id: string }) {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
 
+  const isNew = id === "new";
+
   const [property, setProperty] = useState<Property | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -44,6 +46,10 @@ function EditPropertyContent({ id }: { id: string }) {
 
   useEffect(() => {
     const fetchProperty = async () => {
+      if (isNew) {
+        setIsLoading(false);
+        return;
+      }
       try {
         const res = await fetch(`/api/posts/${id}`);
         const result = await res.json();
@@ -71,7 +77,21 @@ function EditPropertyContent({ id }: { id: string }) {
     };
 
     fetchProperty();
-  }, [id]);
+  }, [id, isNew]);
+
+  const handleTitleChange = (val: string) => {
+    setTitle(val);
+    if (isNew) {
+      setSlug(
+        val
+          .toLowerCase()
+          .replace(/[^\w\s-]/g, "")
+          .replace(/\s+/g, "-")
+          .replace(/--+/g, "-")
+          .trim()
+      );
+    }
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -93,7 +113,7 @@ function EditPropertyContent({ id }: { id: string }) {
             hostId: user?.uid || "mock_admin",
             filename: file.name,
             contentType: file.type,
-            propertyId: id
+            propertyId: isNew ? (slug || "draft") : id
           })
         });
 
@@ -142,8 +162,11 @@ function EditPropertyContent({ id }: { id: string }) {
     setStatusMessage(null);
 
     try {
-      const response = await fetch(`/api/posts/${id}`, {
-        method: "PUT",
+      const url = isNew ? "/api/posts" : `/api/posts/${id}`;
+      const method = isNew ? "POST" : "PUT";
+
+      const response = await fetch(url, {
+        method,
         headers: {
           "Content-Type": "application/json",
           "x-user-id": user?.uid || "",
@@ -160,17 +183,18 @@ function EditPropertyContent({ id }: { id: string }) {
           images,
           bookingType,
           slots,
-          location
+          location,
+          hostId: user?.uid
         })
       });
 
       const resJson = await response.json();
 
       if (!response.ok || !resJson.success) {
-        throw new Error(resJson.error || "Failed to update property.");
+        throw new Error(resJson.error || resJson.data || "Failed to save property.");
       }
 
-      setStatusMessage({ type: "success", text: "Property updated successfully!" });
+      setStatusMessage({ type: "success", text: isNew ? "Property created successfully!" : "Property updated successfully!" });
       setTimeout(() => {
         router.push("/admin/properties");
       }, 1500);
@@ -182,6 +206,7 @@ function EditPropertyContent({ id }: { id: string }) {
   };
 
   const handleDelete = async () => {
+    if (isNew) return;
     if (!window.confirm("Are you sure you want to delete this property? All associated packages will also be deleted.")) {
       return;
     }
@@ -223,7 +248,7 @@ function EditPropertyContent({ id }: { id: string }) {
   }
 
   // Ensure only the property owner can modify this property listing
-  const hasAccess = user && (user.isAdmin && (!property?.hostId || property.hostId === user.uid || property.hostId === "mock_admin_example_com"));
+  const hasAccess = isNew || (user && (user.isAdmin && (!property?.hostId || property.hostId === user.uid || property.hostId === "mock_admin_example_com")));
 
   if (!user || !user.isAdmin || !hasAccess) {
     return (
@@ -266,18 +291,18 @@ function EditPropertyContent({ id }: { id: string }) {
               ← Back to Properties
             </Link>
             <h1 className="text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-white via-zinc-200 to-zinc-400">
-              Edit Property
+              {isNew ? "Create Property" : "Edit Property"}
             </h1>
-            <p className="text-xs text-zinc-400 mt-1">Update property information and upload imagery</p>
+            <p className="text-xs text-zinc-400 mt-1">Configure property information and upload imagery</p>
           </div>
           <span className="rounded-lg bg-teal-500/10 border border-teal-500/20 px-3 py-1 text-xs font-semibold text-teal-400">
-            ID: {id}
+            {isNew ? "✙ New Listing" : `ID: ${id}`}
           </span>
         </header>
 
         <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-xl backdrop-blur-md">
           <h2 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-            <span>⚙</span> Update Details
+            <span>{isNew ? "✙" : "⚙"}</span> {isNew ? "New Property Details" : "Update Details"}
           </h2>
 
           {statusMessage && (
@@ -292,29 +317,29 @@ function EditPropertyContent({ id }: { id: string }) {
             </div>
           )}
 
-          {property ? (
+          {(isNew || property) ? (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="mb-1 block text-xs text-zinc-400 font-semibold uppercase tracking-wider">
-                  Property Title
+                  Property Title *
                 </label>
                 <input
                   type="text"
+                  required
                   placeholder="e.g. Llandudno Cliffside Shack"
                   value={title}
-                  onChange={(e) => {
-                    setTitle(e.target.value);
-                  }}
+                  onChange={(e) => handleTitleChange(e.target.value)}
                   className="w-full rounded-xl border border-white/10 bg-black/40 px-3.5 py-2.5 text-sm text-white focus:border-teal-500 focus:outline-none placeholder:text-zinc-650"
                 />
               </div>
 
               <div>
                 <label className="mb-1 block text-xs text-zinc-400 font-semibold uppercase tracking-wider">
-                  Slug
+                  Slug (Auto-generated) *
                 </label>
                 <input
                   type="text"
+                  required
                   placeholder="e.g. llandudno-cliffside-shack"
                   value={slug}
                   onChange={(e) => setSlug(e.target.value)}
@@ -337,10 +362,11 @@ function EditPropertyContent({ id }: { id: string }) {
 
               <div>
                 <label className="mb-1 block text-xs text-zinc-400 font-semibold uppercase tracking-wider">
-                  {bookingType === "hourly" ? "Base Price Per Hour (ZAR)" : "Base Price Per Night (ZAR)"}
+                  {bookingType === "hourly" ? "Base Price Per Hour (ZAR) *" : "Base Price Per Night (ZAR) *"}
                 </label>
                 <input
                   type="number"
+                  required
                   placeholder={bookingType === "hourly" ? "e.g. 250" : "e.g. 1500"}
                   value={basePrice}
                   onChange={(e) => setBasePrice(e.target.value)}
@@ -406,8 +432,8 @@ function EditPropertyContent({ id }: { id: string }) {
                           onClick={toggleSlot}
                           className={`rounded-lg py-1.5 px-2 text-[10px] font-bold border transition-all ${
                             isSelected
-                              ? "bg-teal-500/10 border-teal-500 text-teal-400"
-                              : "bg-zinc-900 border-white/5 text-zinc-500 hover:text-zinc-300"
+                              ? "bg-teal-550/10 border-teal-500 text-teal-400"
+                              : "bg-zinc-900 border-white/5 text-zinc-505 hover:text-zinc-300"
                           }`}
                         >
                           {label}
@@ -469,7 +495,7 @@ function EditPropertyContent({ id }: { id: string }) {
                         <button
                           type="button"
                           onClick={() => handleRemoveImage(url)}
-                          className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 text-[8px] leading-none opacity-0 group-hover:opacity-100 transition-opacity active:scale-95 shadow-md shadow-black/50"
+                          className="absolute top-1 right-1 bg-red-500 hover:bg-red-650 text-white rounded-full p-1 text-[8px] leading-none opacity-0 group-hover:opacity-100 transition-opacity active:scale-95 shadow-md shadow-black/50"
                         >
                           ✕
                         </button>
@@ -501,7 +527,7 @@ function EditPropertyContent({ id }: { id: string }) {
                   placeholder="https://calendar.google.com/calendar/ical/..."
                   value={googleCalendarUrl}
                   onChange={(e) => setGoogleCalendarUrl(e.target.value)}
-                  className="w-full rounded-xl border border-white/10 bg-black/40 px-3.5 py-2.5 text-sm text-white focus:border-teal-500 focus:outline-none placeholder:text-zinc-650 text-xs"
+                  className="w-full rounded-xl border border-white/10 bg-black/40 px-3.5 py-2.5 text-sm text-white focus:border-teal-500 focus:outline-none placeholder:text-zinc-655 text-xs"
                 />
               </div>
 
@@ -511,16 +537,24 @@ function EditPropertyContent({ id }: { id: string }) {
                   disabled={isSubmitting}
                   className="flex-grow rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 py-3 text-center text-xs font-bold text-white shadow-lg shadow-teal-500/20 hover:brightness-110 active:scale-95 transition-all"
                 >
-                  {isSubmitting ? "Saving changes..." : "Save Changes"}
+                  {isSubmitting
+                    ? isNew
+                      ? "Creating property..."
+                      : "Saving changes..."
+                    : isNew
+                      ? "Create Property"
+                      : "Save Changes"}
                 </button>
-                <button
-                  type="button"
-                  onClick={handleDelete}
-                  disabled={isSubmitting}
-                  className="rounded-xl bg-red-500/10 border border-red-500/20 px-5 py-3 text-center text-xs font-bold text-red-400 hover:bg-red-600 hover:text-white transition-all active:scale-95"
-                >
-                  Delete
-                </button>
+                {!isNew && (
+                  <button
+                    type="button"
+                    onClick={handleDelete}
+                    disabled={isSubmitting}
+                    className="rounded-xl bg-red-500/10 border border-red-500/20 px-5 py-3 text-center text-xs font-bold text-red-400 hover:bg-red-650 hover:text-white transition-all active:scale-95"
+                  >
+                    Delete
+                  </button>
+                )}
               </div>
             </form>
           ) : (
