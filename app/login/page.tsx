@@ -40,6 +40,11 @@ export default function LoginPage() {
           <AuthCard />
         )}
       </div>
+      <div className="absolute bottom-4 flex gap-2 text-xs text-zinc-500 mt-1.5">
+        <a href="/terms">Term of service</a>
+        <span>•</span>
+        <a href="/privacy">Privacy policy</a>
+      </div>
     </div>
   );
 }
