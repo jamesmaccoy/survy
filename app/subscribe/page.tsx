@@ -94,15 +94,15 @@ function SubscribeContent() {
             Become a Pro
           </h1>
           <p className="text-xs sm:text-sm text-zinc-400 mt-2 max-w-lg mx-auto">
-            Choose a plan, unlock listing capabilities, and manage high-resolution imagery with direct Cloudflare R2 bucket integration.
+            Choose a plan, unlock listing capabilities, and manage high-resolution imagery.
           </p>
         </header>
 
         {statusMessage && (
           <div
             className={`max-w-md mx-auto mb-8 rounded-xl border p-3.5 text-center text-xs font-bold ${statusMessage.type === "success"
-                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
-                : "border-red-500/30 bg-red-500/10 text-red-400"
+              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+              : "border-red-500/30 bg-red-500/10 text-red-400"
               }`}
           >
             {statusMessage.text}
@@ -114,7 +114,7 @@ function SubscribeContent() {
             <span className="text-5xl block mb-4">🎉</span>
             <h2 className="text-xl font-black text-white">You are a Pro User!</h2>
             <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
-              Your account has listing management and R2 upload privileges. Go to the Pro Portal to create and publish stays.
+              Your account has listing management and image upload and sharing. Go to the Pro Portal to create and publish stays.
             </p>
             <div className="mt-6 flex flex-col gap-2">
               <Link
@@ -153,7 +153,7 @@ function SubscribeContent() {
                       <span className="text-teal-400">✓</span> List up to 3 properties
                     </li>
                     <li className="flex items-center gap-2">
-                      <span className="text-teal-400">✓</span> Cloudflare R2 high-resolution upload
+                      <span className="text-teal-400">✓</span> High-resolution image uploads and sharing
                     </li>
                     <li className="flex items-center gap-2">
                       <span className="text-teal-400">✓</span> Airbnb / Google Calendar sync
@@ -202,13 +202,13 @@ function SubscribeContent() {
                       <span className="text-teal-400">✓</span> List unlimited properties
                     </li>
                     <li className="flex items-center gap-2">
-                      <span className="text-teal-400">✓</span> Cloudflare R2 high-resolution upload
+                      <span className="text-teal-400">✓</span> High-resolution image uploads and sharing
                     </li>
                     <li className="flex items-center gap-2">
                       <span className="text-teal-400">✓</span> Airbnb / Google Calendar sync
                     </li>
                     <li className="flex items-center gap-2">
-                      <span className="text-teal-400">✓</span> Custom package rate multiplier builder
+                      <span className="text-teal-400">✓</span> Exclusive package for development and payment options
                     </li>
                   </ul>
                 </div>
