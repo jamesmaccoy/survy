@@ -328,25 +328,8 @@ export default function AdminPropertiesPage() {
       </div>
 
       <div className="relative max-w-7xl mx-auto px-4 py-12 sm:px-6 lg:px-8 space-y-8">
-        {/* Navigation & Header */}
-        <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-slate-200 dark:border-white/10 pb-6 gap-4">
-          <div>
-            <h1 className="text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-slate-900 via-slate-800 to-slate-600 dark:from-white dark:via-zinc-200 dark:to-zinc-400">
-              Pro Portal
-            </h1>
-            <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
-              Properties & Listings Management
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="rounded-lg bg-teal-500/10 border border-teal-500/20 px-3 py-1.5 text-xs font-semibold text-teal-600 dark:text-teal-400">
-              🔐 Pro Access
-            </span>
-          </div>
-        </header>
-
-        {/* Tab Selection */}
-        <div className="border-b border-slate-200 dark:border-white/10">
+        {/* Tab Selection & Global Actions */}
+        <div className="border-b border-slate-200 dark:border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-2 sm:pb-0">
           <nav className="-mb-px flex gap-6" aria-label="Tabs">
             <Link
               href="/admin/properties"
@@ -361,6 +344,16 @@ export default function AdminPropertiesPage() {
               <span>📦</span> Packages
             </Link>
           </nav>
+          
+          <button
+            onClick={() => {
+              resetForm();
+              setIsFormOpen(true);
+            }}
+            className="sm:mb-2 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 px-4 py-2 text-xs font-bold text-white hover:brightness-110 shadow-md shadow-teal-500/10 transition-all flex items-center gap-1.5 shrink-0"
+          >
+            <span>✙</span> New Property
+          </button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -371,15 +364,6 @@ export default function AdminPropertiesPage() {
               <h2 className="text-sm font-black uppercase tracking-wider text-slate-900 dark:text-zinc-300 flex items-center gap-2">
                 <span>🏢</span> Published Listings ({properties.length})
               </h2>
-              <button
-                onClick={() => {
-                  resetForm();
-                  setIsFormOpen(true);
-                }}
-                className="rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 px-3 py-1.5 text-xs font-bold text-white hover:brightness-110 shadow-sm transition-all flex items-center gap-1 shrink-0"
-              >
-                <span>✙</span> New Property
-              </button>
             </div>
 
             {isLoading ? (
