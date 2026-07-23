@@ -13,6 +13,7 @@ interface Property {
   slug: string;
   basePricePerNight: number;
   bookingType?: string;
+  images?: string[];
 }
 
 interface PackageData {
@@ -320,45 +321,59 @@ function BookingsCheckoutContent() {
           </Link>
         </header>
 
-        {latestEstimate && latestEstimate.paymentStatus === "pending" && (
-          <div className="mb-8 rounded-3xl border border-orange-500/20 bg-orange-500/5 p-6 backdrop-blur-md relative overflow-hidden">
-            <div className="absolute -right-10 -top-10 w-24 h-24 rounded-full bg-orange-500/10 blur-xl pointer-events-none" />
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <div>
-                <span className="inline-block rounded bg-orange-500/10 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-orange-600 dark:text-orange-400">
-                  Unpaid Stay Estimate
-                </span>
-                <h3 className="text-lg font-black text-teal-950 dark:text-white mt-1">
-                  {propertiesList.find((p) => p.id === latestEstimate.propertyId)?.title || latestEstimate.propertyId}
-                </h3>
-                <p className="text-xs text-teal-850/60 dark:text-zinc-400 mt-1">
-                  Dates: <strong>{formatDisplayDate(latestEstimate.fromDate)}</strong> to{" "}
-                  <strong>{formatDisplayDate(latestEstimate.toDate)}</strong>
-                </p>
-                <p className="text-xs text-teal-800/80 dark:text-zinc-300 mt-1 font-bold">
-                  Total: R {latestEstimate.total ? Number(latestEstimate.total).toLocaleString() : "0"}
-                </p>
-              </div>
+        {latestEstimate && latestEstimate.paymentStatus === "pending" && (() => {
+          const estimateProperty = propertiesList.find((p) => p.id === latestEstimate.propertyId);
+          return (
+            <div className="mb-8 rounded-3xl border border-orange-500/20 bg-orange-500/5 p-6 backdrop-blur-md relative overflow-hidden">
+              <div className="absolute -right-10 -top-10 w-24 h-24 rounded-full bg-orange-500/10 blur-xl pointer-events-none" />
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center w-full">
+                  {estimateProperty?.images && estimateProperty.images.length > 0 && (
+                    <div className="relative w-full sm:w-28 h-20 rounded-2xl overflow-hidden border border-orange-500/20 bg-zinc-950 shrink-0">
+                      <img
+                        src={estimateProperty.images[0]}
+                        alt={estimateProperty.title}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <span className="inline-block rounded bg-orange-500/10 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-orange-600 dark:text-orange-400">
+                      Unpaid Stay Estimate
+                    </span>
+                    <h3 className="text-lg font-black text-teal-950 dark:text-white mt-1">
+                      {estimateProperty?.title || latestEstimate.propertyId}
+                    </h3>
+                    <p className="text-xs text-teal-850/60 dark:text-zinc-400 mt-1">
+                      Dates: <strong>{formatDisplayDate(latestEstimate.fromDate)}</strong> to{" "}
+                      <strong>{formatDisplayDate(latestEstimate.toDate)}</strong>
+                    </p>
+                    <p className="text-xs text-teal-800/80 dark:text-zinc-300 mt-1 font-bold">
+                      Total: R {latestEstimate.total ? Number(latestEstimate.total).toLocaleString() : "0"}
+                    </p>
+                  </div>
+                </div>
 
-              <div className="flex flex-wrap gap-2.5">
-                <Link
-                  href={`/estimate/${latestEstimate.id}`}
-                  className="rounded-xl bg-orange-500 px-4 py-2.5 text-xs font-bold text-white hover:bg-orange-600 transition-all shadow-md shadow-orange-500/10"
-                >
-                  View Details & Pay
-                </Link>
+                <div className="flex flex-wrap gap-2.5 shrink-0">
+                  <Link
+                    href={`/estimate/${latestEstimate.id}`}
+                    className="rounded-xl bg-orange-500 px-4 py-2.5 text-xs font-bold text-white hover:bg-orange-600 transition-all shadow-md shadow-orange-500/10"
+                  >
+                    View Details & Pay
+                  </Link>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {user?.isAdmin && (
           <div className="flex border-b border-teal-100 dark:border-white/5 mb-8">
             <button
               onClick={() => setViewMode("my")}
               className={`px-4 py-2 text-xs font-bold uppercase tracking-wider border-b-2 transition-all ${viewMode === "my"
-                  ? "border-teal-500 text-teal-600 dark:text-teal-400"
-                  : "border-transparent text-teal-800/60 dark:text-zinc-500 hover:text-teal-950 dark:hover:text-zinc-300"
+                ? "border-teal-500 text-teal-600 dark:text-teal-400"
+                : "border-transparent text-teal-800/60 dark:text-zinc-500 hover:text-teal-950 dark:hover:text-zinc-300"
                 }`}
             >
               My Bookings
@@ -366,8 +381,8 @@ function BookingsCheckoutContent() {
             <button
               onClick={() => setViewMode("all")}
               className={`px-4 py-2 text-xs font-bold uppercase tracking-wider border-b-2 transition-all ${viewMode === "all"
-                  ? "border-teal-500 text-teal-600 dark:text-teal-400"
-                  : "border-transparent text-teal-800/60 dark:text-zinc-500 hover:text-teal-950 dark:hover:text-zinc-300"
+                ? "border-teal-500 text-teal-600 dark:text-teal-400"
+                : "border-transparent text-teal-800/60 dark:text-zinc-500 hover:text-teal-950 dark:hover:text-zinc-300"
                 }`}
             >
               All System Bookings (Admin)
@@ -430,9 +445,9 @@ function BookingsCheckoutContent() {
                   <div className="absolute -right-12 -top-12 w-32 h-32 rounded-full bg-teal-500/10 dark:bg-teal-500/20 blur-2xl group-hover:bg-teal-500/20 transition-all pointer-events-none" />
 
                   <div className="space-y-5">
-                    {/* Top Header: Badge, Title & Status */}
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="space-y-1">
+                    {/* Top Header: Badge, Title, Status & Thumbnail on the right */}
+                    <div className="flex gap-4 items-start justify-between">
+                      <div className="flex-1 min-w-0 space-y-1">
                         <span className="inline-block rounded-full bg-teal-500/10 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-teal-700 dark:text-teal-300 border border-teal-500/20">
                           {b.propertyId === "shack"
                             ? "Beach Shack"
@@ -446,16 +461,27 @@ function BookingsCheckoutContent() {
                         <p className="text-[10px] font-mono text-teal-800/60 dark:text-zinc-500">Ref: {b.id}</p>
                       </div>
 
-                      <span
-                        className={`inline-block rounded-full px-3 py-0.5 text-[9px] font-black uppercase tracking-wider border shrink-0 ${b.paymentStatus === "paid" || b.paymentStatus === "success"
+                      <div className="flex flex-col items-end gap-2 shrink-0">
+                        <span
+                          className={`inline-block rounded-full px-3 py-0.5 text-[9px] font-black uppercase tracking-wider border ${b.paymentStatus === "paid" || b.paymentStatus === "success"
                             ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/25"
                             : b.paymentStatus === "failed"
                               ? "bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border-red-200 dark:border-red-500/25"
                               : "bg-orange-50 dark:bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-500/25"
-                          }`}
-                      >
-                        {b.paymentStatus}
-                      </span>
+                            }`}
+                        >
+                          {b.paymentStatus}
+                        </span>
+                        {propertyForBooking?.images && propertyForBooking.images.length > 0 && (
+                          <div className="relative w-16 h-16 rounded-xl overflow-hidden border border-teal-100/40 dark:border-white/5 bg-zinc-950">
+                            <img
+                              src={propertyForBooking.images[0]}
+                              alt={propName}
+                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                            />
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     {/* Countdown / Schedule State */}

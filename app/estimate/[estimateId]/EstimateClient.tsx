@@ -27,6 +27,7 @@ interface Property {
   slug: string;
   basePricePerNight: number;
   bookingType?: string;
+  images?: string[];
 }
 
 interface Package {
@@ -179,7 +180,21 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
         <div className="lg:col-span-3 space-y-6">
           {/* Configuration */}
           <div className="rounded-3xl border border-teal-100/80 dark:border-white/10 bg-teal-50/15 dark:bg-white/5 p-6 backdrop-blur-md space-y-4">
-            <h3 className="text-base font-bold text-teal-950 dark:text-white">Stay Details</h3>
+            <div className="flex gap-4 items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold text-teal-950 dark:text-white">Stay Details</h3>
+                <p className="text-xs text-teal-800/60 dark:text-zinc-500">Estimate configuration and schedule</p>
+              </div>
+              {property?.images && property.images.length > 0 && (
+                <div className="relative w-16 h-16 rounded-xl overflow-hidden border border-teal-100/40 dark:border-white/5 bg-zinc-950 shrink-0">
+                  <img
+                    src={property.images[0]}
+                    alt={property.title || "Property"}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
+            </div>
             
             <div className="grid grid-cols-2 gap-4 text-xs">
               <div className="rounded-2xl bg-white dark:bg-black/40 p-4 border border-teal-100/50 dark:border-white/5">
