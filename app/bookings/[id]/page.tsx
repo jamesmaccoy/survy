@@ -114,20 +114,20 @@ function BookingDetailsContent({ id }: { id: string }) {
 
   if (authLoading || isLoading) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-950 text-white">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-t-teal-500 border-white/10" />
-        <span className="mt-3 text-md text-zinc-550">Loading Booking Details...</span>
+      <div className="flex min-h-screen flex-col items-center justify-center bg-white dark:bg-zinc-950 text-teal-950 dark:text-white">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-t-teal-500 border-teal-150 dark:border-white/10" />
+        <span className="mt-3 text-md text-teal-800/60 dark:text-zinc-500">Loading Booking Details...</span>
       </div>
     );
   }
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-zinc-950 text-white flex items-center justify-center p-4">
-        <div className="max-w-md w-full rounded-3xl border border-white/10 bg-white/5 p-8 text-center backdrop-blur-md">
+      <div className="min-h-screen bg-white dark:bg-zinc-950 text-teal-950 dark:text-white flex items-center justify-center p-4">
+        <div className="max-w-md w-full rounded-3xl border border-teal-100 dark:border-white/10 bg-teal-50/15 dark:bg-white/5 p-8 text-center backdrop-blur-md">
           <span className="text-4xl">🔐</span>
-          <h2 className="text-xl font-black text-white mt-4">Authentication Required</h2>
-          <p className="text-md text-zinc-400 mt-2 leading-relaxed">
+          <h2 className="text-xl font-black text-teal-950 dark:text-white mt-4">Authentication Required</h2>
+          <p className="text-md text-teal-800/80 dark:text-zinc-400 mt-2 leading-relaxed">
             Please log in to view booking information.
           </p>
           <Link
@@ -143,16 +143,16 @@ function BookingDetailsContent({ id }: { id: string }) {
 
   if (!booking) {
     return (
-      <div className="min-h-screen bg-zinc-950 text-white flex items-center justify-center p-4">
-        <div className="max-w-md w-full rounded-3xl border border-white/10 bg-white/5 p-8 text-center backdrop-blur-md">
+      <div className="min-h-screen bg-white dark:bg-zinc-950 text-teal-950 dark:text-white flex items-center justify-center p-4">
+        <div className="max-w-md w-full rounded-3xl border border-teal-100 dark:border-white/10 bg-teal-50/15 dark:bg-white/5 p-8 text-center backdrop-blur-md">
           <span className="text-4xl">⚠️</span>
-          <h2 className="text-xl font-black text-white mt-4">Booking Not Found</h2>
-          <p className="text-md text-zinc-400 mt-2 leading-relaxed">
+          <h2 className="text-xl font-black text-teal-950 dark:text-white mt-4">Booking Not Found</h2>
+          <p className="text-md text-teal-800/80 dark:text-zinc-400 mt-2 leading-relaxed">
             The booking details could not be retrieved. Please check the URL reference and try again.
           </p>
           <Link
             href="/bookings"
-            className="mt-6 inline-block w-full rounded-xl bg-white/5 border border-white/10 py-3 text-center text-xs font-bold text-zinc-300 hover:text-white transition-all"
+            className="mt-6 inline-block w-full rounded-xl bg-teal-50 dark:bg-white/5 border border-teal-100 dark:border-white/10 py-3 text-center text-xs font-bold text-teal-800 dark:text-zinc-300 hover:text-teal-950 dark:hover:text-white transition-all"
           >
             Go to Bookings Dashboard
           </Link>
@@ -168,16 +168,16 @@ function BookingDetailsContent({ id }: { id: string }) {
 
   if (!isUserAuthorized) {
     return (
-      <div className="min-h-screen bg-zinc-950 text-white flex items-center justify-center p-4">
-        <div className="max-w-md w-full rounded-3xl border border-white/10 bg-white/5 p-8 text-center backdrop-blur-md">
+      <div className="min-h-screen bg-white dark:bg-zinc-950 text-teal-950 dark:text-white flex items-center justify-center p-4">
+        <div className="max-w-md w-full rounded-3xl border border-teal-100 dark:border-white/10 bg-teal-50/15 dark:bg-white/5 p-8 text-center backdrop-blur-md">
           <span className="text-4xl">🔐</span>
-          <h2 className="text-xl font-black text-white mt-4">Access Denied</h2>
-          <p className="text-md text-zinc-400 mt-2 leading-relaxed">
+          <h2 className="text-xl font-black text-teal-950 dark:text-white mt-4">Access Denied</h2>
+          <p className="text-md text-teal-800/80 dark:text-zinc-400 mt-2 leading-relaxed">
             You do not have permissions to view this booking ledger sheet.
           </p>
           <Link
             href="/bookings"
-            className="mt-6 inline-block w-full rounded-xl bg-white/5 border border-white/10 py-3 text-center text-xs font-bold text-zinc-300 hover:text-white transition-all"
+            className="mt-6 inline-block w-full rounded-xl bg-teal-50 dark:bg-white/5 border border-teal-100 dark:border-white/10 py-3 text-center text-xs font-bold text-teal-800 dark:text-zinc-300 hover:text-teal-950 dark:hover:text-white transition-all"
           >
             Go to Bookings Dashboard
           </Link>
@@ -195,20 +195,20 @@ function BookingDetailsContent({ id }: { id: string }) {
   const addonsList = packages.filter(p => p.propertyId === booking.propertyId && p.category === "addon");
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white font-sans selection:bg-teal-500/30 selection:text-teal-200">
+    <div className="min-h-screen bg-white dark:bg-zinc-950 text-teal-950 dark:text-white font-sans selection:bg-teal-500/30 selection:text-teal-200">
       <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
         <div className="absolute -top-[10%] left-[20%] w-[60%] h-[60%] rounded-full bg-teal-500/10 blur-[120px]" />
       </div>
 
       <div className="relative max-w-5xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
-        <header className="mb-10 border-b border-white/10 pb-6 flex items-center justify-between">
+        <header className="mb-10 border-b border-teal-100 dark:border-white/10 pb-6 flex items-center justify-between">
           <div>
-            <span className="text-[10px] text-teal-400 font-extrabold uppercase tracking-wide">Stay Ledger</span>
-            <h1 className="text-3xl font-black text-white mt-1">Booking Details</h1>
+            <span className="text-[10px] text-teal-600 dark:text-teal-400 font-extrabold uppercase tracking-wide">Stay Ledger</span>
+            <h1 className="text-3xl font-black text-teal-950 dark:text-white mt-1">Booking Details</h1>
           </div>
           <Link
             href="/bookings"
-            className="text-xs text-zinc-400 hover:text-white transition-colors"
+            className="text-xs text-teal-800 dark:text-zinc-400 hover:text-teal-950 dark:hover:text-white transition-colors"
           >
             ← Back to Bookings Dashboard
           </Link>
@@ -217,45 +217,45 @@ function BookingDetailsContent({ id }: { id: string }) {
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
           {/* Left Column: Stay Information */}
           <div className="lg:col-span-3 space-y-6">
-            <div className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-md space-y-6">
+            <div className="rounded-3xl border border-teal-100 dark:border-white/10 bg-teal-50/15 dark:bg-white/5 p-6 backdrop-blur-md space-y-6">
               <div>
-                <span className="inline-block rounded bg-teal-500/10 px-2.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-teal-400 border border-teal-500/25">
+                <span className="inline-block rounded bg-teal-500/10 px-2.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-teal-600 dark:text-teal-400 border border-teal-500/25">
                   {booking.propertyId === "shack" ? "Beach Shack" : booking.propertyId === "cottage" ? "Cozy Cottage" : "Luxury Villa"}
                 </span>
-                <h2 className="text-2xl font-black text-white mt-3">{propName}</h2>
-                <p className="text-[10px] font-mono text-zinc-500 mt-1">Booking ID: {booking.id}</p>
+                <h2 className="text-2xl font-black text-teal-950 dark:text-white mt-3">{propName}</h2>
+                <p className="text-[10px] font-mono text-teal-800/60 dark:text-zinc-500 mt-1">Booking ID: {booking.id}</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 border-t border-white/5 pt-2 text-md">
-                <div className="rounded-2xl bg-black/40 p-4 border border-white/5">
-                  <span className="text-[10px] text-zinc-500 uppercase block">Check-in</span>
-                  <span className="text-sm font-bold text-white mt-1 block">{checkIn}</span>
-                  <span className="text-[11px] text-zinc-500 block mt-1">14:00 onwards</span>
+              <div className="grid grid-cols-2 gap-4 border-t border-teal-100 dark:border-white/5 pt-2 text-md">
+                <div className="rounded-2xl bg-white dark:bg-black/40 p-4 border border-teal-100 dark:border-white/5">
+                  <span className="text-[10px] text-teal-800/60 dark:text-zinc-500 uppercase block">Check-in</span>
+                  <span className="text-sm font-bold text-teal-950 dark:text-white mt-1 block">{checkIn}</span>
+                  <span className="text-[11px] text-teal-800/60 dark:text-zinc-500 block mt-1">14:00 onwards</span>
                 </div>
-                <div className="rounded-2xl bg-black/40 p-4 border border-white/5">
-                  <span className="text-[10px] text-zinc-500 uppercase block">Check-out</span>
-                  <span className="text-sm font-bold text-white mt-1 block">{checkOut}</span>
-                  <span className="text-[11px] text-zinc-500 block mt-1">Before 10:00 AM</span>
+                <div className="rounded-2xl bg-white dark:bg-black/40 p-4 border border-teal-100 dark:border-white/5">
+                  <span className="text-[10px] text-teal-800/60 dark:text-zinc-500 uppercase block">Check-out</span>
+                  <span className="text-sm font-bold text-teal-950 dark:text-white mt-1 block">{checkOut}</span>
+                  <span className="text-[11px] text-teal-800/60 dark:text-zinc-500 block mt-1">Before 10:00 AM</span>
                 </div>
               </div>
 
-              <div className="border-t border-white/5 pt-2 text-md space-y-1">
+              <div className="border-t border-teal-100 dark:border-white/5 pt-2 text-md space-y-1">
                 <div className="flex justify-between">
-                  <span className="text-zinc-400">Reserved Guest:</span>
-                  <span className="font-bold text-white">{booking.customerName} ({booking.customerEmail})</span>
+                  <span className="text-teal-800/80 dark:text-zinc-400">Reserved Guest:</span>
+                  <span className="font-bold text-teal-950 dark:text-white">{booking.customerName} ({booking.customerEmail})</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-zinc-400">Duration:</span>
-                  <span className="font-bold text-white">{stayNights} Night(s)</span>
+                  <span className="text-teal-800/80 dark:text-zinc-400">Duration:</span>
+                  <span className="font-bold text-teal-950 dark:text-white">{stayNights} Night(s)</span>
                 </div>
               </div>
             </div>
 
             {/* Invited Guests Section */}
             {(booking.paymentStatus === "paid" || booking.paymentStatus === "success") && (
-              <div className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-md space-y-4">
+              <div className="rounded-3xl border border-teal-100 dark:border-white/10 bg-teal-50/15 dark:bg-white/5 p-6 backdrop-blur-md space-y-4">
                 <div className="flex justify-between items-center">
-                  <h3 className="text-base font-bold text-white">Invited Guests</h3>
+                  <h3 className="text-base font-bold text-teal-950 dark:text-white">Invited Guests</h3>
                   {booking.token && (
                     <button
                       onClick={(e) => {
@@ -264,7 +264,7 @@ function BookingDetailsContent({ id }: { id: string }) {
                         navigator.clipboard.writeText(inviteUrl);
                         alert("📋 Invite URL copied to clipboard: " + inviteUrl);
                       }}
-                      className="flex items-center gap-1 rounded bg-teal-500/10 px-2.5 py-1 text-[11px] font-bold text-teal-400 hover:bg-teal-500/20 transition-all active:scale-95 border border-teal-500/25"
+                      className="flex items-center gap-1 rounded bg-teal-500/10 px-2.5 py-1 text-[11px] font-bold text-teal-600 dark:text-teal-400 hover:bg-teal-500/20 transition-all active:scale-95 border border-teal-500/25"
                     >
                       Invite More Guests
                     </button>
@@ -274,13 +274,13 @@ function BookingDetailsContent({ id }: { id: string }) {
                 {booking.guests && booking.guests.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {booking.guests.map((gUid, idx) => (
-                      <span key={idx} className="rounded bg-white/5 border border-white/10 px-3 py-1 text-xs font-mono text-zinc-300">
+                      <span key={idx} className="rounded bg-white dark:bg-white/5 border border-teal-100 dark:border-white/10 px-3 py-1 text-xs font-mono text-teal-950 dark:text-zinc-300">
                         👤 {gUid === user.uid ? "You" : gUid.substring(0, 8) + "..."}
                       </span>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-xs text-zinc-550 italic">No guests joined this stay yet. Send them the invitation link above.</p>
+                  <p className="text-xs text-teal-800/60 dark:text-zinc-550 italic">No guests joined this stay yet. Send them the invitation link above.</p>
                 )}
               </div>
             )}
@@ -288,59 +288,59 @@ function BookingDetailsContent({ id }: { id: string }) {
 
           {/* Right Column: Cost Breakdown & Add-ons */}
           <div className="lg:col-span-2 space-y-6">
-            <div className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-md shadow-xl space-y-4">
-              <h3 className="text-base font-bold text-white border-b border-white/15 pb-2">Cost & Payment</h3>
+            <div className="rounded-3xl border border-teal-100 dark:border-white/10 bg-teal-50/15 dark:bg-white/5 p-6 backdrop-blur-md shadow-xl space-y-4">
+              <h3 className="text-base font-bold text-teal-950 dark:text-white border-b border-teal-100 dark:border-white/15 pb-2">Cost & Payment</h3>
 
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-zinc-400">Status:</span>
+                  <span className="text-teal-800/80 dark:text-zinc-400">Status:</span>
                   <span className={`rounded-full px-2.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide border ${booking.paymentStatus === "paid" || booking.paymentStatus === "success"
-                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/25"
+                    ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-500/25"
                     : booking.paymentStatus === "failed"
-                      ? "bg-red-500/10 text-red-400 border-red-500/25"
-                      : "bg-orange-500/10 text-orange-400 border-orange-500/25"
+                      ? "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-100 dark:border-red-500/25"
+                      : "bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-100 dark:border-orange-500/25"
                     }`}>
                     {booking.paymentStatus}
                   </span>
                 </div>
 
-                <div className="flex justify-between text-zinc-400">
+                <div className="flex justify-between text-teal-800/80 dark:text-zinc-400">
                   <span className="">Stay Total:</span>
-                  <span className="font-black text-white text-lg">R {booking.total ? booking.total.toLocaleString() : "0"}</span>
+                  <span className="font-black text-teal-950 dark:text-white text-lg">R {booking.total ? booking.total.toLocaleString() : "0"}</span>
                 </div>
               </div>
             </div>
 
             {/* In-App Add-ons purchases */}
             {(booking.paymentStatus === "paid" || booking.paymentStatus === "success") && (
-              <div className="rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur-md shadow-xl space-y-2">
-                <h3 className="text-base font-bold text-white border-b border-white/15 pb-2">Enhance Your Stay (Add-ons)</h3>
+              <div className="rounded-3xl border border-teal-100 dark:border-white/10 bg-teal-50/15 dark:bg-white/5 p-4 backdrop-blur-md shadow-xl space-y-2">
+                <h3 className="text-base font-bold text-teal-950 dark:text-white border-b border-teal-100 dark:border-white/15 pb-2">Enhance Your Stay (Add-ons)</h3>
 
                 {addonsList.length === 0 ? (
-                  <p className="text-xs text-zinc-550 italic">No add-ons available for this listing.</p>
+                  <p className="text-xs text-teal-800/60 dark:text-zinc-550 italic">No add-ons available for this listing.</p>
                 ) : (
                   <div className="space-y-3">
                     {addonsList.map((addon) => (
                       <div
                         key={addon.id}
-                        className="flex flex-col justify-between p-4 rounded-2xl bg-black/40 border border-white/5 hover:border-white/10 transition-all gap-3"
+                        className="flex flex-col justify-between p-4 rounded-2xl bg-white dark:bg-black/40 border border-teal-100 dark:border-white/5 hover:border-teal-200 dark:hover:border-white/10 transition-all gap-3"
                       >
                         <div>
-                          <h4 className="text-sm font-bold text-white">{addon.name}</h4>
+                          <h4 className="text-sm font-bold text-teal-950 dark:text-white">{addon.name}</h4>
                           {addon.description && (
-                            <p className="text-[14px] text-zinc-400 mt-1 leading-relaxed">
+                            <p className="text-[14px] text-teal-800/80 dark:text-zinc-400 mt-1 leading-relaxed">
                               {addon.description}
                             </p>
                           )}
                         </div>
-                        <div className="flex items-center justify-between pt-2 border-t border-white/5">
-                          <span className="text-lg font-black text-teal-400">
+                        <div className="flex items-center justify-between pt-2 border-t border-teal-100 dark:border-white/5">
+                          <span className="text-lg font-black text-teal-600 dark:text-teal-400">
                             R {addon.price.toLocaleString()}
                           </span>
                           <button
                             onClick={() => handlePurchaseAddon(addon)}
                             disabled={purchasingAddonId === addon.id}
-                            className="rounded-lg bg-teal-500 hover:bg-teal-650 text-white px-3.5 py-1.5 text-[10px] font-bold shadow-md shadow-teal-500/10 active:scale-95 transition-all disabled:opacity-50"
+                            className="rounded-lg bg-teal-500 hover:bg-teal-600 text-white px-3.5 py-1.5 text-[10px] font-bold shadow-md shadow-teal-500/10 active:scale-95 transition-all disabled:opacity-50"
                           >
                             {purchasingAddonId === addon.id ? "Connecting..." : "Add to Stay"}
                           </button>
@@ -363,8 +363,8 @@ export default function BookingDetailsPage({ params }: { params: Promise<{ id: s
 
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-zinc-950 text-white flex items-center justify-center">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-t-teal-500 border-white/10" />
+      <div className="min-h-screen bg-white dark:bg-zinc-950 text-teal-950 dark:text-white flex items-center justify-center">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-t-teal-500 border-teal-150 dark:border-white/10" />
       </div>
     }>
       <AuthProvider>
