@@ -19,21 +19,55 @@ interface Property {
   location?: string;
 }
 
+interface Package {
+  id: string;
+  propertyId: string;
+  name: string;
+  price: number;
+  description: string;
+  multiplier: number;
+  baseRate: number;
+  yocoId: string;
+  category: string;
+  isEnabled: boolean;
+}
+
 export default function AdminPropertiesPage() {
   const { user, loading } = useAuth();
   const [properties, setProperties] = useState<Property[]>([]);
+  const [packages, setPackages] = useState<Package[]>([]);
+  const [userPlan, setUserPlan] = useState<string>("standard");
   const [isLoading, setIsLoading] = useState(true);
+  const [isDeletingPackage, setIsDeletingPackage] = useState<string | null>(null);
 
-  const fetchProperties = useCallback(async () => {
+  // Side sheet state
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+
+  const fetchPropertiesAndPackages = useCallback(async () => {
     if (!user) return;
     try {
-      const res = await fetch(`/api/posts?hostId=${user.uid}`);
-      const result = await res.json();
-      if (result.success && result.data) {
-        setProperties(result.data);
+      const [propsRes, pkgsRes, profileRes] = await Promise.all([
+        fetch(`/api/posts?hostId=${user.uid}`),
+        fetch(`/api/packages`),
+        fetch(`/api/user/profile?userId=${user.uid}&email=${user.email || ""}`)
+      ]);
+
+      const propsResult = await propsRes.json();
+      const pkgsResult = await pkgsRes.json();
+      const profileResult = await profileRes.json();
+
+      if (propsResult.success && propsResult.data) {
+        setProperties(propsResult.data);
+      }
+      if (pkgsResult.success && pkgsResult.data) {
+        setPackages(pkgsResult.data);
+      }
+      if (profileResult.success && profileResult.data) {
+        setUserPlan(profileResult.data.plan || "standard");
       }
     } catch (err: unknown) {
-      console.error("Failed to load properties:", err);
+      console.error("Failed to load properties and packages:", err);
     } finally {
       setIsLoading(false);
     }
@@ -41,9 +75,43 @@ export default function AdminPropertiesPage() {
 
   useEffect(() => {
     if (user) {
-      fetchProperties();
+      fetchPropertiesAndPackages();
     }
-  }, [user, fetchProperties]);
+  }, [user, fetchPropertiesAndPackages]);
+
+  const handleDeletePackage = async (packageId: string) => {
+    if (!window.confirm("Are you sure you want to delete this package deal?")) {
+      return;
+    }
+
+    setIsDeletingPackage(packageId);
+    try {
+      const response = await fetch(`/api/packages/${packageId}`, {
+        method: "DELETE",
+        headers: {
+          "x-user-id": user?.uid || "",
+          "x-user-email": user?.email || "",
+        },
+      });
+
+      const resJson = await response.json();
+      if (!response.ok || !resJson.success) {
+        throw new Error(resJson.error || "Failed to delete package.");
+      }
+
+      // Reload packages
+      const pkgsRes = await fetch(`/api/packages`);
+      const pkgsData = await pkgsRes.json();
+      if (pkgsData.success) {
+        setPackages(pkgsData.data || []);
+      }
+    } catch (err: unknown) {
+      const error = err as Error;
+      alert(error.message || "An error occurred while deleting the package.");
+    } finally {
+      setIsDeletingPackage(null);
+    }
+  };
 
   if (loading || isLoading) {
     return (
@@ -83,6 +151,8 @@ export default function AdminPropertiesPage() {
     );
   }
 
+  const sheetPackages = selectedProperty ? packages.filter((pkg) => pkg.propertyId === selectedProperty.id) : [];
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-white font-sans selection:bg-teal-500/30 selection:text-teal-600 transition-colors duration-200">
       <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
@@ -90,29 +160,24 @@ export default function AdminPropertiesPage() {
       </div>
 
       <div className="relative max-w-7xl mx-auto px-4 py-12 sm:px-6 lg:px-8 space-y-8">
-        {/* Tab Selection & Global Actions */}
-        <div className="border-b border-slate-200 dark:border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-2 sm:pb-0">
-          <nav className="-mb-px flex gap-6" aria-label="Tabs">
+        {/* Header Title & Actions */}
+        <div className="border-b border-slate-200 dark:border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6">
+          <div>
+            <h1 className="text-2xl font-black text-slate-900 dark:text-white">Properties Dashboard</h1>
+            <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">Manage listings and their package entitlements</p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <span className="rounded-lg bg-teal-500/10 border border-teal-500/20 px-3 py-1.5 text-[10px] font-bold text-teal-600 dark:text-teal-400">
+              ⚡ Plan: {userPlan === "pro" ? "Professional" : "Standard Pro"}
+            </span>
             <Link
-              href="/admin/properties"
-              className="border-teal-500 text-teal-600 dark:text-teal-400 border-b-2 py-4 px-1 text-sm font-bold flex items-center gap-2"
+              href="/admin/properties/new"
+              className="rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 px-4 py-2 text-xs font-bold text-white hover:brightness-110 shadow-md shadow-teal-500/10 transition-all flex items-center gap-1.5 shrink-0"
             >
-              <span>🏢</span> Properties
+              <span>✙</span> New Property
             </Link>
-            <Link
-              href="/admin/packages"
-              className="border-transparent text-slate-500 dark:text-zinc-400 hover:text-slate-705 dark:hover:text-zinc-300 hover:border-slate-300 dark:hover:border-white/20 border-b-2 py-4 px-1 text-sm font-bold flex items-center gap-2"
-            >
-              <span>📦</span> Packages
-            </Link>
-          </nav>
-          
-          <Link
-            href="/admin/properties/new"
-            className="sm:mb-2 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 px-4 py-2 text-xs font-bold text-white hover:brightness-110 shadow-md shadow-teal-500/10 transition-all flex items-center gap-1.5 shrink-0"
-          >
-            <span>✙</span> New Property
-          </Link>
+          </div>
         </div>
 
         {properties.length === 0 ? (
@@ -123,89 +188,229 @@ export default function AdminPropertiesPage() {
             </p>
             <Link
               href="/admin/properties/new"
-              className="inline-flex rounded-xl bg-teal-500 px-5 py-2.5 text-xs font-bold text-white hover:bg-teal-650 transition-all"
+              className="inline-flex rounded-xl bg-teal-500 px-5 py-2.5 text-xs font-bold text-white hover:bg-teal-655 transition-all"
             >
               ✙ Create First Property
             </Link>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {properties.map((p) => (
-              <div
-                key={p.id}
-                className="rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 overflow-hidden flex flex-col justify-between shadow-sm hover:shadow-md hover:border-slate-350 dark:hover:border-white/20 transition-all duration-200"
-              >
-                {/* Card Top Image */}
-                <div className="relative aspect-video w-full bg-slate-200 dark:bg-zinc-900 border-b border-slate-200 dark:border-white/5">
-                  {p.images && p.images.length > 0 ? (
-                    <Image
-                      src={p.images[0]}
-                      alt={p.title}
-                      fill
-                      unoptimized
-                      className="object-cover"
-                    />
-                  ) : (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 dark:text-zinc-650 gap-1.5">
-                      <span className="text-3xl">📷</span>
-                      <span className="text-[10px] font-bold uppercase tracking-wider">No Imagery Uploaded</span>
-                    </div>
-                  )}
-                </div>
+            {properties.map((p) => {
+              const propertyPackages = packages.filter((pkg) => pkg.propertyId === p.id);
+              const pkgCount = propertyPackages.length;
 
-                {/* Card Content Body */}
-                <div className="p-5 flex-grow flex flex-col justify-between gap-4">
-                  <div className="space-y-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <h3 className="text-sm font-extrabold text-slate-900 dark:text-white truncate">
-                          {p.title}
-                        </h3>
-                        {p.location && (
-                          <span className="text-[10px] font-bold text-teal-600 dark:text-teal-400 block mt-0.5">
-                            {p.location}
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-right shrink-0">
-                        <span className="text-[8px] text-slate-500 dark:text-zinc-500 uppercase font-black block leading-none">
-                          {p.bookingType === "hourly" ? "Rate/Hour" : "Rate/Night"}
-                        </span>
-                        <span className="text-sm font-black text-teal-650 dark:text-teal-400">
-                          R {p.basePricePerNight.toLocaleString()}
-                        </span>
-                      </div>
-                    </div>
-
-                    {p.description ? (
-                      <p className="text-[11px] text-slate-550 dark:text-zinc-400 line-clamp-3 leading-relaxed">
-                        {p.description}
-                      </p>
+              return (
+                <div
+                  key={p.id}
+                  className="rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 overflow-hidden flex flex-col justify-between shadow-sm hover:shadow-md hover:border-slate-350 dark:hover:border-white/20 transition-all duration-200"
+                >
+                  {/* Card Top Image */}
+                  <div className="relative aspect-video w-full bg-slate-200 dark:bg-zinc-900 border-b border-slate-200 dark:border-white/5">
+                    {p.images && p.images.length > 0 ? (
+                      <Image
+                        src={p.images[0]}
+                        alt={p.title}
+                        fill
+                        unoptimized
+                        className="object-cover"
+                      />
                     ) : (
-                      <p className="text-[11px] text-slate-400 dark:text-zinc-600 italic">
-                        No description specified for this property listing.
-                      </p>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 dark:text-zinc-650 gap-1.5">
+                        <span className="text-3xl">📷</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider">No Imagery Uploaded</span>
+                      </div>
                     )}
                   </div>
 
-                  {/* Card Footer Actions */}
-                  <div className="flex items-center justify-between border-t border-slate-100 dark:border-white/5 pt-4">
-                    <span className="rounded bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 px-2 py-0.5 text-[8px] text-slate-600 dark:text-zinc-400 font-bold uppercase tracking-wider">
-                      {p.bookingType === "hourly" ? "🕒 Short bookings" : "🌙 Long booking"}
-                    </span>
-                    <Link
-                      href={`/admin/properties/${p.id}`}
-                      className="rounded-lg bg-teal-500/10 border border-teal-500/20 px-3 py-1.5 text-[10px] font-bold text-teal-600 dark:text-teal-400 hover:bg-teal-500 hover:text-white transition-all active:scale-95 shadow-sm"
-                    >
-                      Edit Config →
-                    </Link>
+                  {/* Card Content Body */}
+                  <div className="p-5 flex-grow flex flex-col justify-between gap-4">
+                    <div className="space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <h3 className="text-sm font-extrabold text-slate-900 dark:text-white truncate">
+                            {p.title}
+                          </h3>
+                          {p.location && (
+                            <span className="text-[10px] font-bold text-teal-600 dark:text-teal-400 block mt-0.5">
+                              {p.location}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className="text-[8px] text-slate-500 dark:text-zinc-500 uppercase font-black block leading-none">
+                            {p.bookingType === "hourly" ? "Rate/Hour" : "Rate/Night"}
+                          </span>
+                          <span className="text-sm font-black text-teal-650 dark:text-teal-400">
+                            R {p.basePricePerNight.toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+
+                      {p.description ? (
+                        <p className="text-[11px] text-slate-555 dark:text-zinc-400 line-clamp-3 leading-relaxed">
+                          {p.description}
+                        </p>
+                      ) : (
+                        <p className="text-[11px] text-slate-400 dark:text-zinc-600 italic">
+                          No description specified for this property listing.
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Card Footer Actions */}
+                    <div className="flex items-center justify-between border-t border-slate-100 dark:border-white/5 pt-4">
+                      <button
+                        onClick={() => {
+                          setSelectedProperty(p);
+                          setIsSheetOpen(true);
+                        }}
+                        className="rounded-lg bg-teal-500/10 border border-teal-500/20 px-3 py-1.5 text-[10px] font-bold text-teal-600 dark:text-teal-400 hover:bg-teal-500 hover:text-white transition-all active:scale-95 flex items-center gap-1.5 shadow-sm"
+                      >
+                        <span>📦</span> Packages ({pkgCount})
+                      </button>
+                      <Link
+                        href={`/admin/properties/${p.id}`}
+                        className="rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 px-3 py-1.5 text-[10px] font-bold text-slate-700 dark:text-zinc-300 transition-all active:scale-95"
+                      >
+                        Edit Config →
+                      </Link>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
+
+      {/* Packages Left-Hand Side Sheet Sidebar */}
+      {isSheetOpen && selectedProperty && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 transition-opacity duration-300 animate-fade-in"
+            onClick={() => setIsSheetOpen(false)}
+          />
+          {/* Sheet Container */}
+          <div
+            className="fixed top-0 right-0 h-full w-full md:w-[550px] z-50 bg-white dark:bg-zinc-950 border-l border-slate-200 dark:border-white/10 shadow-2xl flex flex-col transform transition-transform duration-300 ease-in-out animate-slide-in-right"
+          >
+            {/* Sheet Header */}
+            <div className="p-6 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] text-teal-600 dark:text-teal-400 font-bold uppercase tracking-wider block">
+                  Property Packages
+                </span>
+                <h2 className="text-base font-black text-slate-900 dark:text-white truncate max-w-[280px]">
+                  {selectedProperty.title}
+                </h2>
+              </div>
+              <button
+                onClick={() => setIsSheetOpen(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors text-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Sheet Actions & Stats */}
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-black/20 flex items-center justify-between">
+              <span className="text-xs text-slate-500 dark:text-zinc-400 font-semibold">
+                {sheetPackages.length} package{sheetPackages.length === 1 ? "" : "s"} configured
+              </span>
+              <Link
+                href={`/admin/packages/new?propertyId=${selectedProperty.id}`}
+                className="rounded-lg bg-teal-500 px-3 py-1.5 text-[10px] font-bold text-white hover:bg-teal-600 transition-all flex items-center gap-1 shadow-sm shadow-teal-500/15"
+              >
+                <span>✙</span> Add Package
+              </Link>
+            </div>
+
+            {/* Sheet Packages List */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              {sheetPackages.length === 0 ? (
+                <div className="text-center py-12 text-slate-400 dark:text-zinc-650 italic text-xs">
+                  No packages configured for this property listing.
+                </div>
+              ) : (
+                sheetPackages.map((pkg) => (
+                  <div
+                    key={pkg.id}
+                    className="rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-black/10 p-4 space-y-3 shadow-sm hover:border-slate-350 dark:hover:border-white/20 transition-all"
+                  >
+                    <div>
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <span className={`inline-block rounded px-1.5 py-0.5 text-[8px] font-extrabold uppercase tracking-wide border ${pkg.category === "standard"
+                            ? "bg-teal-500/10 border-teal-500/20 text-teal-600 dark:text-teal-400"
+                            : "bg-purple-500/10 border-purple-500/20 text-purple-600 dark:text-purple-400"
+                            }`}>
+                            {pkg.category}
+                          </span>
+                          <h4 className="text-xs font-extrabold text-slate-900 dark:text-white mt-1.5">
+                            {pkg.name}
+                          </h4>
+                          <span className="text-[8px] text-slate-400 dark:text-zinc-500 font-mono block">
+                            id: {pkg.id}
+                          </span>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className="text-[8px] text-slate-400 dark:text-zinc-500 uppercase font-bold block">Rate</span>
+                          <span className="text-xs font-black text-teal-600 dark:text-teal-400">R {pkg.price.toLocaleString()}</span>
+                        </div>
+                      </div>
+                      {pkg.description && (
+                        <p className="text-[10px] text-slate-600 dark:text-zinc-400 leading-relaxed border-t border-slate-100 dark:border-white/5 mt-2 pt-2">
+                          {pkg.description}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between border-t border-slate-100 dark:border-white/5 pt-2.5">
+                      <span className="text-[9px] text-slate-500 dark:text-zinc-500">
+                        Mult: <strong className="text-slate-700 dark:text-zinc-300">{pkg.multiplier}x</strong> | Base: <strong className="text-slate-700 dark:text-zinc-300">R{pkg.baseRate}</strong>
+                      </span>
+                      <div className="flex gap-2">
+                        <Link
+                          href={`/admin/packages/${pkg.id}`}
+                          className="rounded-md bg-teal-500/10 border border-teal-500/20 px-2 py-1 text-[9px] font-bold text-teal-600 dark:text-teal-400 hover:bg-teal-500 hover:text-white transition-all"
+                        >
+                          Edit
+                        </Link>
+                        <button
+                          onClick={() => handleDeletePackage(pkg.id)}
+                          disabled={isDeletingPackage === pkg.id}
+                          className="rounded-md bg-red-500/10 border border-red-500/20 px-2 py-1 text-[9px] font-bold text-red-650 dark:text-red-400 hover:bg-red-500 hover:text-white transition-all disabled:opacity-50"
+                        >
+                          {isDeletingPackage === pkg.id ? "..." : "Delete"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Embedded sheet animations style tag */}
+      <style jsx global>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes slideInLeft {
+          from { transform: translateX(-100%); }
+          to { transform: translateX(0); }
+        }
+        .animate-fade-in {
+          animation: fadeIn 0.25s ease-out forwards;
+        }
+        .animate-slide-in-left {
+          animation: slideInLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+      `}</style>
     </div>
   );
 }
