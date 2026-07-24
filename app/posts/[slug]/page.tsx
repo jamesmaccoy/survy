@@ -490,18 +490,12 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
                         <>
                           {formatDisplayDate(savedDates!.fromDate)}
                           <br />
-                          <span className="text-[10px] text-teal-600 dark:text-teal-400 font-mono">
+                          <span className="text-md text-teal-600 dark:text-teal-400 font-mono">
                             {new Date(savedDates!.fromDate).toLocaleTimeString([], {
                               hour: "2-digit",
                               minute: "2-digit",
                               hour12: false,
                             })}{" "}
-                            -{" "}
-                            {new Date(savedDates!.toDate).toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                              hour12: false,
-                            })}
                           </span>
                         </>
                       ) : (
@@ -513,7 +507,7 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
                   <div className="flex justify-between text-xs text-teal-900/80 dark:text-zinc-300">
                     <span className="font-medium">Duration:</span>
                     <span className="font-bold text-teal-950 dark:text-white">
-                      {property.bookingType === "hourly" ? "1 Slot (4 Hours)" : `${nights} Night(s)`}
+                      {property.bookingType === "hourly" ? "1 Slot" : `${nights} Night(s)`}
                     </span>
                   </div>
 

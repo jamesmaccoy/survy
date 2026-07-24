@@ -324,8 +324,8 @@ function HomePageContent() {
                   </span>
                   <span
                     className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${latestEstimate.paymentStatus === "paid" || latestEstimate.paymentStatus === "success"
-                        ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
-                        : "bg-amber-500/15 border-amber-500/30 text-amber-600 dark:text-amber-400"
+                      ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
+                      : "bg-amber-500/15 border-amber-500/30 text-amber-600 dark:text-amber-400"
                       }`}
                   >
                     {latestEstimate.paymentStatus === "paid" ? "Paid" : "Pending"}
@@ -399,12 +399,7 @@ function HomePageContent() {
                       minute: "2-digit",
                       hour12: false,
                     })}{" "}
-                    -{" "}
-                    {new Date(savedDates.toDate).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      hour12: false,
-                    })}
+
                   </div>
                 </>
               ) : (
@@ -440,8 +435,8 @@ function HomePageContent() {
               onClick={handleSaveDates}
               disabled={isSavingDates || authLoading}
               className={`w-full sm:w-auto h-[42px] px-5 rounded-xl text-xs font-extrabold transition-all shrink-0 flex items-center justify-center gap-1.5 ${!user
-                  ? "bg-zinc-800 text-zinc-400 cursor-not-allowed border border-transparent"
-                  : "border-2 border-teal-500/80 bg-teal-500/10 text-teal-700 dark:text-teal-300 hover:bg-teal-500/20 active:scale-95"
+                ? "bg-zinc-800 text-zinc-400 cursor-not-allowed border border-transparent"
+                : "border-2 border-teal-500/80 bg-teal-500/10 text-teal-700 dark:text-teal-300 hover:bg-teal-500/20 active:scale-95"
                 }`}
             >
               {!user ? "🔒 Login to Apply" : isSavingDates ? "Syncing..." : saveStatus ? saveStatus : "Sync Schedule"}
@@ -535,12 +530,7 @@ function HomePageContent() {
                                   minute: "2-digit",
                                   hour12: false,
                                 })}{" "}
-                                -{" "}
-                                {new Date(savedDates.toDate).toLocaleTimeString([], {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                  hour12: false,
-                                })}
+
                               </span>
                             </div>
                           ) : (
