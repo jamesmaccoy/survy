@@ -665,130 +665,261 @@ function BookingsCheckoutContent() {
   }
 
   return (
-    <div className="relative max-w-5xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
+    <div className="relative max-w-5xl mx-auto px-4 py-12 sm:px-6 lg:px-8 font-sans">
+      {/* Background Glow */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
+        <div className="absolute -top-[10%] left-[10%] w-[50%] h-[50%] rounded-full bg-teal-500/10 blur-[100px]" />
+      </div>
+
       {/* Page Header */}
       <header className="mb-10 border-b border-teal-100 dark:border-white/10 pb-6 flex items-center justify-between">
         <div>
-          <span className="text-[10px] text-teal-600 dark:text-teal-400 font-extrabold uppercase tracking-wide">Step 2: Checkout</span>
-          <h1 className="text-3xl font-black text-teal-950 dark:text-white mt-1">Book Your Package stay</h1>
+          <span className="text-[10px] text-teal-600 dark:text-teal-400 font-extrabold uppercase tracking-wide">
+            Step 2: Checkout
+          </span>
+          <h1 className="text-3xl font-black text-teal-950 dark:text-white mt-1">
+            Book Your Stay
+          </h1>
         </div>
         <Link
           href="/"
-          className="text-xs text-teal-800 dark:text-zinc-400 hover:text-teal-950 dark:hover:text-white transition-colors"
+          className="text-xs font-semibold text-teal-800 dark:text-zinc-400 hover:text-teal-950 dark:hover:text-white transition-colors flex items-center gap-1"
         >
           ← Change Dates / Property
         </Link>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
-        {/* Left Side: Summary & Package Select */}
+        {/* Left Side: Summary & Package Select Tiles */}
         <div className="lg:col-span-3 space-y-6">
-          {/* Stay Details summary */}
-          <div className="rounded-3xl border border-teal-100/80 dark:border-white/10 bg-teal-50/15 dark:bg-white/5 p-6 backdrop-blur-md space-y-4">
-            <h3 className="text-base font-bold text-teal-950 dark:text-white">1. Stay Configuration</h3>
 
-            <div className="grid grid-cols-2 gap-4 text-xs">
-              <div className="rounded-2xl bg-white dark:bg-black/40 p-4 border border-teal-100/50 dark:border-white/5">
-                <span className="text-[10px] text-teal-850/60 dark:text-zinc-500 uppercase block">Selected Destination</span>
-                <span className="text-sm font-extrabold text-teal-950 dark:text-white mt-1 block">
-                  {property ? property.title : "Llandudno"}
+          {/* Stay Details Summary */}
+          <div className="rounded-3xl border border-teal-100/80 dark:border-white/10 bg-teal-50/20 dark:bg-white/5 p-6 backdrop-blur-md space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-bold text-teal-950 dark:text-white">
+                1. Stay Configuration
+              </h3>
+              {/* Booking Type Badge */}
+              <span
+                className={`rounded-full px-3 py-1 text-[10px] font-extrabold uppercase tracking-wide border ${isHourly
+                  ? "bg-amber-500/10 text-amber-700 border-amber-500/20 dark:text-amber-400"
+                  : "bg-indigo-500/10 text-indigo-700 border-indigo-500/20 dark:text-indigo-400"
+                  }`}
+              >
+                {isHourly ? "🕒 Hourly Slot Booking" : "🌙 Nightly Overnight Stay"}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+              {/* Destination Tile */}
+              <div className="rounded-2xl bg-white dark:bg-black/40 p-4 border border-teal-100/60 dark:border-white/5 shadow-sm space-y-1">
+                <span className="text-[10px] text-teal-800/70 dark:text-zinc-500 uppercase font-bold block">
+                  Selected Destination
                 </span>
-                <span className="text-[10px] text-teal-800/60 dark:text-zinc-500 font-mono">id: {propertyId}</span>
+                <span className="text-sm font-extrabold text-teal-950 dark:text-white block">
+                  {property ? property.title : "Llandudno Villa"}
+                </span>
+                <span className="text-[10px] text-teal-800/60 dark:text-zinc-500 font-mono block">
+                  id: {propertyId}
+                </span>
               </div>
-              <div className="rounded-2xl bg-white dark:bg-black/40 p-4 border border-teal-100/50 dark:border-white/5">
-                <span className="text-[10px] text-teal-850/60 dark:text-zinc-500 uppercase block">
-                  {isHourly ? "Booking Date & Time" : "Booking Dates"}
-                </span>
-                <span className="text-sm font-extrabold text-teal-950 dark:text-white mt-1 block">
+
+              {/* Booking Date & Time Tile */}
+              <div className="rounded-2xl bg-white dark:bg-black/40 p-4 border border-teal-100/60 dark:border-white/5 shadow-sm space-y-1.5">
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] text-teal-800/70 dark:text-zinc-500 uppercase font-bold block">
+                    {isHourly ? "Booking Date & Time Slot" : "Check-in & Check-out Dates"}
+                  </span>
+                </div>
+
+                <span className="text-sm font-extrabold text-teal-950 dark:text-white block">
                   {isHourly ? (
                     <>
-                      {formatDisplayDate(from)}
-                      <span className="block text-[10px] font-normal text-zinc-400 mt-0.5">
-                        {from.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false})} - {to.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false})}
-                      </span>
+                      <div>{formatDisplayDate(from)}</div>
+                      <div className="text-xs font-bold text-teal-600 dark:text-teal-400 mt-1 flex items-center gap-1.5">
+                        <span className="inline-block w-2 h-2 rounded-full bg-teal-500 animate-pulse" />
+                        Slot Time: {from.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false })}
+                      </div>
                     </>
                   ) : (
-                    `${formatDisplayDate(from)} - ${formatDisplayDate(to)}`
+                    `${formatDisplayDate(from)} – ${formatDisplayDate(to)}`
                   )}
                 </span>
-                <span className="text-[10px] text-teal-800/60 dark:text-zinc-500 font-mono">
-                  {isHourly ? "1 Slot booking" : `${nights} night(s) stay`}
-                </span>
+
+                {/* Explicit Distinction Disclaimer / Metadata */}
+                <div className="pt-1.5 border-t border-slate-100 dark:border-white/5 text-[10px] text-teal-900/70 dark:text-zinc-400">
+                  {isHourly ? (
+                    <p className="flex items-center gap-1 font-medium text-amber-800/90 dark:text-amber-300/80">
+                      <span>⏱</span> Access granted only during the selected hourly slot (No overnight stay).
+                    </p>
+                  ) : (
+                    <p className="flex items-center gap-1 font-medium text-indigo-800/90 dark:text-indigo-300/80">
+                      <span>🛏</span> Standard overnight accommodation ({nights} night{nights > 1 ? "s" : ""}).
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           </div>
-
-          {/* Package Configuration */}
-          <div className="rounded-3xl border border-teal-100/80 dark:border-white/10 bg-teal-50/15 dark:bg-white/5 p-6 backdrop-blur-md space-y-4">
-            <h3 className="text-base font-bold text-teal-950 dark:text-white">2. Select Package Option</h3>
-
-            <div>
-              <select
-                value={selectedPackageId}
-                onChange={(e) => setSelectedPackageId(e.target.value)}
-                className="w-full rounded-xl border border-teal-150 dark:border-white/10 bg-white dark:bg-black/40 px-4 py-3 text-sm text-teal-950 dark:text-white focus:border-teal-500 focus:outline-none"
-              >
-                <option value="" className="bg-white dark:bg-zinc-950 text-teal-950 dark:text-white">
-                  No Package (Standard Stay)
-                </option>
-                {packages.filter(p => p.category !== "addon").map((pkg) => (
-                  <option key={pkg.id} value={pkg.id} className="bg-white dark:bg-zinc-950 text-teal-950 dark:text-white">
-                    {pkg.name} (R {pkg.price || pkg.baseRate || 0} {pkg.multiplier && pkg.multiplier !== 1 ? `| x${pkg.multiplier}` : ""})
-                  </option>
-                ))}
-              </select>
+          {/* Package Configuration - TILE SELECTOR */}
+          <div className="rounded-3xl border border-teal-100/80 dark:border-white/10 bg-teal-50/20 dark:bg-white/5 p-6 backdrop-blur-md space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-bold text-teal-950 dark:text-white">
+                2. Select Package Option
+              </h3>
+              <span className="text-xs text-teal-700 dark:text-zinc-400 font-medium">
+                Optional Enhancements
+              </span>
             </div>
 
-            {selectedPackage && (
-              <div className="rounded-2xl bg-white dark:bg-black/40 p-4 border border-teal-100 dark:border-white/5 space-y-2.5">
-                <div className="flex justify-between items-center">
-                  <span className="rounded bg-teal-550/10 dark:bg-teal-500/10 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-teal-600 dark:text-teal-400">
-                    {selectedPackage.category} Package
-                  </span>
-                  <span className="text-xs text-teal-800/60 dark:text-zinc-500">
-                    Base Multiplier: <strong>{selectedPackage.multiplier}x</strong>
-                  </span>
+            <div className="grid grid-cols-1 gap-3">
+              {/* Option: Standard / No Package Tile */}
+              <button
+                type="button"
+                onClick={() => setSelectedPackageId("")}
+                className={`relative w-full text-left rounded-2xl p-4 transition-all border flex items-start justify-between gap-4 ${selectedPackageId === ""
+                  ? "bg-white dark:bg-zinc-900 border-teal-500 ring-2 ring-teal-500/20 shadow-md"
+                  : "bg-white/70 dark:bg-black/30 border-teal-100 dark:border-white/5 hover:border-teal-300 dark:hover:border-white/20"
+                  }`}
+              >
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-extrabold text-teal-950 dark:text-white">
+                      Standard Stay
+                    </span>
+                    <span className="rounded bg-slate-100 dark:bg-white/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-600 dark:text-zinc-400">
+                      Basic
+                    </span>
+                  </div>
+                  <p className="text-xs text-teal-900/70 dark:text-zinc-400 leading-relaxed">
+                    Standard booking with base amenities included. No additional package added.
+                  </p>
                 </div>
-                <h4 className="text-sm font-extrabold text-teal-950 dark:text-white">{selectedPackage.name}</h4>
-                {selectedPackage.description && (
-                  <p className="text-xs text-teal-900/80 dark:text-zinc-400 leading-relaxed">{selectedPackage.description}</p>
-                )}
-              </div>
-            )}
+
+                <div className="flex flex-col items-end shrink-0">
+                  <span className="text-sm font-black text-teal-950 dark:text-white">
+                    R 0
+                  </span>
+                  <div
+                    className={`mt-2 h-5 w-5 rounded-full border flex items-center justify-center transition-all ${selectedPackageId === ""
+                      ? "border-teal-500 bg-teal-500 text-white"
+                      : "border-slate-300 dark:border-white/20"
+                      }`}
+                  >
+                    {selectedPackageId === "" && <span className="text-[10px] leading-none">✓</span>}
+                  </div>
+                </div>
+              </button>
+
+              {/* Dynamic Package Tiles */}
+              {packages
+                .filter((p) => p.category !== "addon")
+                .map((pkg) => {
+                  const isSelected = selectedPackageId === pkg.id;
+                  const price = pkg.price || pkg.baseRate || 0;
+
+                  return (
+                    <button
+                      key={pkg.id}
+                      type="button"
+                      onClick={() => setSelectedPackageId(pkg.id)}
+                      className={`relative w-full text-left rounded-2xl p-4 transition-all border flex items-start justify-between gap-4 ${isSelected
+                        ? "bg-white dark:bg-zinc-900 border-teal-500 ring-2 ring-teal-500/20 shadow-md"
+                        : "bg-white/70 dark:bg-black/30 border-teal-100 dark:border-white/5 hover:border-teal-300 dark:hover:border-white/20"
+                        }`}
+                    >
+                      <div className="space-y-1.5 pr-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-extrabold text-teal-950 dark:text-white">
+                            {pkg.name}
+                          </span>
+                          {pkg.category && (
+                            <span className="rounded bg-teal-500/10 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-teal-600 dark:text-teal-400">
+                              {pkg.category}
+                            </span>
+                          )}
+                          {pkg.multiplier && pkg.multiplier !== 1 && (
+                            <span className="rounded bg-amber-500/10 px-2 py-0.5 text-[9px] font-bold text-amber-600 dark:text-amber-400">
+                              {pkg.multiplier}x Multiplier
+                            </span>
+                          )}
+                        </div>
+                        {pkg.description && (
+                          <p className="text-xs text-teal-900/70 dark:text-zinc-400 leading-relaxed">
+                            {pkg.description}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex flex-col items-end shrink-0">
+                        <span className="text-sm font-black text-teal-600 dark:text-teal-400">
+                          +R {price.toLocaleString()}
+                        </span>
+                        <div
+                          className={`mt-2 h-5 w-5 rounded-full border flex items-center justify-center transition-all ${isSelected
+                            ? "border-teal-500 bg-teal-500 text-white"
+                            : "border-slate-300 dark:border-white/20"
+                            }`}
+                        >
+                          {isSelected && <span className="text-[10px] leading-none">✓</span>}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+            </div>
           </div>
         </div>
 
         {/* Right Side: Total calculations & Secure Book action */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="rounded-3xl border border-teal-100/80 dark:border-white/10 bg-teal-50/15 dark:bg-white/5 p-6 backdrop-blur-md shadow-xl space-y-4">
-            <h3 className="text-base font-bold text-teal-950 dark:text-white border-b border-teal-100/50 dark:border-white/15 pb-2">3. Cost Estimate & Pay</h3>
+          <div className="rounded-3xl border border-teal-100/80 dark:border-white/10 bg-teal-50/20 dark:bg-white/5 p-6 backdrop-blur-md shadow-xl space-y-4">
+            <h3 className="text-base font-bold text-teal-950 dark:text-white border-b border-teal-100/60 dark:border-white/10 pb-3">
+              3. Cost Estimate & Pay
+            </h3>
 
             <div className="space-y-3 text-xs">
-              <div className="flex justify-between text-teal-900 dark:text-zinc-400">
+              <div className="flex justify-between text-teal-900/80 dark:text-zinc-400">
                 <span>{isHourly ? "Booking Duration:" : "Stay Duration:"}</span>
                 <span className="font-bold text-teal-950 dark:text-white">
                   {isHourly ? "1 Slot" : `${nights} night(s)`}
                 </span>
               </div>
-              <div className="flex justify-between text-teal-900 dark:text-zinc-400">
-                <span>{isHourly ? `Slot Cost (R ${basePricePerNight} × 1 slot):` : `Nightly Cost (R ${basePricePerNight} × ${nights}):`}</span>
-                <span className="font-bold text-teal-950 dark:text-white">R {baseCost.toLocaleString()}</span>
+
+              <div className="flex justify-between text-teal-900/80 dark:text-zinc-400">
+                <span>
+                  {isHourly
+                    ? `Slot Cost (R ${basePricePerNight} × 1 slot):`
+                    : `Nightly Cost (R ${basePricePerNight} × ${nights}):`}
+                </span>
+                <span className="font-bold text-teal-950 dark:text-white">
+                  R {baseCost.toLocaleString()}
+                </span>
               </div>
+
               {selectedPackage && (
                 <>
-                  <div className="flex justify-between text-teal-900 dark:text-zinc-400">
+                  <div className="flex justify-between text-teal-900/80 dark:text-zinc-400">
                     <span>Package Cost ({selectedPackage.name}):</span>
-                    <span className="font-bold text-teal-950 dark:text-white">R {packagePrice.toLocaleString()}</span>
+                    <span className="font-bold text-teal-950 dark:text-white">
+                      R {packagePrice.toLocaleString()}
+                    </span>
                   </div>
-                  <div className="flex justify-between text-teal-900 dark:text-zinc-400">
-                    <span>Package Multiplier:</span>
-                    <span className="font-bold text-teal-950 dark:text-white">× {packageMultiplier}</span>
-                  </div>
+                  {packageMultiplier > 1 && (
+                    <div className="flex justify-between text-teal-900/80 dark:text-zinc-400">
+                      <span>Package Multiplier:</span>
+                      <span className="font-bold text-teal-950 dark:text-white">
+                        × {packageMultiplier}
+                      </span>
+                    </div>
+                  )}
                 </>
               )}
 
               <div className="border-t border-teal-100 dark:border-white/10 pt-4 flex justify-between items-center">
-                <span className="text-sm font-bold text-teal-950 dark:text-white">Payable Total ZAR:</span>
+                <span className="text-sm font-bold text-teal-950 dark:text-white">
+                  Payable Total ZAR:
+                </span>
                 <span className="text-2xl font-black text-teal-600 dark:text-teal-400">
                   R {finalTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </span>
@@ -803,7 +934,9 @@ function BookingsCheckoutContent() {
                 </div>
                 <div className="rounded-3xl border border-teal-100 dark:border-white/5 bg-teal-50/10 dark:bg-zinc-950 p-4 space-y-3">
                   <p className="text-[11px] text-teal-800/80 dark:text-zinc-400 leading-relaxed">
-                    {isHourly ? "Select an available date on the calendar below to update your booking date:" : "Select an available date range on the calendar below to update your stay dates:"}
+                    {isHourly
+                      ? "Select an available date on the calendar below to update your booking date:"
+                      : "Select an available date range on the calendar below to update your stay dates:"}
                   </p>
                   <CalendarPicker
                     selectedFromDate={savedDates?.fromDate.split("T")[0] || ""}
@@ -821,8 +954,8 @@ function BookingsCheckoutContent() {
               onClick={handleBookNow}
               disabled={isSubmitting || !!dateConflict}
               className={`w-full rounded-xl py-3.5 text-center text-xs font-bold text-white transition-all ${!!dateConflict
-                  ? "bg-neutral-800 text-white/30 cursor-not-allowed border border-neutral-700"
-                  : "bg-gradient-to-r from-teal-500 to-emerald-500 shadow-lg shadow-teal-500/15 hover:scale-[1.01] hover:brightness-110 active:scale-95"
+                ? "bg-neutral-800 text-white/30 cursor-not-allowed border border-neutral-700"
+                : "bg-gradient-to-r from-teal-500 to-emerald-500 shadow-lg shadow-teal-500/15 hover:scale-[1.01] hover:brightness-110 active:scale-95"
                 }`}
             >
               {isSubmitting ? "Generating Yoco transaction..." : "Confirm & Pay via Yoco"}
@@ -831,8 +964,10 @@ function BookingsCheckoutContent() {
 
           {/* Checkout console logger */}
           {checkoutLog.length > 0 && (
-            <div className="rounded-3xl border border-teal-100/50 dark:border-white/5 bg-black/90 p-4 font-mono text-[9px] text-teal-400 space-y-1 max-h-40 overflow-y-auto">
-              <div className="text-teal-600/70 dark:text-white/40 mb-1 border-b border-teal-900/30 dark:border-white/5 pb-1 font-sans text-[10px]">Session Logs</div>
+            <div className="rounded-3xl border border-teal-100/50 dark:border-white/5 bg-black/90 p-4 font-mono text-[9px] text-teal-400 space-y-1 max-h-40 overflow-y-auto shadow-inner">
+              <div className="text-teal-600/70 dark:text-white/40 mb-1 border-b border-teal-900/30 dark:border-white/5 pb-1 font-sans text-[10px]">
+                Session Logs
+              </div>
               {checkoutLog.map((log, idx) => (
                 <div key={idx}>{log}</div>
               ))}
