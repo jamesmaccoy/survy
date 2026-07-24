@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth";
 
 interface Property {
@@ -43,6 +44,15 @@ export default function AdminPropertiesPage() {
   // Side sheet state
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+
+  const router = useRouter();
+
+  const handleCardClick = (e: React.MouseEvent, propertyId: string) => {
+    if ((e.target as HTMLElement).closest(".packages-btn")) {
+      return;
+    }
+    router.push(`/admin/properties/${propertyId}`);
+  };
 
   const fetchPropertiesAndPackages = useCallback(async () => {
     if (!user) return;
@@ -202,10 +212,16 @@ export default function AdminPropertiesPage() {
               return (
                 <div
                   key={p.id}
-                  className="rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 overflow-hidden flex flex-col justify-between shadow-sm hover:shadow-md hover:border-slate-350 dark:hover:border-white/20 transition-all duration-200"
+                  onClick={(e) => handleCardClick(e, p.id)}
+                  className="group rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 overflow-hidden flex flex-col justify-between shadow-sm hover:shadow-md hover:border-slate-350 dark:hover:border-white/20 transition-all duration-200 cursor-pointer"
                 >
                   {/* Card Top Image */}
                   <div className="relative aspect-video w-full bg-slate-200 dark:bg-zinc-900 border-b border-slate-200 dark:border-white/5">
+                    {/* Booking Type Overlay Badge */}
+                    <span className="absolute top-3 left-3 z-10 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 px-2.5 py-1 text-[9px] text-white font-bold uppercase tracking-wider">
+                      {p.bookingType === "hourly" ? "🕒 Hourly slots" : "🌙 Nightly stay"}
+                    </span>
+
                     {p.images && p.images.length > 0 ? (
                       <Image
                         src={p.images[0]}
@@ -260,20 +276,18 @@ export default function AdminPropertiesPage() {
                     {/* Card Footer Actions */}
                     <div className="flex items-center justify-between border-t border-slate-100 dark:border-white/5 pt-4">
                       <button
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           setSelectedProperty(p);
                           setIsSheetOpen(true);
                         }}
-                        className="rounded-lg bg-teal-500/10 border border-teal-500/20 px-3 py-1.5 text-[10px] font-bold text-teal-600 dark:text-teal-400 hover:bg-teal-500 hover:text-white transition-all active:scale-95 flex items-center gap-1.5 shadow-sm"
+                        className="packages-btn rounded-lg bg-teal-500/10 border border-teal-500/20 px-3 py-1.5 text-[10px] font-bold text-teal-600 dark:text-teal-400 hover:bg-teal-500 hover:text-white transition-all active:scale-95 flex items-center gap-1.5 shadow-sm"
                       >
                         <span>📦</span> Packages ({pkgCount})
                       </button>
-                      <Link
-                        href={`/admin/properties/${p.id}`}
-                        className="rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 px-3 py-1.5 text-[10px] font-bold text-slate-700 dark:text-zinc-300 transition-all active:scale-95"
-                      >
-                        Edit Config →
-                      </Link>
+                      <span className="text-[10px] text-slate-400 dark:text-zinc-500 font-bold group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-all flex items-center gap-0.5">
+                        Configure <span className="transform group-hover:translate-x-0.5 transition-transform">→</span>
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -293,10 +307,13 @@ export default function AdminPropertiesPage() {
           />
           {/* Sheet Container */}
           <div
-            className="fixed top-0 right-0 h-full w-full md:w-[550px] z-50 bg-white dark:bg-zinc-950 border-l border-slate-200 dark:border-white/10 shadow-2xl flex flex-col transform transition-transform duration-300 ease-in-out animate-slide-in-right"
+            className="fixed bottom-0 left-0 w-full h-[85vh] rounded-t-3xl border-t md:top-0 md:right-0 md:bottom-auto md:left-auto md:h-full md:w-[550px] md:rounded-t-none md:border-l md:border-t-0 z-50 bg-white dark:bg-zinc-950 border-slate-200 dark:border-white/10 shadow-2xl flex flex-col transform transition-transform duration-300 ease-in-out animate-sheet"
           >
+            {/* Drag Handle for Mobile */}
+            <div className="w-12 h-1 bg-slate-300 dark:bg-zinc-800 rounded-full mx-auto my-3 shrink-0 md:hidden" />
+
             {/* Sheet Header */}
-            <div className="p-6 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
+            <div className="p-6 pt-3 md:pt-6 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
               <div>
                 <span className="text-[10px] text-teal-600 dark:text-teal-400 font-bold uppercase tracking-wider block">
                   Property Packages
@@ -400,15 +417,24 @@ export default function AdminPropertiesPage() {
           from { opacity: 0; }
           to { opacity: 1; }
         }
-        @keyframes slideInLeft {
-          from { transform: translateX(-100%); }
+        @keyframes slideUp {
+          from { transform: translateY(100%); }
+          to { transform: translateY(0); }
+        }
+        @keyframes slideRight {
+          from { transform: translateX(100%); }
           to { transform: translateX(0); }
         }
         .animate-fade-in {
           animation: fadeIn 0.25s ease-out forwards;
         }
-        .animate-slide-in-left {
-          animation: slideInLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        .animate-sheet {
+          animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @media (min-width: 768px) {
+          .animate-sheet {
+            animation: slideRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          }
         }
       `}</style>
     </div>
