@@ -275,11 +275,11 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
                     {isHourly ? "Start Time" : "Check-In"}
                   </span>
                   <span className="text-[10px] font-mono text-teal-800/60 dark:text-zinc-400">
-                    {isHourly ? from.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false }) : "From 14:00"}
+                    {formatDisplayDate(from)}
                   </span>
                 </div>
                 <span className="text-base font-extrabold text-teal-950 dark:text-white block">
-                  {formatDisplayDate(from)}
+                  {isHourly ? from.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false }) : "From 14:00"}
                 </span>
                 <span className="text-[10px] text-teal-800/60 dark:text-zinc-500 block">Arrival window</span>
               </div>
@@ -291,11 +291,11 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
                     {isHourly ? "End Time" : "Check-Out"}
                   </span>
                   <span className="text-[10px] font-mono text-teal-800/60 dark:text-zinc-400">
-                    {isHourly ? to.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false }) : "By 10:00 AM"}
+                    {formatDisplayDate(to)}
                   </span>
                 </div>
                 <span className="text-base font-extrabold text-teal-950 dark:text-white block">
-                  {formatDisplayDate(to)}
+                  {isHourly ? to.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false }) : "By 10:00 AM"}
                 </span>
                 <span className="text-[10px] text-teal-800/60 dark:text-zinc-500 block">Departure window</span>
               </div>
@@ -411,8 +411,8 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
               </h3>
               <span
                 className={`inline-block rounded-full px-3 py-0.5 text-[9px] font-black uppercase tracking-wider border ${isPaid
-                    ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/25"
-                    : "bg-orange-50 dark:bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-500/25"
+                  ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/25"
+                  : "bg-orange-50 dark:bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-500/25"
                   }`}
               >
                 {isPaid ? "Paid ✓" : "Pending Payment"}
