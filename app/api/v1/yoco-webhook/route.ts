@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { updateBookingStatus, getEstimate, updateEstimateStatus, createBooking, listBookings, promoteUserToAdmin, getProperty } from "@/lib/firebase";
+import { sendBookingConfirmationEmail } from "@/lib/email";
 
 export async function POST(request: NextRequest) {
   try {
@@ -57,7 +58,7 @@ export async function POST(request: NextRequest) {
           });
 
           if (!alreadyExists) {
-            await createBooking({
+            const booking = await createBooking({
               propertyId: estimate.propertyId,
               packageId: estimate.packageId || null,
               customerName: targetName,
@@ -75,6 +76,16 @@ export async function POST(request: NextRequest) {
             if (!isHourly) {
               await updateEstimateStatus(estimateId, "paid");
             }
+
+            // Trigger email notification asynchronously
+            try {
+              sendBookingConfirmationEmail(booking).catch((err) => {
+                console.error("[Yoco Webhook] Error in sendBookingConfirmationEmail promise:", err);
+              });
+            } catch (err) {
+              console.warn("[Yoco Webhook] Failed to trigger sendBookingConfirmationEmail:", err);
+            }
+            
             console.log(`[Yoco Webhook] Booking created successfully from estimate ${estimateId}`);
           } else {
             console.log(`[Yoco Webhook] Booking already exists for estimate ${estimateId}`);

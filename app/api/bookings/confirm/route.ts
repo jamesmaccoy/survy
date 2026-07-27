@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getEstimate, updateEstimateStatus, createBooking, listBookings, getProperty } from "@/lib/firebase";
+import { sendBookingConfirmationEmail } from "@/lib/email";
 
 export async function POST(request: NextRequest) {
   try {
@@ -56,6 +57,15 @@ export async function POST(request: NextRequest) {
     // Update estimate status to paid ONLY if nightly stay
     if (!isHourly) {
       await updateEstimateStatus(estimateId, "paid");
+    }
+
+    // Trigger email notification asynchronously
+    try {
+      sendBookingConfirmationEmail(booking).catch((err) => {
+        console.error("[confirm route] Error in sendBookingConfirmationEmail promise:", err);
+      });
+    } catch (err) {
+      console.warn("[confirm route] Failed to trigger sendBookingConfirmationEmail:", err);
     }
 
     return NextResponse.json({ success: true, booking, message: "Booking confirmed successfully!" }, { status: 201 });
