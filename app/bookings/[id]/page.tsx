@@ -126,7 +126,7 @@ function BookingDetailsContent({ id }: { id: string }) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-white dark:bg-zinc-950 text-teal-950 dark:text-white">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-t-teal-500 border-teal-150 dark:border-white/10" />
-        <span className="mt-3 text-xs text-teal-800/60 dark:text-zinc-500 font-medium">Retrieving Stay Ledger...</span>
+        <span className="mt-3 text-xs text-teal-800/60 dark:text-zinc-500 font-medium">Retrieving Stay Details...</span>
       </div>
     );
   }
@@ -183,7 +183,7 @@ function BookingDetailsContent({ id }: { id: string }) {
           <span className="text-4xl">🔐</span>
           <h2 className="text-xl font-black text-teal-950 dark:text-white mt-4">Access Restricted</h2>
           <p className="text-xs text-teal-800/80 dark:text-zinc-400 mt-2 leading-relaxed">
-            You do not have authorization to view this stay ledger sheet.
+            You do not have authorization to view this stay booking details.
           </p>
           <Link
             href="/bookings"
@@ -219,7 +219,7 @@ function BookingDetailsContent({ id }: { id: string }) {
         <header className="border-b border-teal-100 dark:border-white/10 pb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <span className="text-[10px] text-teal-600 dark:text-teal-400 font-extrabold uppercase tracking-widest">
-              Reservation Ledger
+              Reservation Overview
             </span>
             <h1 className="text-3xl font-black text-teal-950 dark:text-white tracking-tight mt-1">Booking Overview</h1>
           </div>

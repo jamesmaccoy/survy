@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuth, AuthProvider } from "@/components/auth";
 import { formatDisplayDate } from "@/lib/utils";
@@ -55,6 +55,26 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
   const [isPaying, setIsPaying] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
 
+  const [packages, setPackages] = useState<Package[]>([]);
+  const [selectedPackageId, setSelectedPackageId] = useState<string>(estimate.packageId || "");
+  const [isUpdatingPackage, setIsUpdatingPackage] = useState(false);
+
+  // Fetch packages for the property
+  useEffect(() => {
+    const loadPackages = async () => {
+      try {
+        const res = await fetch(`/api/packages?propertyId=${estimate.propertyId}`);
+        const result = await res.json();
+        if (result.success && result.data) {
+          setPackages(result.data.filter((p: any) => p.category !== "addon"));
+        }
+      } catch (err) {
+        console.error("Failed to load packages on estimate page:", err);
+      }
+    };
+    loadPackages();
+  }, [estimate.propertyId]);
+
   // Copy share url helper
   const inviteUrl =
     typeof window !== "undefined" ? `${window.location.origin}/i/${estimate.token}` : "";
@@ -72,11 +92,12 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
     setPayError(null);
 
     try {
-      const targetType = selectedPackage
-        ? selectedPackage.id
-        : estimate.propertyId === "cottage"
-          ? "long_weekend_at_the_Cottage"
-          : "shack_stack";
+      const targetType = currentSelectedPackage 
+        ? currentSelectedPackage.id 
+        : (packages.length > 0 
+            ? packages[0].id 
+            : (estimate.propertyId === "cottage" ? "long_weekend_at_the_Cottage" : "shack_stack")
+          );
 
       const linkRes = await fetch("/api/v1/generate_checkout_link", {
         method: "POST",
@@ -84,8 +105,8 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
         body: JSON.stringify({
           type: targetType,
           estimateId: estimate.id,
-          amountInCentsOverride: Math.round(estimate.total * 100),
-          descriptionOverride: selectedPackage ? selectedPackage.name : "Stay Booking",
+          amountInCentsOverride: Math.round(finalTotal * 100),
+          descriptionOverride: currentSelectedPackage ? currentSelectedPackage.name : "Stay Booking",
         }),
       });
 
@@ -172,6 +193,49 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
   const nights = isHourly ? 1 : stayNights;
   const isPaid = estimate.paymentStatus === "paid" || estimate.paymentStatus === "success";
 
+  const basePricePerNight = property ? property.basePricePerNight : 1500;
+  const baseCost = basePricePerNight * nights;
+
+  const currentSelectedPackage = packages.find(p => p.id === selectedPackageId) || (selectedPackageId === estimate.packageId ? selectedPackage : null);
+  const packagePrice = currentSelectedPackage ? (currentSelectedPackage.price || currentSelectedPackage.baseRate || 0) : 0;
+  const packageMultiplier = currentSelectedPackage ? (currentSelectedPackage.multiplier || 1.0) : 1.0;
+  const finalTotal = (baseCost + packagePrice) * packageMultiplier;
+
+  const handlePackageChange = async (packageId: string) => {
+    setSelectedPackageId(packageId);
+    setIsUpdatingPackage(true);
+
+    try {
+      const activePkg = packages.find(p => p.id === packageId);
+      const activePrice = activePkg ? (activePkg.price || activePkg.baseRate || 0) : 0;
+      const activeMultiplier = activePkg ? (activePkg.multiplier || 1.0) : 1.0;
+      
+      const newTotal = (baseCost + activePrice) * activeMultiplier;
+
+      const res = await fetch("/api/estimates", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          estimateId: estimate.id,
+          packageId: packageId || null,
+          total: newTotal
+        })
+      });
+
+      const result = await res.json();
+      if (!res.ok || !result.success) {
+        throw new Error(result.error || "Failed to update package option in database.");
+      }
+      
+      estimate.total = newTotal;
+      estimate.packageId = packageId || null;
+    } catch (err: any) {
+      alert("⚠️ Error updating package: " + err.message);
+    } finally {
+      setIsUpdatingPackage(false);
+    }
+  };
+
   const propThumbnail =
     property?.images?.[0] || property?.imageUrl || property?.image || property?.coverImage;
 
@@ -186,7 +250,7 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
       <header className="border-b border-teal-100 dark:border-white/10 pb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <span className="text-[10px] text-teal-600 dark:text-teal-400 font-extrabold uppercase tracking-widest">
-            Estimate Ledger
+            Stay Estimate
           </span>
           <h1 className="text-3xl font-black text-teal-950 dark:text-white tracking-tight mt-1">
             Estimate for {property?.title || "Llandudno"}
@@ -302,27 +366,51 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
             </div>
           </div>
 
-          {/* Package Details */}
-          {selectedPackage && (
-            <div className="rounded-3xl border border-teal-100 dark:border-white/10 bg-white/80 dark:bg-zinc-900/70 p-6 backdrop-blur-xl shadow-lg space-y-3">
-              <div className="flex justify-between items-center">
-                <h3 className="text-sm font-extrabold text-teal-950 dark:text-white uppercase tracking-wider">
-                  Selected Package
-                </h3>
-                <span className="rounded-full bg-teal-500/10 px-2.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-teal-700 dark:text-teal-300 border border-teal-500/20">
-                  {selectedPackage.category}
-                </span>
-              </div>
-              <div className="rounded-2xl bg-teal-50/50 dark:bg-black/40 p-4 border border-teal-100/80 dark:border-white/5 space-y-1">
-                <h4 className="text-sm font-extrabold text-teal-950 dark:text-white">{selectedPackage.name}</h4>
-                {selectedPackage.description && (
-                  <p className="text-xs text-teal-800/80 dark:text-zinc-400 leading-relaxed">
-                    {selectedPackage.description}
+          {/* Select Package Option Dropdown */}
+          <div className="rounded-3xl border border-teal-100 dark:border-white/10 bg-white/80 dark:bg-zinc-900/70 p-6 backdrop-blur-xl shadow-lg space-y-4">
+            <div className="border-b border-teal-100/60 dark:border-white/5 pb-3">
+              <h3 className="text-base font-black text-teal-950 dark:text-white tracking-tight">
+                Select Package Option
+              </h3>
+              <p className="text-[11px] text-teal-800/60 dark:text-zinc-400 mt-0.5">
+                Enhance your stay by choosing a curated package experience, or checkout with standard accommodation.
+              </p>
+            </div>
+
+            <div>
+              <select
+                value={selectedPackageId}
+                disabled={isUpdatingPackage || isPaid}
+                onChange={(e) => handlePackageChange(e.target.value)}
+                className="w-full rounded-xl border border-teal-150 dark:border-white/10 bg-teal-50/30 dark:bg-black/40 px-4 py-3 text-sm text-teal-950 dark:text-white focus:border-teal-500 focus:outline-none disabled:opacity-50"
+              >
+                <option value="" className="bg-white dark:bg-zinc-950 text-teal-950 dark:text-white font-semibold">
+                  No Package (Standard Stay)
+                </option>
+                {packages.map((pkg) => (
+                  <option key={pkg.id} value={pkg.id} className="bg-white dark:bg-zinc-950 text-teal-950 dark:text-white">
+                    {pkg.name} (R {pkg.price || pkg.baseRate || 0} {pkg.multiplier && pkg.multiplier !== 1 ? `| x${pkg.multiplier}` : ""})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {currentSelectedPackage && (
+              <div className="rounded-2xl bg-teal-50/50 dark:bg-black/40 p-4 border border-teal-100/80 dark:border-white/5 space-y-1 mt-3">
+                <div className="flex justify-between items-center">
+                  <h4 className="text-sm font-extrabold text-teal-950 dark:text-white">{currentSelectedPackage.name}</h4>
+                  <span className="rounded bg-teal-500/10 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-teal-700 dark:text-teal-300 border border-teal-500/20">
+                    {currentSelectedPackage.category}
+                  </span>
+                </div>
+                {currentSelectedPackage.description && (
+                  <p className="text-xs text-teal-800/80 dark:text-zinc-400 leading-relaxed mt-1">
+                    {currentSelectedPackage.description}
                   </p>
                 )}
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* FEATURED: Invite Guests & Sharing Portal */}
           <div className="rounded-3xl border border-teal-100 dark:border-white/10 bg-white/80 dark:bg-zinc-900/70 p-6 backdrop-blur-xl shadow-lg space-y-4">
@@ -430,11 +518,27 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
                   {isHourly ? "1 Slot" : `${nights} Night(s)`}
                 </span>
               </div>
+              <div className="flex justify-between text-teal-900 dark:text-zinc-400">
+                <span className="font-medium">Accommodation Cost</span>
+                <span className="font-bold text-teal-950 dark:text-white">R {baseCost.toLocaleString()}</span>
+              </div>
+              {currentSelectedPackage && (
+                <>
+                  <div className="flex justify-between text-teal-900 dark:text-zinc-400">
+                    <span className="font-medium">Package Cost ({currentSelectedPackage.name})</span>
+                    <span className="font-bold text-teal-950 dark:text-white">R {packagePrice.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-teal-900 dark:text-zinc-400">
+                    <span className="font-medium">Package Multiplier</span>
+                    <span className="font-bold text-teal-950 dark:text-white">× {packageMultiplier}</span>
+                  </div>
+                </>
+              )}
 
               <div className="border-t border-teal-100 dark:border-white/10 pt-4 flex justify-between items-center font-bold">
                 <span className="text-sm text-teal-950 dark:text-white">Total Payable:</span>
                 <span className="text-2xl font-black text-teal-600 dark:text-teal-400">
-                  R {estimate.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  R {finalTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </span>
               </div>
             </div>

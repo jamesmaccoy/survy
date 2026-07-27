@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, use, Suspense } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAuth, AuthProvider } from "@/components/auth";
 import CalendarPicker from "@/components/CalendarPicker";
 import { formatDisplayDate } from "@/lib/utils";
@@ -37,6 +38,7 @@ interface PropertyDetailsContentProps {
 
 function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
   const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
 
   // Page States
   const [property, setProperty] = useState<Property | null>(null);
@@ -223,6 +225,7 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
       const estResult = await estRes.json();
       if (estRes.ok && estResult.success) {
         setLatestEstimate(estResult.estimate);
+        router.push(`/estimate/${estResult.estimate.id}`);
       }
     } catch (err: any) {
       setDateError(err.message);
@@ -520,7 +523,7 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
                 </div>
 
                 <Link
-                  href={`/bookings?propertyId=${property.id}`}
+                  href={latestEstimate ? `/estimate/${latestEstimate.id}` : `/bookings?propertyId=${property.id}`}
                   className="block w-full rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 py-3 text-center text-xs font-black text-white hover:brightness-105 active:scale-95 transition-all shadow-lg shadow-teal-500/20"
                 >
                   Select Package & Pay →

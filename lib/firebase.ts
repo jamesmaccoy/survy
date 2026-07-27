@@ -711,6 +711,31 @@ export async function updateEstimateStatus(id: string, paymentStatus: string): P
   }
 }
 
+export async function updateEstimate(id: string, data: Partial<any>): Promise<boolean> {
+  const db = getFirestore();
+  if (isMockMode || !db) {
+    const dbData = readMockDb();
+    dbData.estimates = dbData.estimates || [];
+    const index = dbData.estimates.findIndex((e: any) => e.id === id);
+    if (index >= 0) {
+      dbData.estimates[index] = {
+        ...dbData.estimates[index],
+        ...data
+      };
+      writeMockDb(dbData);
+      return true;
+    }
+    return false;
+  }
+  try {
+    await db.collection("estimates").doc(id).update(data);
+    return true;
+  } catch (err) {
+    console.error(`[Firebase] updateEstimate error:`, err);
+    return false;
+  }
+}
+
 export async function addGuestToEstimate(id: string, guestUid: string, guestEmail?: string, guestName?: string): Promise<boolean> {
   const db = getFirestore();
   if (isMockMode || !db) {
