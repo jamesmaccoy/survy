@@ -75,6 +75,37 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
     loadPackages();
   }, [estimate.propertyId]);
 
+  const [hasUserPaid, setHasUserPaid] = useState(false);
+  const [isLoadingPaymentStatus, setIsLoadingPaymentStatus] = useState(true);
+
+  // Check if current user has already paid for this estimate (to support multiple hourly payments)
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      setIsLoadingPaymentStatus(false);
+      return;
+    }
+    const checkUserPaid = async () => {
+      try {
+        const res = await fetch(`/api/bookings?propertyId=${estimate.propertyId}`);
+        const result = await res.json();
+        if (result.success && result.data) {
+          const userBooking = result.data.find(
+            (b: any) => b.estimateId === estimate.id && (b.customerId === user.uid || b.customerEmail === user.email) && (b.paymentStatus === "paid" || b.paymentStatus === "success")
+          );
+          if (userBooking) {
+            setHasUserPaid(true);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to check user payment status:", err);
+      } finally {
+        setIsLoadingPaymentStatus(false);
+      }
+    };
+    checkUserPaid();
+  }, [estimate.propertyId, estimate.id, user, authLoading]);
+
   // Copy share url helper
   const inviteUrl =
     typeof window !== "undefined" ? `${window.location.origin}/i/${estimate.token}` : "";
@@ -107,6 +138,9 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
           estimateId: estimate.id,
           amountInCentsOverride: Math.round(finalTotal * 100),
           descriptionOverride: currentSelectedPackage ? currentSelectedPackage.name : "Stay Booking",
+          userId: user?.uid,
+          email: user?.email,
+          name: user?.displayName || user?.email?.split("@")[0] || "Guest"
         }),
       });
 
@@ -191,7 +225,9 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
   );
 
   const nights = isHourly ? 1 : stayNights;
-  const isPaid = estimate.paymentStatus === "paid" || estimate.paymentStatus === "success";
+  const isPaid = isHourly 
+    ? hasUserPaid 
+    : (estimate.paymentStatus === "paid" || estimate.paymentStatus === "success" || hasUserPaid);
 
   const basePricePerNight = property ? property.basePricePerNight : 1500;
   const baseCost = basePricePerNight * nights;
@@ -552,10 +588,15 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
             {!isPaid ? (
               <button
                 onClick={handlePay}
-                disabled={isPaying}
+                disabled={isPaying || isLoadingPaymentStatus}
                 className="w-full rounded-xl py-3.5 text-center text-xs font-bold text-white transition-all bg-teal-500 hover:bg-teal-600 shadow-lg shadow-teal-500/20 active:scale-95 disabled:opacity-50"
               >
-                {isPaying ? "Connecting to Checkout..." : "Confirm & Pay via Yoco"}
+                {isLoadingPaymentStatus
+                  ? "Checking payment status..."
+                  : isPaying
+                    ? "Connecting to Checkout..."
+                    : "Confirm & Pay via Yoco"
+                }
               </button>
             ) : (
               <div className="space-y-4">

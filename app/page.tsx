@@ -98,7 +98,13 @@ function HomePageContent() {
           await fetch("/api/bookings/confirm", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ estimateId, paymentStatus: "paid" }),
+            body: JSON.stringify({
+              estimateId,
+              paymentStatus: "paid",
+              customerId: user?.uid,
+              customerEmail: user?.email,
+              customerName: user?.displayName || user?.email?.split("@")[0] || "Guest"
+            }),
           });
         } else if (bookingId) {
           await fetch("/api/bookings", {
