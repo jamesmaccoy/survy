@@ -402,7 +402,7 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
             </div>
           </div>
 
-          {/* Select Package Option Dropdown */}
+          {/* Select Package Option Tiles */}
           <div className="rounded-3xl border border-teal-100 dark:border-white/10 bg-white/80 dark:bg-zinc-900/70 p-6 backdrop-blur-xl shadow-lg space-y-4">
             <div className="border-b border-teal-100/60 dark:border-white/5 pb-3">
               <h3 className="text-base font-black text-teal-950 dark:text-white tracking-tight">
@@ -413,39 +413,104 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
               </p>
             </div>
 
-            <div>
-              <select
-                value={selectedPackageId}
+            <div className="grid grid-cols-1 gap-3">
+              {/* Option: Standard / No Package Tile */}
+              <button
+                type="button"
                 disabled={isUpdatingPackage || isPaid}
-                onChange={(e) => handlePackageChange(e.target.value)}
-                className="w-full rounded-xl border border-teal-150 dark:border-white/10 bg-teal-50/30 dark:bg-black/40 px-4 py-3 text-sm text-teal-950 dark:text-white focus:border-teal-500 focus:outline-none disabled:opacity-50"
+                onClick={() => handlePackageChange("")}
+                className={`relative w-full text-left rounded-2xl p-4 transition-all border flex items-start justify-between gap-4 disabled:opacity-70 ${selectedPackageId === ""
+                  ? "bg-white dark:bg-zinc-900 border-teal-500 ring-2 ring-teal-500/20 shadow-md"
+                  : "bg-white/70 dark:bg-black/30 border-teal-100 dark:border-white/5 hover:border-teal-300 dark:hover:border-white/20"
+                  }`}
               >
-                <option value="" className="bg-white dark:bg-zinc-950 text-teal-950 dark:text-white font-semibold">
-                  No Package (Standard Stay)
-                </option>
-                {packages.map((pkg) => (
-                  <option key={pkg.id} value={pkg.id} className="bg-white dark:bg-zinc-950 text-teal-950 dark:text-white">
-                    {pkg.name} (R {pkg.price || pkg.baseRate || 0} {pkg.multiplier && pkg.multiplier !== 1 ? `| x${pkg.multiplier}` : ""})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {currentSelectedPackage && (
-              <div className="rounded-2xl bg-teal-50/50 dark:bg-black/40 p-4 border border-teal-100/80 dark:border-white/5 space-y-1 mt-3">
-                <div className="flex justify-between items-center">
-                  <h4 className="text-sm font-extrabold text-teal-950 dark:text-white">{currentSelectedPackage.name}</h4>
-                  <span className="rounded bg-teal-500/10 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-teal-700 dark:text-teal-300 border border-teal-500/20">
-                    {currentSelectedPackage.category}
-                  </span>
-                </div>
-                {currentSelectedPackage.description && (
-                  <p className="text-xs text-teal-800/80 dark:text-zinc-400 leading-relaxed mt-1">
-                    {currentSelectedPackage.description}
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-extrabold text-teal-950 dark:text-white">
+                      Standard Stay
+                    </span>
+                    <span className="rounded bg-slate-100 dark:bg-white/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-600 dark:text-zinc-400">
+                      Basic
+                    </span>
+                  </div>
+                  <p className="text-xs text-teal-900/70 dark:text-zinc-400 leading-relaxed">
+                    Standard booking with base amenities included. No additional package added.
                   </p>
-                )}
-              </div>
-            )}
+                </div>
+
+                <div className="flex flex-col items-end shrink-0">
+                  <span className="text-sm font-black text-teal-950 dark:text-white">
+                    R 0
+                  </span>
+                  <div
+                    className={`mt-2 h-5 w-5 rounded-full border flex items-center justify-center transition-all ${selectedPackageId === ""
+                      ? "border-teal-500 bg-teal-500 text-white"
+                      : "border-slate-300 dark:border-white/20"
+                      }`}
+                  >
+                    {selectedPackageId === "" && <span className="text-[10px] leading-none">✓</span>}
+                  </div>
+                </div>
+              </button>
+
+              {/* Dynamic Package Tiles */}
+              {packages
+                .filter((p) => p.category !== "addon")
+                .map((pkg) => {
+                  const isSelected = selectedPackageId === pkg.id;
+                  const price = pkg.price || pkg.baseRate || 0;
+
+                  return (
+                    <button
+                      key={pkg.id}
+                      type="button"
+                      disabled={isUpdatingPackage || isPaid}
+                      onClick={() => handlePackageChange(pkg.id)}
+                      className={`relative w-full text-left rounded-2xl p-4 transition-all border flex items-start justify-between gap-4 disabled:opacity-70 ${isSelected
+                        ? "bg-white dark:bg-zinc-900 border-teal-500 ring-2 ring-teal-500/20 shadow-md"
+                        : "bg-white/70 dark:bg-black/30 border-teal-100 dark:border-white/5 hover:border-teal-300 dark:hover:border-white/20"
+                        }`}
+                    >
+                      <div className="space-y-1.5 pr-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-extrabold text-teal-950 dark:text-white">
+                            {pkg.name}
+                          </span>
+                          {pkg.category && (
+                            <span className="rounded bg-teal-500/10 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-teal-600 dark:text-teal-400">
+                              {pkg.category}
+                            </span>
+                          )}
+                          {pkg.multiplier && pkg.multiplier !== 1 && (
+                            <span className="rounded bg-amber-500/10 px-2 py-0.5 text-[9px] font-bold text-amber-600 dark:text-amber-400">
+                              {pkg.multiplier}x Multiplier
+                            </span>
+                          )}
+                        </div>
+                        {pkg.description && (
+                          <p className="text-xs text-teal-900/70 dark:text-zinc-400 leading-relaxed">
+                            {pkg.description}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex flex-col items-end shrink-0">
+                        <span className="text-sm font-black text-teal-600 dark:text-teal-400">
+                          +R {price.toLocaleString()}
+                        </span>
+                        <div
+                          className={`mt-2 h-5 w-5 rounded-full border flex items-center justify-center transition-all ${isSelected
+                            ? "border-teal-500 bg-teal-500 text-white"
+                            : "border-slate-300 dark:border-white/20"
+                            }`}
+                        >
+                          {isSelected && <span className="text-[10px] leading-none">✓</span>}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+            </div>
           </div>
 
           {/* FEATURED: Invite Guests & Sharing Portal */}
