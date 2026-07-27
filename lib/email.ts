@@ -1,4 +1,4 @@
-import { getProperty, getUserProfile } from "./firebase";
+import { getProperty, getUserEmail } from "./firebase";
 
 function formatIcsDate(date: Date): string {
   return date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
@@ -23,8 +23,7 @@ export async function sendBookingConfirmationEmail(booking: {
   try {
     const property = await getProperty(booking.propertyId);
     const hostId = property?.hostId || "mock_admin_example_com";
-    const hostProfile = await getUserProfile(hostId);
-    const hostEmail = hostProfile?.email || "jamesmac@gmail.com"; // Fallback host email
+    const hostEmail = (await getUserEmail(hostId)) || "jamesmac@gmail.com"; // Fallback host email
     const customerEmail = booking.customerEmail;
 
     const start = new Date(booking.fromDate);

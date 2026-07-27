@@ -1,5 +1,6 @@
 import { initializeApp, cert, getApps } from "firebase-admin";
 import { getFirestore as getFirestoreAdmin } from "firebase-admin/firestore";
+import { getAuth } from "firebase-admin/auth";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -954,6 +955,56 @@ export async function getUserProfile(uid: string): Promise<any> {
   } catch (err) {
     console.error("[Firebase] getUserProfile error:", err);
   }
+  return null;
+}
+
+export async function getUserEmail(uid: string): Promise<string | null> {
+  const db = getFirestore();
+  if (!uid) return null;
+  
+  if (uid.startsWith("mock_")) {
+    const map: Record<string, string> = {
+      mock_thankyou_digital_gmail_com: "thankyou.digital@gmail.com",
+      mock_jmaclachlan_gmail_com: "jmaclachlan@gmail.com",
+      mock_admin_example_com: "jamesmac@gmail.com",
+    };
+    if (map[uid]) return map[uid];
+    
+    let emailPart = uid.substring(5);
+    if (emailPart.endsWith("_gmail_com")) {
+      const prefix = emailPart.substring(0, emailPart.length - 10);
+      return `${prefix.replace(/_/g, ".")}@gmail.com`;
+    }
+    if (emailPart.endsWith("_co_za")) {
+      const prefix = emailPart.substring(0, emailPart.length - 6);
+      return `${prefix.replace(/_/g, ".")}@co.za`;
+    }
+    return null;
+  }
+
+  if (isMockMode || !db) {
+    return null;
+  }
+
+  try {
+    const doc = await db.collection("users").doc(uid).get();
+    if (doc.exists && doc.data()?.email) {
+      return doc.data().email;
+    }
+  } catch (err) {
+    console.warn(`[Firebase] getUserEmail collection query failed:`, err);
+  }
+
+  try {
+    const auth = getAuth();
+    const userRecord = await auth.getUser(uid);
+    if (userRecord && userRecord.email) {
+      return userRecord.email;
+    }
+  } catch (err) {
+    console.warn(`[Firebase] getUserEmail auth query failed for ${uid}:`, err);
+  }
+
   return null;
 }
 
