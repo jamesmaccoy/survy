@@ -220,7 +220,7 @@ export function PackageSheet({
                 side={isMobile ? "bottom" : "right"}
                 className={cn(
                     "flex flex-col w-full gap-0 overflow-hidden p-0",
-                    isMobile ? "h-[80vh] rounded-t-3xl border-t" : "h-full data-[side=right]:sm:max-w-lg"
+                    isMobile ? "data-[side=bottom]:h-[80vh] rounded-t-3xl border-t" : "h-full data-[side=right]:sm:max-w-lg"
                 )}
             >
                 <SheetHeader className="border-b border-border px-5 pt-5 pb-4">
