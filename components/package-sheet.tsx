@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
@@ -77,7 +77,7 @@ function PackageRow({
                             {pkg.category === "standard" ? "Standard" : "Add-on"}
                         </Badge>
                         {!pkg.isEnabled && (
-                            <Badge variant="ghost" className="text-[10px] font-bold tracking-wider uppercase">
+                            <Badge variant="outline" className="text-[10px] font-bold tracking-wider uppercase">
                                 Hidden
                             </Badge>
                         )}
@@ -113,7 +113,7 @@ function PackageRow({
                         <p className="text-[11px] leading-relaxed font-medium text-foreground">
                             Stored under legacy id <code className="font-mono">{pkg.propertyId}</code>.
                         </p>
-                        <Button variant="ghost" size="xs" onClick={onReassign} className="mt-1 px-0 text-[11px] font-bold text-destructive hover:bg-transparent hover:underline">
+                        <Button variant="ghost" size="sm" onClick={onReassign} className="mt-1 h-auto p-0 text-[11px] font-bold text-destructive hover:bg-transparent hover:underline">
                             Reassign to {propertyId}
                         </Button>
                     </div>
@@ -141,27 +141,27 @@ function PackageRow({
                     {confirmDelete ? (
                         <>
                             <span className="text-[11px] font-semibold text-muted-foreground">Delete?</span>
-                            <Button variant="ghost" size="xs" onClick={() => setConfirmDelete(false)}>
+                            <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(false)} className="h-7 px-2 text-xs">
                                 No
                             </Button>
-                            <Button variant="destructive" size="xs" onClick={onDelete} className="font-bold">
+                            <Button variant="destructive" size="sm" onClick={onDelete} className="h-7 px-2 text-xs font-bold">
                                 Yes, delete
                             </Button>
                         </>
                     ) : (
                         <>
-                            <Button variant="outline" size="xs" onClick={onEdit} className="font-semibold">
-                                <PencilIcon data-icon="inline-start" aria-hidden="true" />
+                            <Button variant="outline" size="sm" onClick={onEdit} className="h-7 px-2 text-xs font-semibold">
+                                <PencilIcon className="mr-1 size-3" aria-hidden="true" />
                                 Edit
                             </Button>
                             <Button
                                 variant="ghost"
-                                size="icon-xs"
+                                size="icon"
                                 onClick={() => setConfirmDelete(true)}
-                                className="text-muted-foreground hover:text-destructive"
+                                className="h-7 w-7 text-muted-foreground hover:text-destructive"
                                 aria-label={`Delete ${pkg.name}`}
                             >
-                                <Trash2Icon aria-hidden="true" />
+                                <Trash2Icon className="size-3.5" aria-hidden="true" />
                             </Button>
                         </>
                     )}
@@ -185,10 +185,18 @@ export function PackageSheet({
 }: PackageSheetProps) {
     const [editingId, setEditingId] = useState<string | null>(null)
     const [creating, setCreating] = useState(false)
+    const [isMobile, setIsMobile] = useState(false)
+
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 640)
+        checkMobile()
+        window.addEventListener("resize", checkMobile)
+        return () => window.removeEventListener("resize", checkMobile)
+    }, [])
 
     const existingIds = useMemo(() => packages.map((p) => p.id), [packages])
     const standard = packages.filter((p) => p.category === "standard")
-    const addons = packages.filter((p) => p.category === "addon")
+    const addons = packages.filter((p) => p.category === "addon" || p.category === "hosted" || p.category === "special")
     const liveValue = packages.filter((p) => p.isEnabled).reduce((sum, p) => sum + effectivePrice(p), 0)
 
     function close(next: boolean) {
@@ -203,14 +211,17 @@ export function PackageSheet({
 
     const sections = [
         { key: "standard", label: "Standard packages", hint: "Replace the base rate", items: standard },
-        { key: "addon", label: "Add-ons", hint: "Billed on top of the booking", items: addons },
+        { key: "addon", label: "Add-ons & Premium", hint: "Billed on top of the booking", items: addons },
     ]
 
     return (
         <Sheet open={open} onOpenChange={close}>
             <SheetContent
-                side="right"
-                className="w-full gap-0 overflow-hidden data-[side=right]:sm:max-w-lg"
+                side={isMobile ? "bottom" : "right"}
+                className={cn(
+                    "flex flex-col w-full gap-0 overflow-hidden p-0",
+                    isMobile ? "h-[85vh] rounded-t-3xl border-t" : "h-full data-[side=right]:sm:max-w-lg"
+                )}
             >
                 <SheetHeader className="border-b border-border px-5 pt-5 pb-4">
                     <p className="text-[11px] font-bold tracking-wider uppercase text-primary">Property packages</p>
