@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/components/auth";
 import { PropertyCard } from "@/components/property-card";
 import { PackageSheet } from "@/components/package-sheet";
-import { OrphanedPackages } from "@/components/orphaned-package";
+import { SuggestedPackages } from "@/components/orphaned-package";
 import { type Property, type PropertyPackage } from "@/lib/types";
 import { type PackageDraft } from "@/components/package-form";
 import { PlusIcon } from "lucide-react";
@@ -57,9 +57,8 @@ export default function AdminPropertiesPage() {
   }, [user, fetchPropertiesAndPackages]);
 
   // bucket packages
-  const { byProperty, orphaned } = useMemo(() => {
+  const byProperty = useMemo(() => {
     const byProp: Record<string, PropertyPackage[]> = {};
-    const orphan: Record<string, PropertyPackage[]> = {};
     const propertyIds = new Set(properties.map((p) => p.id));
 
     packages.forEach((pkg) => {
@@ -67,18 +66,33 @@ export default function AdminPropertiesPage() {
       if (propertyIds.has(pId)) {
         if (!byProp[pId]) byProp[pId] = [];
         byProp[pId].push(pkg);
-      } else {
-        if (!orphan[pId]) orphan[pId] = [];
-        orphan[pId].push(pkg);
       }
     });
 
-    return { byProperty: byProp, orphaned: orphan };
+    return byProp;
+  }, [properties, packages]);
+
+  // Suggested packages templates from other listings
+  const suggestedPackages = useMemo(() => {
+    const myPropertyIds = new Set(properties.map((p) => p.id));
+    const otherPkgs = packages.filter((pkg) => !myPropertyIds.has(pkg.propertyId));
+
+    const seen = new Set<string>();
+    const uniqueTemplates: PropertyPackage[] = [];
+
+    otherPkgs.forEach((pkg) => {
+      const key = `${pkg.name.toLowerCase()}-${pkg.price}-${pkg.category}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        uniqueTemplates.push(pkg);
+      }
+    });
+
+    return uniqueTemplates;
   }, [properties, packages]);
 
   const activeProperty = properties.find((p) => p.id === selectedPropertyId) ?? null;
   const activePackages = selectedPropertyId ? (byProperty[selectedPropertyId] ?? []) : [];
-  const orphanCount = Object.values(orphaned).reduce((sum, list) => sum + list.length, 0);
 
   const openPackagesSheet = (propertyId: string) => {
     setSelectedPropertyId(propertyId);
@@ -215,6 +229,47 @@ export default function AdminPropertiesPage() {
     }
   };
 
+  const handleCopyPackage = async (propertyId: string, pkg: PropertyPackage) => {
+    const newId = `${pkg.id.split('_')[0]}_${propertyId}`;
+    try {
+      const response = await fetch("/api/packages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-id": user?.uid || "",
+          "x-user-email": user?.email || "",
+        },
+        body: JSON.stringify({
+          id: newId,
+          propertyId,
+          name: pkg.name,
+          price: pkg.price,
+          description: pkg.description,
+          multiplier: pkg.multiplier,
+          baseRate: pkg.baseRate,
+          yocoId: pkg.yocoId ? `${pkg.yocoId.split('_')[0]}_${propertyId}` : newId,
+          category: pkg.category,
+          isEnabled: true,
+        }),
+      });
+
+      const resJson = await response.json();
+      if (!response.ok || !resJson.success) {
+        throw new Error(resJson.data || resJson.error || "Failed to copy package.");
+      }
+
+      // Refresh packages
+      const pkgsRes = await fetch(`/api/packages`);
+      const pkgsData = await pkgsRes.json();
+      if (pkgsData.success) {
+        setPackages(pkgsData.data || []);
+      }
+    } catch (err: unknown) {
+      const error = err as Error;
+      alert(error.message || "An error occurred while copying the package.");
+    }
+  };
+
   const handleReassignPackage = async (packageId: string, propertyId: string) => {
     const pkg = packages.find((p) => p.id === packageId);
     if (!pkg) return;
@@ -315,12 +370,11 @@ export default function AdminPropertiesPage() {
           </div>
         </div>
 
-        {orphanCount > 0 && (
-          <OrphanedPackages
-            orphaned={orphaned}
+        {suggestedPackages.length > 0 && (
+          <SuggestedPackages
+            suggested={suggestedPackages}
             properties={properties}
-            onReassign={handleReassignPackage}
-            onDelete={handleDeletePackage}
+            onCopy={handleCopyPackage}
           />
         )}
 
