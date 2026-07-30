@@ -30,6 +30,19 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                if (window.matchMedia('(prefers-color-scheme: dark)').matches && !document.documentElement.classList.contains('light')) {
+                  document.documentElement.classList.add('dark');
+                }
+              } catch (_) {}
+            `,
+          }}
+        />
+      </head>
       {/* Google tag (gtag.js) */}
       <Script async src="https://www.googletagmanager.com/gtag/js?id=G-G346419JPQ"></Script>
       <Script>
