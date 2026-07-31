@@ -323,7 +323,8 @@ function HomePageContent() {
     latestEstimate?.paymentStatus === "paid" || latestEstimate?.paymentStatus === "success";
 
   return (
-    <main className="min-h-screen bg-background pb-20 font-sans text-foreground">
+    // The root layout already renders the <main> landmark.
+    <div className="min-h-screen bg-background pb-20 font-sans text-foreground">
       <div className="mx-auto flex max-w-5xl flex-col gap-8 px-4 py-10 sm:px-6 lg:px-8">
         <header className="flex flex-col items-center gap-3 text-center">
           <Badge variant="secondary">Surf Yoga Community</Badge>
@@ -642,7 +643,7 @@ function HomePageContent() {
           )}
         </section>
       </div>
-    </main>
+    </div>
   );
 }
 

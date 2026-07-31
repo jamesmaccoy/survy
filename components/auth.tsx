@@ -10,7 +10,18 @@ import {
   signInWithRedirect,
   getRedirectResult
 } from "firebase/auth";
+import { TriangleAlertIcon } from "lucide-react";
+
 import { auth } from "@/lib/clientApp";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { Spinner } from "@/components/ui/spinner";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 interface AuthUser {
   uid: string;
@@ -307,110 +318,105 @@ export function AuthCard() {
   if (loading) {
     return (
       <div className="flex h-44 items-center justify-center">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-t-teal-500 border-white/10" />
+        <Spinner className="size-6 text-muted-foreground" />
+        <span className="sr-only">Checking your session</span>
       </div>
     );
   }
 
   if (user) {
     return (
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-5 flex items-center justify-between">
-        <div>
-          <span className="text-[10px] text-zinc-500 uppercase tracking-wide">Signed in as</span>
-          <h4 className="text-sm font-bold text-white mt-0.5">{user.email}</h4>
-          {isMockUser && (
-            <span className="inline-block rounded bg-orange-500/10 border border-orange-500/20 px-1.5 py-0.5 text-[8px] font-bold text-orange-400 mt-1 uppercase tracking-wide">
-              Offline Mock Session
+      <Card>
+        <CardContent className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-col gap-1">
+            <span className="text-xs uppercase tracking-wide text-muted-foreground">
+              Signed in as
             </span>
-          )}
-        </div>
-        <button
-          onClick={logOut}
-          className="rounded-lg bg-zinc-900 px-3.5 py-2 text-xs font-bold text-zinc-400 hover:text-white transition-colors"
-        >
-          Sign Out
-        </button>
-      </div>
+            <p className="font-heading text-sm font-medium">{user.email}</p>
+            {isMockUser && (
+              <Badge variant="secondary" className="mt-1 w-fit">
+                Offline mock session
+              </Badge>
+            )}
+          </div>
+          <Button variant="outline" size="sm" onClick={logOut}>
+            Sign out
+          </Button>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-xl backdrop-blur-md">
-      {/* Tab select */}
-      <div className="mb-5 grid grid-cols-2 gap-1 rounded-xl bg-white/5 p-1 border border-white/5">
-        <button
-          type="button"
-          onClick={() => { setIsSignUpMode(false); setFormError(null); clearAuthError(); }}
-          className={`rounded-lg py-2 text-xs font-bold transition-all ${
-            !isSignUpMode ? "bg-white text-black shadow-md" : "text-white/60 hover:text-white"
-          }`}
+    <Card>
+      <CardHeader className="gap-4">
+        <ToggleGroup
+          aria-label="Authentication mode"
+          value={[isSignUpMode ? "signup" : "signin"]}
+          onValueChange={(value) => {
+            const next = value[0];
+            if (next !== "signin" && next !== "signup") return;
+            setIsSignUpMode(next === "signup");
+            setFormError(null);
+            clearAuthError();
+          }}
+          className="grid w-full grid-cols-2"
         >
-          Sign In
-        </button>
-        <button
-          type="button"
-          onClick={() => { setIsSignUpMode(true); setFormError(null); clearAuthError(); }}
-          className={`rounded-lg py-2 text-xs font-bold transition-all ${
-            isSignUpMode ? "bg-white text-black shadow-md" : "text-white/60 hover:text-white"
-          }`}
-        >
-          Sign Up
-        </button>
-      </div>
+          <ToggleGroupItem value="signin">Sign in</ToggleGroupItem>
+          <ToggleGroupItem value="signup">Sign up</ToggleGroupItem>
+        </ToggleGroup>
 
-      <h3 className="text-sm font-bold text-white mb-4">
-        {isSignUpMode ? "Create a Guest Profile" : "Access Your Booking Account"}
-      </h3>
+        <CardTitle className="text-sm">
+          {isSignUpMode ? "Create a guest profile" : "Access your booking account"}
+        </CardTitle>
+      </CardHeader>
 
-      {(formError || authError) && (
-        <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-center text-xs text-red-400">
-          ⚠️ {formError || authError}
+      <CardContent className="flex flex-col gap-5">
+        {(formError || authError) && (
+          <Alert variant="destructive">
+            <TriangleAlertIcon />
+            <AlertDescription>{formError || authError}</AlertDescription>
+          </Alert>
+        )}
+
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="auth-email">Email address</Label>
+            <Input
+              id="auth-email"
+              type="email"
+              autoComplete="email"
+              required
+              placeholder="e.g. guest@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="auth-password">Password</Label>
+            <Input
+              id="auth-password"
+              type="password"
+              autoComplete={isSignUpMode ? "new-password" : "current-password"}
+              required
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
+          <Button type="submit" className="w-full">
+            {isSignUpMode ? "Register profile" : "Sign in"}
+          </Button>
+        </form>
+
+        <div className="flex items-center gap-3">
+          <Separator className="flex-1" />
+          <span className="text-xs uppercase tracking-wide text-muted-foreground">or</span>
+          <Separator className="flex-1" />
         </div>
-      )}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="mb-1 block text-xs text-zinc-400">Email Address</label>
-          <input
-            type="email"
-            required
-            placeholder="e.g. guest@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-xl border border-white/10 bg-black/40 px-3.5 py-2 text-sm text-white focus:border-teal-500 focus:outline-none placeholder:text-zinc-700"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-xs text-zinc-400">Password</label>
-          <input
-            type="password"
-            required
-            placeholder="••••••••"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-xl border border-white/10 bg-black/40 px-3.5 py-2 text-sm text-white focus:border-teal-500 focus:outline-none placeholder:text-zinc-700"
-          />
-        </div>
-        <button
-          type="submit"
-          className="w-full rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 py-3 text-center text-xs font-bold text-white shadow-lg shadow-teal-500/20 hover:brightness-110 active:scale-95 transition-all"
-        >
-          {isSignUpMode ? "Register Profile" : "Authenticate Session"}
-        </button>
-      </form>
-
-      <div className="my-5 flex items-center justify-between">
-        <hr className="w-full border-white/10" />
-        <span className="px-3 text-[10px] uppercase tracking-wider text-zinc-500">or</span>
-        <hr className="w-full border-white/10" />
-      </div>
-
-      <button
-        type="button"
-        onClick={handleGoogleSignIn}
-        className="flex w-full items-center justify-center gap-3 rounded-xl border border-white/10 bg-white/5 py-3 text-xs font-bold text-white shadow-md hover:bg-white/10 active:scale-95 transition-all"
-      >
-        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <Button variant="outline" className="w-full" onClick={handleGoogleSignIn}>
+          <svg className="size-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
           <path
             d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
             fill="#4285F4"
@@ -427,9 +433,10 @@ export function AuthCard() {
             d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
             fill="#EA4335"
           />
-        </svg>
-        Continue with Google
-      </button>
-    </div>
+          </svg>
+          Continue with Google
+        </Button>
+      </CardContent>
+    </Card>
   );
 }

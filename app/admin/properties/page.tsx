@@ -8,7 +8,21 @@ import { PackageSheet } from "@/components/package-sheet";
 import { SuggestedPackages } from "@/components/orphaned-package";
 import { type Property, type PropertyPackage } from "@/lib/types";
 import { type PackageDraft } from "@/components/package-form";
-import { PlusIcon } from "lucide-react";
+import { HouseIcon, LockIcon, PlusIcon, TriangleAlertIcon, ZapIcon } from "lucide-react";
+
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { Spinner } from "@/components/ui/spinner";
 
 export default function AdminPropertiesPage() {
   const { user, loading } = useAuth();
@@ -16,6 +30,7 @@ export default function AdminPropertiesPage() {
   const [packages, setPackages] = useState<PropertyPackage[]>([]);
   const [userPlan, setUserPlan] = useState<string>("standard");
   const [isLoading, setIsLoading] = useState(true);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   // Side sheet state
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -100,6 +115,7 @@ export default function AdminPropertiesPage() {
   };
 
   const handleCreatePackage = async (propertyId: string, draft: PackageDraft) => {
+    setActionError(null);
     try {
       const response = await fetch("/api/packages", {
         method: "POST",
@@ -127,7 +143,7 @@ export default function AdminPropertiesPage() {
       }
     } catch (err: unknown) {
       const error = err as Error;
-      alert(error.message || "An error occurred while creating the package.");
+      setActionError(error.message || "An error occurred while creating the package.");
     }
   };
 
@@ -135,6 +151,7 @@ export default function AdminPropertiesPage() {
     const pkg = packages.find((p) => p.id === packageId);
     if (!pkg) return;
 
+    setActionError(null);
     try {
       const response = await fetch("/api/packages", {
         method: "POST",
@@ -163,11 +180,12 @@ export default function AdminPropertiesPage() {
       }
     } catch (err: unknown) {
       const error = err as Error;
-      alert(error.message || "An error occurred while updating the package.");
+      setActionError(error.message || "An error occurred while updating the package.");
     }
   };
 
   const handleDeletePackage = async (packageId: string) => {
+    setActionError(null);
     try {
       const response = await fetch(`/api/packages/${packageId}`, {
         method: "DELETE",
@@ -190,7 +208,7 @@ export default function AdminPropertiesPage() {
       }
     } catch (err: unknown) {
       const error = err as Error;
-      alert(error.message || "An error occurred while deleting the package.");
+      setActionError(error.message || "An error occurred while deleting the package.");
     }
   };
 
@@ -198,6 +216,7 @@ export default function AdminPropertiesPage() {
     const pkg = packages.find((p) => p.id === packageId);
     if (!pkg) return;
 
+    setActionError(null);
     try {
       const response = await fetch("/api/packages", {
         method: "POST",
@@ -225,12 +244,13 @@ export default function AdminPropertiesPage() {
       }
     } catch (err: unknown) {
       const error = err as Error;
-      alert(error.message || "An error occurred while toggling the package.");
+      setActionError(error.message || "An error occurred while toggling the package.");
     }
   };
 
   const handleCopyPackage = async (propertyId: string, pkg: PropertyPackage) => {
     const newId = `${pkg.id.split('_')[0]}_${propertyId}`;
+    setActionError(null);
     try {
       const response = await fetch("/api/packages", {
         method: "POST",
@@ -266,7 +286,7 @@ export default function AdminPropertiesPage() {
       }
     } catch (err: unknown) {
       const error = err as Error;
-      alert(error.message || "An error occurred while copying the package.");
+      setActionError(error.message || "An error occurred while copying the package.");
     }
   };
 
@@ -274,6 +294,7 @@ export default function AdminPropertiesPage() {
     const pkg = packages.find((p) => p.id === packageId);
     if (!pkg) return;
 
+    setActionError(null);
     try {
       const response = await fetch("/api/packages", {
         method: "POST",
@@ -301,74 +322,95 @@ export default function AdminPropertiesPage() {
       }
     } catch (err: unknown) {
       const error = err as Error;
-      alert(error.message || "An error occurred while reassigning the package.");
+      setActionError(error.message || "An error occurred while reassigning the package.");
     }
   };
 
   if (loading || isLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-white flex items-center justify-center">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-t-teal-500 border-teal-500/20" />
+      <div className="flex min-h-screen items-center justify-center">
+        <Spinner className="size-6 text-muted-foreground" />
+        <span className="sr-only">Loading properties</span>
       </div>
     );
   }
 
   if (!user || !user.isAdmin) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-white flex items-center justify-center p-4">
-        <div className="max-w-md w-full rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 p-8 text-center shadow-sm backdrop-blur-md">
-          <span className="text-4xl">🔐</span>
-          <h2 className="text-xl font-black text-slate-900 dark:text-white mt-4">
-            Access Denied
-          </h2>
-          <p className="text-xs text-slate-500 dark:text-zinc-400 mt-2 leading-relaxed">
-            Administrative privileges are required to access this portal. Please sign in with an administrator account to continue.
-          </p>
-          <div className="mt-6 flex flex-col gap-2">
-            <Link
-              href="/login"
-              className="w-full rounded-xl bg-teal-500 py-3 text-center text-xs font-bold text-white hover:bg-teal-600 transition-all shadow-md shadow-teal-500/10"
-            >
-              Sign In as Admin
-            </Link>
-            <Link
-              href="/"
-              className="w-full rounded-xl border border-slate-200 dark:border-white/10 py-3 text-center text-xs font-bold text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white transition-all"
-            >
-              Back to Home
-            </Link>
-          </div>
-        </div>
+      // The root layout already renders the <main> landmark.
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent>
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <LockIcon />
+                </EmptyMedia>
+                <EmptyTitle>Access denied</EmptyTitle>
+                <EmptyDescription>
+                  Administrative privileges are required to access this portal. Please sign
+                  in with an administrator account to continue.
+                </EmptyDescription>
+              </EmptyHeader>
+              <EmptyContent className="w-full">
+                <Button
+                  className="w-full"
+                  nativeButton={false}
+                  render={<Link href="/login" />}
+                >
+                  Sign in as admin
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  nativeButton={false}
+                  render={<Link href="/" />}
+                >
+                  Back to home
+                </Button>
+              </EmptyContent>
+            </Empty>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-white font-sans selection:bg-teal-500/30 selection:text-teal-600 transition-colors duration-200">
-      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
-        <div className="absolute -top-[10%] left-[10%] w-[50%] h-[50%] rounded-full bg-teal-500/10 blur-[100px]" />
-      </div>
-
-      <div className="relative max-w-7xl mx-auto px-4 py-12 sm:px-6 lg:px-8 space-y-8">
+    // The root layout already renders the <main> landmark.
+    <div className="min-h-screen">
+      <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-12 sm:px-6 lg:px-8">
         {/* Header Title & Actions */}
-        <div className="border-b border-slate-200 dark:border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6">
-          <div>
-            <h1 className="text-2xl font-black text-slate-900 dark:text-white">Properties Dashboard</h1>
-            <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">Manage listings and their package entitlements</p>
+        <header className="flex flex-col items-start justify-between gap-4 border-b pb-6 sm:flex-row sm:items-center">
+          <div className="flex flex-col gap-1">
+            <h1 className="font-heading text-2xl font-semibold">Properties dashboard</h1>
+            <p className="text-sm text-muted-foreground">
+              Manage listings and their package entitlements
+            </p>
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="rounded-lg bg-teal-500/10 border border-teal-500/20 px-3 py-1.5 text-[10px] font-bold text-teal-600 dark:text-teal-400">
-              ⚡ Plan: {userPlan === "pro" ? "Professional" : "Standard Pro"}
-            </span>
-            <Link
-              href="/admin/properties/new"
-              className="rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 px-4 py-2 text-xs font-bold text-white hover:brightness-110 shadow-md shadow-teal-500/10 transition-all flex items-center gap-1.5 shrink-0"
+            <Badge variant="secondary">
+              <ZapIcon />
+              Plan: {userPlan === "pro" ? "Professional" : "Standard Pro"}
+            </Badge>
+            <Button
+              className="shrink-0"
+              nativeButton={false}
+              render={<Link href="/admin/properties/new" />}
             >
-              <PlusIcon className="mr-1 size-3.5 inline-block" /> New Property
-            </Link>
+              <PlusIcon data-icon="inline-start" />
+              New property
+            </Button>
           </div>
-        </div>
+        </header>
+
+        {actionError && (
+          <Alert variant="destructive">
+            <TriangleAlertIcon />
+            <AlertDescription>{actionError}</AlertDescription>
+          </Alert>
+        )}
 
         {suggestedPackages.length > 0 && (
           <SuggestedPackages
@@ -379,18 +421,30 @@ export default function AdminPropertiesPage() {
         )}
 
         {properties.length === 0 ? (
-          <div className="text-center py-20 rounded-3xl border border-slate-200 dark:border-white/5 bg-white dark:bg-white/5 p-6 shadow-sm max-w-lg mx-auto">
-            <span className="text-4xl block mb-3">🏡</span>
-            <p className="text-sm text-slate-500 dark:text-zinc-400 mb-4">
-              No properties published yet. Create one to get started.
-            </p>
-            <Link
-              href="/admin/properties/new"
-              className="inline-flex rounded-xl bg-teal-500 px-5 py-2.5 text-xs font-bold text-white hover:bg-teal-655 transition-all"
-            >
-              ✙ Create First Property
-            </Link>
-          </div>
+          <Card className="mx-auto w-full max-w-lg">
+            <CardContent>
+              <Empty>
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <HouseIcon />
+                  </EmptyMedia>
+                  <EmptyTitle>No properties yet</EmptyTitle>
+                  <EmptyDescription>
+                    No properties published yet. Create one to get started.
+                  </EmptyDescription>
+                </EmptyHeader>
+                <EmptyContent>
+                  <Button
+                    nativeButton={false}
+                    render={<Link href="/admin/properties/new" />}
+                  >
+                    <PlusIcon data-icon="inline-start" />
+                    Create first property
+                  </Button>
+                </EmptyContent>
+              </Empty>
+            </CardContent>
+          </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {properties.map((property) => (

@@ -1,8 +1,12 @@
 "use client";
 
 import React, { useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { KeyRoundIcon } from "lucide-react";
+
 import { useAuth, AuthCard } from "@/components/auth";
+import { Spinner } from "@/components/ui/spinner";
 
 export default function LoginPage() {
   const { user, loading } = useAuth();
@@ -17,34 +21,47 @@ export default function LoginPage() {
     }
   }, [user, loading, router]);
 
-
   return (
-    <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-zinc-950 px-4 py-16 text-white relative">
-      {/* Background radial gradient */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
-        <div className="absolute -top-[10%] left-[20%] w-[60%] h-[60%] rounded-full bg-teal-500/10 blur-[120px]" />
-      </div>
-
-      <div className="relative w-full max-w-md">
-        <div className="text-center mb-8">
-          <span className="text-2xl">🗝</span>
-          <h1 className="text-2xl font-black text-white mt-3">Exclusive Packages for Inaccessible Locations</h1>
-          <p className="text-xs text-zinc-500 mt-1.5">Sign in to configure dates and lock bookings</p>
-        </div>
+    // The root layout already renders the <main> landmark, so this is a plain div.
+    <div className="flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center gap-8 px-4 py-16">
+      <div className="w-full max-w-md">
+        <header className="mb-8 flex flex-col items-center gap-3 text-center">
+          <span
+            aria-hidden="true"
+            className="flex size-10 items-center justify-center rounded-full bg-secondary text-secondary-foreground"
+          >
+            <KeyRoundIcon className="size-5" />
+          </span>
+          <h1 className="font-heading text-2xl font-semibold text-balance">
+            Exclusive packages for inaccessible locations
+          </h1>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            Sign in to configure dates and lock bookings
+          </p>
+        </header>
 
         {loading ? (
           <div className="flex h-44 items-center justify-center">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-t-teal-500 border-white/10" />
+            <Spinner className="size-6 text-muted-foreground" />
+            <span className="sr-only">Checking your session</span>
           </div>
         ) : (
           <AuthCard />
         )}
       </div>
-      <div className="absolute bottom-4 flex gap-2 text-xs text-zinc-500 mt-1.5">
-        <a href="/terms">Term of service</a>
-        <span>•</span>
-        <a href="/privacy">Privacy policy</a>
-      </div>
+
+      <nav
+        aria-label="Legal"
+        className="flex items-center gap-2 text-sm text-muted-foreground"
+      >
+        <Link href="/terms" className="hover:text-foreground">
+          Terms of service
+        </Link>
+        <span aria-hidden="true">•</span>
+        <Link href="/privacy" className="hover:text-foreground">
+          Privacy policy
+        </Link>
+      </nav>
     </div>
   );
 }
