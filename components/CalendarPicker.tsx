@@ -1,6 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
+import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon, TriangleAlertIcon } from "lucide-react";
+
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 
 interface Booking {
   id: string;
@@ -36,6 +40,7 @@ export default function CalendarPicker({
   const initialDate = selectedFromDate ? new Date(selectedFromDate) : new Date();
   const [currentYear, setCurrentYear] = useState(initialDate.getFullYear());
   const [currentMonth, setCurrentMonth] = useState(initialDate.getMonth()); // 0-indexed
+  const [rangeError, setRangeError] = useState<string | null>(null);
 
   // Helper to format date as YYYY-MM-DD in local time
   const formatDateString = (year: number, month: number, day: number): string => {
@@ -145,6 +150,8 @@ export default function CalendarPicker({
       const handleDayClick = () => {
         if (isBooked) return;
 
+        setRangeError(null);
+
         if (bookingType === "hourly") {
           onChange(dateStr, dateStr);
         } else {
@@ -170,7 +177,9 @@ export default function CalendarPicker({
               }
 
               if (hasOverlap) {
-                alert("The selected range overlaps with an existing booking. Please choose another range.");
+                setRangeError(
+                  "The selected range overlaps with an existing booking. Please choose another range."
+                );
                 onChange(dateStr, "");
               } else {
                 onChange(selectedFromDate, dateStr);
@@ -197,41 +206,64 @@ export default function CalendarPicker({
         tooltipText = "Today";
       }
 
-      // Styles
-      let dayClass = "w-full aspect-square max-w-[44px] flex items-center justify-center text-xs font-semibold rounded-sm relative cursor-pointer transition-all duration-200 ";
+      // Styles. The continuous range band is painted on the wrapper (which has no
+      // gap between cells) so a multi-day stay reads as one connected band rather
+      // than a row of disconnected pills.
+      const isRangeInterior = isSelectedRange && !isSelectedFrom && !isSelectedTo;
+      const hasRange = Boolean(selectedFromDate && selectedToDate);
+      let bandClass = "absolute inset-y-0.5 -inset-x-px bg-accent ";
+      if (isSelectedFrom && hasRange) {
+        bandClass += "left-1/2 rounded-l-full";
+      } else if (isSelectedTo && hasRange) {
+        bandClass += "right-1/2 rounded-r-full";
+      }
+
+      let dayClass =
+        "relative flex aspect-square w-full items-center justify-center rounded-full text-xs font-medium transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none ";
       if (isBooked) {
-        dayClass += "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-500/20 cursor-not-allowed hover:bg-red-100 dark:hover:bg-red-500/20";
+        dayClass += "cursor-not-allowed text-destructive/70 line-through";
       } else if (isSelectedFrom || isSelectedTo) {
-        dayClass += "bg-teal-500 text-white shadow-lg shadow-teal-500/20 scale-105 z-10 font-bold mx-1 -my-1";
-      } else if (isSelectedRange) {
-        dayClass += "bg-teal-100/50 dark:bg-teal-500/20 text-teal-900 dark:text-teal-200 border border-teal-200 dark:border-teal-500/10";
+        dayClass += "bg-primary font-semibold text-primary-foreground";
+      } else if (isRangeInterior) {
+        dayClass += "text-accent-foreground";
       } else if (isToday) {
-        dayClass += "bg-teal-50/80 dark:bg-zinc-800 text-teal-900 dark:text-white border border-teal-200 dark:border-zinc-700 hover:bg-teal-100 dark:hover:bg-zinc-700";
+        dayClass += "ring-1 ring-inset ring-primary/60 text-foreground hover:bg-accent";
       } else {
-        dayClass += "bg-white/40 dark:bg-white/5 text-teal-950 dark:text-zinc-300 hover:bg-teal-50 dark:hover:bg-white/10 hover:text-teal-700 dark:hover:text-white";
+        dayClass += "text-foreground hover:bg-accent";
       }
 
       days.push(
-        <div key={dateStr} className="relative group">
+        <div key={dateStr} className="relative group w-full max-w-[44px]">
+          {/* Continuous selection band behind the day cells */}
+          {(isRangeInterior || ((isSelectedFrom || isSelectedTo) && hasRange)) && (
+            <span aria-hidden="true" className={bandClass} />
+          )}
           <button
             type="button"
             onClick={handleDayClick}
             disabled={isBooked}
+            aria-label={tooltipText ? `${dateStr}. ${tooltipText}` : dateStr}
+            aria-pressed={isSelectedFrom || isSelectedTo || isSelectedRange}
             className={dayClass}
           >
             {day}
 
             {/* Visual indicator for booked/blocked dates */}
             {isBooked && (
-              <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-red-400 opacity-60" />
+              <span
+                aria-hidden="true"
+                className="absolute bottom-0.5 left-1/2 size-1 -translate-x-1/2 rounded-full bg-destructive"
+              />
             )}
           </button>
 
-          {/* Premium Tooltip */}
+          {/* Tooltip */}
           {tooltipText && (
-            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-[200px] pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-zinc-900 border border-white/10 text-white text-[10px] py-1.5 px-2.5 rounded-lg shadow-xl z-20 text-center font-sans tracking-wide">
+            <div
+              role="tooltip"
+              className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 w-max max-w-[200px] -translate-x-1/2 rounded-md border bg-popover px-2.5 py-1.5 text-center text-xs text-popover-foreground opacity-0 shadow-md transition-opacity group-hover:opacity-100"
+            >
               {tooltipText}
-              <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-zinc-900" />
             </div>
           )}
         </div>
@@ -239,17 +271,20 @@ export default function CalendarPicker({
     }
 
     return (
-      <div className="space-y-4">
+      <div className="flex flex-col gap-4">
         {/* Month Header */}
-        <div className="text-center font-bold text-sm text-teal-950 dark:text-white border-b border-teal-100/50 dark:border-white/5 pb-2.5">
+        <div className="border-b pb-2.5 text-center font-heading text-sm font-medium">
           {monthNames[month]} {year}
         </div>
 
         {/* Calendar Grid */}
-        <div className="grid grid-cols-7 gap-1.5 justify-items-center">
+        <div className="grid grid-cols-7 justify-items-center gap-y-1">
           {/* Weekday headers */}
           {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((dayName) => (
-            <div key={dayName} className="h-6 w-full max-w-[44px] flex items-center justify-center text-[10px] font-bold text-teal-800/60 dark:text-zinc-500 uppercase tracking-wider">
+            <div
+              key={dayName}
+              className="flex h-6 w-full max-w-[44px] items-center justify-center text-xs font-medium uppercase tracking-wide text-muted-foreground"
+            >
               {dayName}
             </div>
           ))}
@@ -264,33 +299,39 @@ export default function CalendarPicker({
   const nextMonthVal = currentMonth === 11 ? 0 : currentMonth + 1;
 
   return (
-    <div className="w-full rounded-3xl border border-teal-100 dark:border-white/10 bg-teal-50/10 dark:bg-white/5 p-6 shadow-2xl backdrop-blur-md space-y-6">
+    <div className="flex w-full flex-col gap-6 rounded-xl border bg-card p-6 text-card-foreground">
       {/* Calendar Navigation */}
-      <div className="flex items-center justify-between border-b border-teal-100 dark:border-white/5 pb-4">
-        <button
-          type="button"
+      <div className="flex items-center justify-between gap-3 border-b pb-4">
+        <Button
+          variant="outline"
+          size="icon-sm"
           onClick={handlePrevMonth}
-          className="h-9 w-9 flex items-center justify-center rounded-xl bg-teal-50/50 dark:bg-white/5 border border-teal-100 dark:border-white/10 text-teal-800 dark:text-zinc-400 hover:text-teal-950 dark:hover:text-white hover:bg-teal-100 dark:hover:bg-white/10 hover:border-teal-200 dark:hover:border-white/20 transition-all active:scale-95"
+          aria-label="Previous month"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
+          <ChevronLeftIcon />
+        </Button>
 
-        <span className="text-xs font-extrabold uppercase tracking-widest text-teal-600 dark:text-teal-400 flex items-center gap-2">
-          <span>📅</span> {bookingType === "hourly" ? "Time-Specific Calendar" : "Availability Calendar"}
+        <span className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+          <CalendarIcon className="size-4" />
+          {bookingType === "hourly" ? "Time-specific calendar" : "Availability calendar"}
         </span>
 
-        <button
-          type="button"
+        <Button
+          variant="outline"
+          size="icon-sm"
           onClick={handleNextMonth}
-          className="h-9 w-9 flex items-center justify-center rounded-xl bg-teal-50/50 dark:bg-white/5 border border-teal-100 dark:border-white/10 text-teal-800 dark:text-zinc-400 hover:text-teal-950 dark:hover:text-white hover:bg-teal-100 dark:hover:bg-white/10 hover:border-teal-200 dark:hover:border-white/20 transition-all active:scale-95"
+          aria-label="Next month"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
+          <ChevronRightIcon />
+        </Button>
       </div>
+
+      {rangeError && (
+        <Alert variant="destructive">
+          <TriangleAlertIcon />
+          <AlertDescription>{rangeError}</AlertDescription>
+        </Alert>
+      )}
 
       {/* Responsive grids for two months */}
       <div className={`grid gap-8 ${singleMonth ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2 md:gap-12"}`}>
@@ -299,29 +340,41 @@ export default function CalendarPicker({
       </div>
 
       {/* Date display legend */}
-      <div className="border-t border-teal-100 dark:border-white/5 pt-4 flex flex-wrap gap-4 items-center justify-between text-[11px] text-teal-800 dark:text-zinc-400">
+      <div className="flex flex-wrap items-center justify-between gap-4 border-t pt-4 text-sm text-muted-foreground">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1.5">
-            <div className="w-3.5 h-3.5 rounded bg-teal-500" />
-            <span className="text-teal-950 dark:text-zinc-300">Selected</span>
+            <span aria-hidden="true" className="size-3.5 rounded-sm bg-primary" />
+            <span>Selected</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="w-3.5 h-3.5 rounded bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/30" />
-            <span className="text-teal-950 dark:text-zinc-300">Unavailable</span>
+            <span aria-hidden="true" className="text-destructive/70 line-through">
+              00
+            </span>
+            <span>Unavailable</span>
           </div>
         </div>
 
         {selectedFromDate && (
-          <div className="text-teal-600 dark:text-teal-300 font-medium">
+          <p>
             {bookingType === "hourly" ? (
-              <>Selected Date: <strong className="text-teal-950 dark:text-white">{selectedFromDate}</strong></>
+              <>
+                Selected date:{" "}
+                <strong className="font-medium text-foreground">{selectedFromDate}</strong>
+              </>
             ) : (
               <>
-                Stay: <strong className="text-teal-950 dark:text-white">{selectedFromDate}</strong>
-                {selectedToDate ? <> to <strong className="text-teal-950 dark:text-white">{selectedToDate}</strong></> : " (Select Check-out)"}
+                Stay: <strong className="font-medium text-foreground">{selectedFromDate}</strong>
+                {selectedToDate ? (
+                  <>
+                    {" "}
+                    to <strong className="font-medium text-foreground">{selectedToDate}</strong>
+                  </>
+                ) : (
+                  " (select check-out)"
+                )}
               </>
             )}
-          </div>
+          </p>
         )}
       </div>
     </div>

@@ -6,6 +6,37 @@ import { useRouter } from "next/navigation";
 import { useAuth, AuthProvider } from "@/components/auth";
 import CalendarPicker from "@/components/CalendarPicker";
 import { formatDisplayDate } from "@/lib/utils";
+import {
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  CalendarIcon,
+  CheckIcon,
+  CopyIcon,
+  GiftIcon,
+  ImageOffIcon,
+  MapPinIcon,
+  TriangleAlertIcon,
+} from "lucide-react";
+
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { Separator } from "@/components/ui/separator";
+import { Spinner } from "@/components/ui/spinner";
 
 interface Property {
   id: string;
@@ -236,30 +267,30 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
 
   if (isLoading || authLoading) {
     return (
-      <div className="flex min-h-[500px] flex-col items-center justify-center text-teal-950 dark:text-white">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-t-teal-500 border-teal-100 dark:border-white/10" />
-        <span className="mt-3 text-xs font-semibold tracking-wide text-teal-800/60 dark:text-zinc-400">
-          Retrieving Listing Information...
-        </span>
+      <div className="flex min-h-[500px] flex-col items-center justify-center gap-3">
+        <Spinner className="size-6 text-muted-foreground" />
+        <span className="text-sm text-muted-foreground">Retrieving listing information</span>
       </div>
     );
   }
 
   if (!property) {
     return (
-      <div className="max-w-md mx-auto my-20 p-8 rounded-3xl border border-teal-100/80 dark:border-white/10 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-xl text-center shadow-xl">
-        <span className="text-4xl">⚠️</span>
-        <h3 className="text-xl font-black text-teal-950 dark:text-white mt-4">Listing Not Found</h3>
-        <p className="text-xs text-teal-800/80 dark:text-zinc-400 mt-2 leading-relaxed">
-          The property matching <strong>"{slug}"</strong> could not be located.
-        </p>
-        <Link
-          href="/"
-          className="mt-6 inline-block w-full rounded-xl bg-teal-500 py-3 text-center text-xs font-bold text-white hover:bg-teal-600 transition-all shadow-md shadow-teal-500/20"
-        >
-          Return to Destination Listings
-        </Link>
-      </div>
+      <Empty className="mx-auto my-20 max-w-md">
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <TriangleAlertIcon />
+          </EmptyMedia>
+          <EmptyTitle>Listing not found</EmptyTitle>
+          <EmptyDescription>
+            {`The property matching "${slug}" could not be located.`}
+          </EmptyDescription>
+        </EmptyHeader>
+        <Button nativeButton={false} render={<Link href="/" />}>
+          <ArrowLeftIcon data-icon="inline-start" />
+          Back to all destinations
+        </Button>
+      </Empty>
     );
   }
 
@@ -281,333 +312,347 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
   }
 
   return (
-    <div className="relative max-w-5xl mx-auto px-4 py-8 sm:px-6 lg:px-8 space-y-6 font-sans">
-      {/* Background gradients */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
-        <div className="absolute -top-[10%] left-[20%] w-[60%] h-[60%] rounded-full bg-teal-500/10 blur-[120px]" />
-      </div>
-
+    <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-8 font-sans sm:px-6 lg:px-8">
       {/* Navigation Header */}
-      <div className="flex items-center justify-between">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-teal-800 dark:text-zinc-400 hover:text-teal-950 dark:hover:text-white transition-colors"
-        >
-          <span>←</span> Back to All Destinations
-        </Link>
+      <div>
+        <Button variant="ghost" size="sm" nativeButton={false} render={<Link href="/" />}>
+          <ArrowLeftIcon data-icon="inline-start" />
+          Back to all destinations
+        </Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
+      <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-5">
         {/* Left Column: Property Details & Media */}
-        <div className="lg:col-span-3 space-y-6">
-          <div className="rounded-3xl border border-teal-100/80 dark:border-white/10 bg-white dark:bg-zinc-900/80 p-6 backdrop-blur-xl shadow-xl space-y-5">
-
-            {/* Gallery with Title Overlayed */}
-            <div className="space-y-3">
-              <div className="relative aspect-video rounded-2xl overflow-hidden border border-teal-100/50 dark:border-white/5 bg-zinc-950 shadow-inner">
-                {property.images && property.images.length > 0 ? (
-                  <img
-                    src={property.images[activeImageIndex]}
-                    alt={`${property.title} gallery view`}
-                    className="w-full h-full object-cover transition-all duration-300 ease-in-out"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-zinc-900 flex items-center justify-center text-zinc-500 text-xs">
-                    No image available
-                  </div>
-                )}
-
-                {/* Top Badge */}
-                <span className="absolute top-3 left-3 rounded-full bg-black/60 backdrop-blur-md border border-white/20 px-2.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-white">
-                  {property.bookingType === "hourly" ? "Hourly Slot" : "Nightly Stay"}
-                </span>
-
-                {/* Title Overlay Banner at Bottom of Image */}
-                <div className="absolute inset-x-0 bottom-0 pt-16 pb-4 px-5 bg-gradient-to-t from-black/90 via-black/50 to-transparent flex flex-col justify-end">
-                  <div className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-teal-300 mb-0.5">
-                    <span>📍</span> {property.location || "Llandudno, Cape Town"}
-                  </div>
-                  <h1 className="text-2xl sm:text-3xl font-black text-white drop-shadow-md">
-                    {property.title}
-                  </h1>
-                  <span className="text-[10px] text-zinc-300/80 font-mono mt-0.5">
-                    Ref: {property.slug} • ID: {property.id}
-                  </span>
-                </div>
-              </div>
-
-              {/* Thumbnails */}
-              {property.images && property.images.length > 1 && (
-                <div className="flex gap-2 overflow-x-auto pb-1 max-w-full">
-                  {property.images.map((img, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setActiveImageIndex(idx)}
-                      className={`relative w-20 aspect-video rounded-xl overflow-hidden border-2 shrink-0 transition-all ${idx === activeImageIndex
-                        ? "border-teal-500 scale-95 shadow-md"
-                        : "border-transparent opacity-60 hover:opacity-100"
-                        }`}
-                    >
-                      <img src={img} alt="" className="w-full h-full object-cover" />
-                    </button>
-                  ))}
+        <div className="flex flex-col gap-6 lg:col-span-3">
+          <Card className="gap-0 pt-0">
+            {/* Gallery */}
+            <div className="relative aspect-video overflow-hidden bg-muted">
+              {property.images && property.images.length > 0 ? (
+                <img
+                  src={property.images[activeImageIndex] || "/placeholder.svg"}
+                  alt={`${property.title} gallery view`}
+                  className="size-full object-cover"
+                />
+              ) : (
+                <div className="flex size-full flex-col items-center justify-center gap-2 text-muted-foreground">
+                  <ImageOffIcon className="size-6" />
+                  <span className="text-xs">No image available</span>
                 </div>
               )}
+
+              <Badge variant="secondary" className="absolute top-3 left-3">
+                {property.bookingType === "hourly" ? "Hourly slot" : "Nightly stay"}
+              </Badge>
             </div>
 
-            {/* Price Highlights */}
-            <div className="grid grid-cols-2 gap-4 border-t border-teal-100/60 dark:border-white/5 pt-4">
-              <div>
-                <span className="text-[9px] text-teal-800/60 dark:text-zinc-400 uppercase font-bold tracking-wider block">
-                  {property.bookingType === "hourly" ? "Hourly slot price" : "Nightly base rate"}
-                </span>
-                <p className="text-2xl font-black text-teal-600 dark:text-teal-400 mt-0.5">
-                  R {property.basePricePerNight.toLocaleString()}
-                  <span className="text-xs font-semibold text-teal-800/60 dark:text-zinc-400">
-                    {property.bookingType === "hourly" ? "/slot" : "/night"}
-                  </span>
-                </p>
-              </div>
-              <div>
-                <span className="text-[9px] text-teal-800/60 dark:text-zinc-400 uppercase font-bold tracking-wider block">
-                  Location
-                </span>
-                <p className="text-sm font-bold text-teal-950 dark:text-white mt-1">
-                  {property.location || "🏖 Llandudno, Cape Town"}
-                </p>
-              </div>
-            </div>
-
-            {/* Description */}
-            <div className="border-t border-teal-100/60 dark:border-white/5 pt-4">
-              <span className="text-[9px] text-teal-800/60 dark:text-zinc-400 uppercase font-bold tracking-wider block mb-1">
-                About this property
-              </span>
-              <p className="text-xs text-teal-900/80 dark:text-zinc-300 leading-relaxed whitespace-pre-line">
-                {property.description ||
-                  "Experience Llandudno at its finest. This property features coastline scenery, proximity to the beach, luxury amenities, and private decks. Connect package options and add-ons at checkout."}
-              </p>
-            </div>
-          </div>
-
-          {/* Package Deals Section */}
-          <div className="rounded-3xl border border-teal-100/80 dark:border-white/10 bg-white dark:bg-zinc-900/80 p-6 backdrop-blur-xl shadow-xl space-y-4">
-            <h3 className="text-base font-black text-teal-950 dark:text-white flex items-center gap-2">
-              <span>🎁</span> Available Packages
-            </h3>
-
-            {packages.filter((pkg) => pkg.category !== "addon").length === 0 ? (
-              <p className="text-xs text-teal-800/60 dark:text-zinc-500 italic">
-                No specific package configurations created for this property yet.
-              </p>
-            ) : (
-              <div className="grid grid-cols-1 gap-3">
-                {packages
-                  .filter((pkg) => pkg.category !== "addon")
-                  .map((pkg) => (
-                    <div
-                      key={pkg.id}
-                      className="rounded-2xl bg-teal-50/40 dark:bg-black/40 p-4 border border-teal-100/60 dark:border-white/5 flex items-center justify-between transition-all hover:border-teal-300 dark:hover:border-teal-500/30"
-                    >
-                      <div className="space-y-1">
-                        <span className="inline-block rounded-full bg-teal-100 dark:bg-white/5 border border-teal-200 dark:border-white/10 px-2 py-0.5 text-[8px] font-extrabold text-teal-800 dark:text-zinc-400 uppercase tracking-wider">
-                          {pkg.category} Category
-                        </span>
-                        <h4 className="text-sm font-bold text-teal-950 dark:text-white">{pkg.name}</h4>
-                        {pkg.description && (
-                          <p className="text-xs text-teal-900/70 dark:text-zinc-400 leading-relaxed">
-                            {pkg.description}
-                          </p>
-                        )}
-                      </div>
-                      <div className="text-right pl-4 shrink-0">
-                        <span className="text-[8px] text-teal-800/60 dark:text-zinc-500 uppercase font-bold block">
-                          Price
-                        </span>
-                        <p className="text-sm font-black text-teal-600 dark:text-teal-400">
-                          R {pkg.price.toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+            {/* Thumbnails */}
+            {property.images && property.images.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto px-(--card-spacing) pt-(--card-spacing)">
+                {property.images.map((img, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setActiveImageIndex(idx)}
+                    aria-label={`View image ${idx + 1}`}
+                    aria-current={idx === activeImageIndex}
+                    className={`relative aspect-video w-20 shrink-0 overflow-hidden rounded-md ring-2 transition-opacity ${
+                      idx === activeImageIndex
+                        ? "ring-primary"
+                        : "opacity-60 ring-transparent hover:opacity-100"
+                    }`}
+                  >
+                    <img
+                      src={img || "/placeholder.svg"}
+                      alt=""
+                      className="size-full object-cover"
+                    />
+                  </button>
+                ))}
               </div>
             )}
-          </div>
+
+            <CardHeader className="pt-(--card-spacing)">
+              <CardTitle className="text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
+                {property.title}
+              </CardTitle>
+              <CardDescription className="flex items-center gap-1.5">
+                <MapPinIcon className="size-3.5" />
+                {property.location || "Llandudno, Cape Town"}
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="pt-(--card-spacing)">
+              <Separator />
+
+              {/* Price Highlights */}
+              <div className="grid grid-cols-2 gap-4 py-4">
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs text-muted-foreground">
+                    {property.bookingType === "hourly" ? "Hourly slot price" : "Nightly base rate"}
+                  </span>
+                  <p className="font-heading text-2xl font-semibold">
+                    R {property.basePricePerNight.toLocaleString()}
+                    <span className="text-sm font-normal text-muted-foreground">
+                      {property.bookingType === "hourly" ? "/slot" : "/night"}
+                    </span>
+                  </p>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs text-muted-foreground">Reference</span>
+                  <p className="font-mono text-sm">{property.slug}</p>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Description */}
+              <div className="flex flex-col gap-1.5 pt-4">
+                <span className="text-xs text-muted-foreground">About this property</span>
+                <p className="text-sm leading-relaxed whitespace-pre-line text-pretty">
+                  {property.description ||
+                    "Experience Llandudno at its finest. This property features coastline scenery, proximity to the beach, luxury amenities, and private decks. Connect package options and add-ons at checkout."}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Package Deals Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <GiftIcon className="size-4 text-muted-foreground" />
+                Available packages
+              </CardTitle>
+            </CardHeader>
+
+            <CardContent>
+              {packages.filter((pkg) => pkg.category !== "addon").length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No specific package configurations created for this property yet.
+                </p>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {packages
+                    .filter((pkg) => pkg.category !== "addon")
+                    .map((pkg) => (
+                      <div
+                        key={pkg.id}
+                        className="flex items-start justify-between gap-4 rounded-lg border bg-muted/40 p-4"
+                      >
+                        <div className="flex flex-col items-start gap-1.5">
+                          {pkg.category && <Badge variant="outline">{pkg.category}</Badge>}
+                          <h4 className="font-heading text-sm font-medium">{pkg.name}</h4>
+                          {pkg.description && (
+                            <p className="text-sm leading-relaxed text-muted-foreground">
+                              {pkg.description}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex shrink-0 flex-col items-end gap-0.5">
+                          <span className="text-xs text-muted-foreground">Price</span>
+                          <p className="font-heading text-sm font-semibold">
+                            R {pkg.price.toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         {/* Right Column: Interactive Stay Scheduler & Booking Block */}
-        <div className="lg:col-span-2 space-y-6 sticky top-6">
-          <div className="rounded-3xl border border-teal-100/80 dark:border-white/10 bg-white dark:bg-zinc-900/80 p-6 backdrop-blur-xl shadow-xl space-y-5">
-            <div className="flex justify-between items-center w-full border-b border-teal-100/60 dark:border-white/10 pb-3">
-              <h3 className="text-base font-black text-teal-950 dark:text-white flex items-center gap-2">
-                <span>📅</span> Stay Planner
-              </h3>
-            </div>
+        <div className="sticky top-6 flex flex-col gap-6 lg:col-span-2">
+          <Card>
+            <CardHeader className="border-b">
+              <CardTitle className="flex items-center gap-2">
+                <CalendarIcon className="size-4 text-muted-foreground" />
+                Stay planner
+              </CardTitle>
+            </CardHeader>
 
-            {/* Enhanced Active Estimate Sharing Widget */}
-            {latestEstimate && (
-              <div className="rounded-2xl border border-teal-500/30 bg-teal-500/10 p-3.5 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-teal-600 dark:text-teal-400">
-                    Active Estimate Ready
-                  </span>
-                  <span className="text-[10px] font-mono text-zinc-400">
-                    Token: {latestEstimate.token ? `${latestEstimate.token.slice(0, 8)}...` : "Active"}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between gap-2">
-                  <div className="text-xs font-bold text-teal-950 dark:text-white">
-                    R {latestEstimate.total ? latestEstimate.total.toLocaleString() : "0"}
-                  </div>
-                  <button
-                    onClick={handleShareEstimate}
-                    className="rounded-xl bg-teal-500 hover:bg-teal-600 px-3 py-1.5 text-xs font-bold text-white transition-all active:scale-95 flex items-center gap-1.5 shadow-sm"
-                  >
-                    <span>{copiedEstimateUrl ? "✓ Copied!" : "🔗 Share Link"}</span>
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {!user ? (
-              <div className="text-center py-6 space-y-4">
-                <p className="text-xs text-teal-900/80 dark:text-zinc-400 leading-relaxed">
-                  Sign in or register to lock check-in dates and access package booking options.
-                </p>
-                <Link
-                  href="/login"
-                  className="inline-block w-full rounded-xl bg-teal-500 py-3 text-center text-xs font-extrabold text-white hover:bg-teal-600 transition-all shadow-md shadow-teal-500/20"
-                >
-                  Sign In to Reserve
-                </Link>
-              </div>
-            ) : datesLocked ? (
-              <div className="space-y-4">
-                <div className="rounded-2xl bg-teal-50/60 dark:bg-teal-500/10 border border-teal-100 dark:border-teal-500/20 p-4 space-y-2.5">
-                  <div className="flex justify-between items-start text-xs text-teal-900/80 dark:text-zinc-300">
-                    <span className="font-medium">
-                      {property.bookingType === "hourly" ? "Selected Slot:" : "Selected Stay:"}
+            <CardContent className="flex flex-col gap-4">
+              {/* Active Estimate Sharing Widget */}
+              {latestEstimate && (
+                <div className="flex flex-col gap-2 rounded-lg border bg-muted/40 p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                      Active estimate ready
                     </span>
-                    <span className="font-bold text-teal-950 dark:text-white text-right">
-                      {property.bookingType === "hourly" ? (
-                        <>
-                          {formatDisplayDate(savedDates!.fromDate)}
-                          <br />
-                          <span className="text-md text-teal-600 dark:text-teal-400 font-mono">
-                            {new Date(savedDates!.fromDate).toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                              hour12: false,
-                            })}{" "}
-                          </span>
-                        </>
+                    <span className="font-mono text-xs text-muted-foreground">
+                      {latestEstimate.token ? `${latestEstimate.token.slice(0, 8)}…` : "Active"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="font-heading text-sm font-semibold">
+                      R {latestEstimate.total ? latestEstimate.total.toLocaleString() : "0"}
+                    </div>
+                    <Button size="sm" variant="outline" onClick={handleShareEstimate}>
+                      {copiedEstimateUrl ? (
+                        <CheckIcon data-icon="inline-start" />
                       ) : (
-                        `${formatDisplayDate(savedDates!.fromDate)} - ${formatDisplayDate(savedDates!.toDate)}`
+                        <CopyIcon data-icon="inline-start" />
                       )}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between text-xs text-teal-900/80 dark:text-zinc-300">
-                    <span className="font-medium">Duration:</span>
-                    <span className="font-bold text-teal-950 dark:text-white">
-                      {property.bookingType === "hourly" ? "1 Slot" : `${nights} Night(s)`}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between text-xs text-teal-900/80 dark:text-zinc-300 border-t border-teal-100/60 dark:border-white/5 pt-2">
-                    <span className="font-bold">Estimated Base Total:</span>
-                    <span className="font-black text-teal-600 dark:text-teal-400">
-                      R {baseStayCost.toLocaleString()}
-                    </span>
+                      {copiedEstimateUrl ? "Copied" : "Share link"}
+                    </Button>
                   </div>
                 </div>
+              )}
 
-                <Link
-                  href={latestEstimate ? `/estimate/${latestEstimate.id}` : `/bookings?propertyId=${property.id}`}
-                  className="block w-full rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 py-3 text-center text-xs font-black text-white hover:brightness-105 active:scale-95 transition-all shadow-lg shadow-teal-500/20"
-                >
-                  Select Package & Pay →
-                </Link>
+              {!user ? (
+                <div className="flex flex-col gap-4 py-2 text-center">
+                  <p className="text-sm leading-relaxed text-muted-foreground text-pretty">
+                    Sign in or register to lock check-in dates and access package booking options.
+                  </p>
+                  <Button className="w-full" nativeButton={false} render={<Link href="/login" />}>
+                    Sign in to reserve
+                  </Button>
+                </div>
+              ) : datesLocked ? (
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-2.5 rounded-lg border bg-muted/40 p-4">
+                    <div className="flex items-start justify-between gap-3 text-sm">
+                      <span className="text-muted-foreground">
+                        {property.bookingType === "hourly" ? "Selected slot" : "Selected stay"}
+                      </span>
+                      <span className="text-right font-medium">
+                        {property.bookingType === "hourly" ? (
+                          <>
+                            {formatDisplayDate(savedDates!.fromDate)}
+                            <br />
+                            <span className="font-mono text-muted-foreground">
+                              {new Date(savedDates!.fromDate).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                hour12: false,
+                              })}
+                            </span>
+                          </>
+                        ) : (
+                          `${formatDisplayDate(savedDates!.fromDate)} – ${formatDisplayDate(savedDates!.toDate)}`
+                        )}
+                      </span>
+                    </div>
 
-                <button
-                  onClick={() => setSavedDates(null)}
-                  className="w-full text-center text-[10px] uppercase tracking-wider text-teal-800 dark:text-zinc-400 hover:text-teal-950 dark:hover:text-white font-bold transition-colors"
-                >
-                  Change Stay Dates
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <p className="text-xs text-teal-900/80 dark:text-zinc-400">
-                  {property.bookingType === "hourly"
-                    ? "Select booking date and time to persist to your profile."
-                    : "Select stay ranges to persist to your guest profile."}
-                </p>
+                    <div className="flex items-center justify-between gap-3 text-sm">
+                      <span className="text-muted-foreground">Duration</span>
+                      <span className="font-medium">
+                        {property.bookingType === "hourly"
+                          ? "1 slot"
+                          : `${nights} night${nights === 1 ? "" : "s"}`}
+                      </span>
+                    </div>
 
-                {dateError && (
-                  <div className="rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 p-2.5 text-center text-xs text-red-600 dark:text-red-400 font-bold">
-                    ⚠️ {dateError}
+                    <Separator />
+
+                    <div className="flex items-center justify-between gap-3 text-sm">
+                      <span className="font-medium">Estimated base total</span>
+                      <span className="font-heading text-base font-semibold">
+                        R {baseStayCost.toLocaleString()}
+                      </span>
+                    </div>
                   </div>
-                )}
 
-                <CalendarPicker
-                  selectedFromDate={fromDate}
-                  selectedToDate={toDate}
-                  bookings={bookings}
-                  singleMonth={true}
-                  bookingType={property.bookingType}
-                  onChange={(start, end) => {
-                    setFromDate(start);
-                    setToDate(end);
-                  }}
-                />
+                  <Button
+                    className="w-full"
+                    nativeButton={false}
+                    render={
+                      <Link
+                        href={
+                          latestEstimate
+                            ? `/estimate/${latestEstimate.id}`
+                            : `/bookings?propertyId=${property.id}`
+                        }
+                      />
+                    }
+                  >
+                    Select package &amp; pay
+                    <ArrowRightIcon data-icon="inline-end" />
+                  </Button>
 
-                {property.bookingType === "hourly" && (
-                  <div className="rounded-2xl bg-teal-50/50 dark:bg-white/5 border border-teal-100 dark:border-white/10 p-3 space-y-2">
-                    <label className="block text-[9px] text-teal-800/70 dark:text-zinc-400 uppercase tracking-wider font-extrabold">
-                      Available Slots (Flat Booking)
-                    </label>
-                    {property.slots && property.slots.length > 0 ? (
-                      <div className="grid grid-cols-2 gap-2">
-                        {property.slots.map((slotTime) => {
-                          const isSelected = selectedSlot === slotTime;
-                          const [h, m] = slotTime.split(":");
-                          const hourNum = parseInt(h);
-                          const ampm = hourNum >= 12 ? "PM" : "AM";
-                          const displayHour = hourNum % 12 === 0 ? 12 : hourNum % 12;
-                          const label = `${displayHour}:${m} ${ampm} Slot`;
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => setSavedDates(null)}
+                  >
+                    Change stay dates
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  <p className="text-sm text-muted-foreground text-pretty">
+                    {property.bookingType === "hourly"
+                      ? "Select booking date and time to persist to your profile."
+                      : "Select stay ranges to persist to your guest profile."}
+                  </p>
 
-                          return (
-                            <button
-                              key={slotTime}
-                              type="button"
-                              onClick={() => setSelectedSlot(slotTime)}
-                              className={`rounded-xl py-2 px-2.5 text-xs font-bold border transition-all ${isSelected
-                                ? "bg-teal-500/15 border-teal-500 text-teal-600 dark:text-teal-400"
-                                : "bg-white/40 dark:bg-black/30 border-teal-100 dark:border-white/5 text-zinc-600 dark:text-zinc-400 hover:text-white"
-                                }`}
-                            >
-                              {label}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <p className="text-[10px] text-zinc-500 italic">No available slots configured.</p>
-                    )}
-                  </div>
-                )}
+                  {dateError && (
+                    <Alert variant="destructive">
+                      <TriangleAlertIcon />
+                      <AlertTitle>Invalid selection</AlertTitle>
+                      <AlertDescription>{dateError}</AlertDescription>
+                    </Alert>
+                  )}
 
-                <button
-                  onClick={handleSaveDates}
-                  disabled={isSavingDates}
-                  className="w-full rounded-xl bg-teal-500 py-3 text-center text-xs font-black text-white hover:bg-teal-600 transition-all active:scale-95 shadow-md shadow-teal-500/20"
-                >
-                  {isSavingDates ? "Saving selection..." : "Confirm & Save Booking"}
-                </button>
-              </div>
-            )}
-          </div>
+                  <CalendarPicker
+                    selectedFromDate={fromDate}
+                    selectedToDate={toDate}
+                    bookings={bookings}
+                    singleMonth={true}
+                    bookingType={property.bookingType}
+                    onChange={(start, end) => {
+                      setFromDate(start);
+                      setToDate(end);
+                    }}
+                  />
+
+                  {property.bookingType === "hourly" && (
+                    <div className="flex flex-col gap-2 rounded-lg border bg-muted/40 p-3">
+                      <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                        Available slots
+                      </span>
+                      {property.slots && property.slots.length > 0 ? (
+                        <div className="grid grid-cols-2 gap-2">
+                          {property.slots.map((slotTime) => {
+                            const isSelected = selectedSlot === slotTime;
+                            const [h, m] = slotTime.split(":");
+                            const hourNum = parseInt(h);
+                            const ampm = hourNum >= 12 ? "PM" : "AM";
+                            const displayHour = hourNum % 12 === 0 ? 12 : hourNum % 12;
+                            const label = `${displayHour}:${m} ${ampm}`;
+
+                            return (
+                              <Button
+                                key={slotTime}
+                                type="button"
+                                size="sm"
+                                variant={isSelected ? "default" : "outline"}
+                                aria-pressed={isSelected}
+                                onClick={() => setSelectedSlot(slotTime)}
+                              >
+                                {label}
+                              </Button>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          No available slots configured.
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  <Button className="w-full" onClick={handleSaveDates} disabled={isSavingDates}>
+                    {isSavingDates && <Spinner data-icon="inline-start" />}
+                    {isSavingDates ? "Saving selection" : "Confirm & save booking"}
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
@@ -620,8 +665,8 @@ export default function PropertyDetailsPage({ params }: { params: Promise<{ slug
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-t-teal-500 border-teal-100 dark:border-white/10" />
+        <div className="flex min-h-screen items-center justify-center bg-background">
+          <Spinner className="size-6 text-muted-foreground" />
         </div>
       }
     >

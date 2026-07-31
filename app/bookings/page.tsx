@@ -6,6 +6,41 @@ import { useAuth, AuthProvider } from "@/components/auth";
 import Link from "next/link";
 import CalendarPicker from "@/components/CalendarPicker";
 import { formatDisplayDate } from "@/lib/utils";
+import {
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  BedDoubleIcon,
+  CalendarOffIcon,
+  CheckIcon,
+  ClockIcon,
+  KeyRoundIcon,
+  LuggageIcon,
+  TriangleAlertIcon,
+  UsersIcon,
+} from "lucide-react";
+
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { Separator } from "@/components/ui/separator";
+import { Spinner } from "@/components/ui/spinner";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 interface Property {
   id: string;
@@ -44,6 +79,15 @@ interface Booking {
   guestsDetails?: Record<string, { name: string; email: string }>;
 }
 
+function paymentBadgeVariant(
+  status: string
+): "default" | "secondary" | "destructive" | "outline" {
+  if (status === "paid" || status === "success") return "default";
+  if (status === "failed" || status === "cancelled" || status === "refunded")
+    return "destructive";
+  return "secondary";
+}
+
 function BookingsCheckoutContent() {
   const searchParams = useSearchParams();
   const propertyId = searchParams.get("propertyId") || "";
@@ -60,6 +104,7 @@ function BookingsCheckoutContent() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [checkoutLog, setCheckoutLog] = useState<string[]>([]);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [dateConflict, setDateConflict] = useState<string | null>(null);
   const [bookingsList, setBookingsList] = useState<Booking[]>([]);
 
@@ -180,9 +225,9 @@ function BookingsCheckoutContent() {
 
   if (authLoading || isLoading) {
     return (
-      <div className="flex min-h-[400px] flex-col items-center justify-center text-teal-950 dark:text-white">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-t-teal-500 border-teal-150 dark:border-white/10" />
-        <span className="mt-3 text-xs text-teal-800/60 dark:text-zinc-500">Securing Session Context...</span>
+      <div className="flex min-h-[400px] flex-col items-center justify-center gap-3">
+        <Spinner className="size-6 text-primary" />
+        <span className="text-sm text-muted-foreground">Securing session context...</span>
       </div>
     );
   }
@@ -190,20 +235,25 @@ function BookingsCheckoutContent() {
   // 1. Not Authenticated State
   if (!user) {
     return (
-      <div className="max-w-md mx-auto my-20 p-8 rounded-3xl border border-teal-100 dark:border-white/10 bg-teal-50/15 dark:bg-white/5 text-center">
-        <span className="text-3xl">🔑</span>
-        <h3 className="text-lg font-bold text-teal-950 dark:text-white mt-4">Authentication Required</h3>
-        <p className="text-xs text-teal-800/80 dark:text-zinc-400 mt-2 leading-relaxed">
-          {propertyId
-            ? "You must be logged in and have selected stay dates before checking out a package."
-            : "You must be logged in to view your stays."}
-        </p>
-        <Link
-          href="/"
-          className="mt-6 inline-block w-full rounded-xl bg-teal-500 py-3 text-center text-xs font-bold text-white hover:bg-teal-600 transition-all"
-        >
-          {propertyId ? "Go to Homepage Login & Date Picker" : "Go to Homepage to Login"}
-        </Link>
+      <div className="mx-auto w-full max-w-md px-4 py-16">
+        <Empty className="rounded-xl border">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <KeyRoundIcon />
+            </EmptyMedia>
+            <EmptyTitle>Authentication required</EmptyTitle>
+            <EmptyDescription>
+              {propertyId
+                ? "You must be logged in and have selected stay dates before checking out a package."
+                : "You must be logged in to view your stays."}
+            </EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <Button className="w-full" nativeButton={false} render={<Link href="/" />}>
+              {propertyId ? "Go to homepage login and date picker" : "Go to homepage to login"}
+            </Button>
+          </EmptyContent>
+        </Empty>
       </div>
     );
   }
@@ -211,18 +261,24 @@ function BookingsCheckoutContent() {
   // 2. Dates not selected state (Only during checkout flow)
   if (propertyId && !savedDates) {
     return (
-      <div className="max-w-md mx-auto my-20 p-8 rounded-3xl border border-teal-100 dark:border-white/10 bg-teal-50/15 dark:bg-white/5 text-center">
-        <span className="text-3xl">📅</span>
-        <h3 className="text-lg font-bold text-teal-950 dark:text-white mt-4">Dates Missing</h3>
-        <p className="text-xs text-teal-800/80 dark:text-zinc-400 mt-2 leading-relaxed">
-          No active stay dates found on your profile. Please configure check-in and check-out dates on the portal first.
-        </p>
-        <Link
-          href="/"
-          className="mt-6 inline-block w-full rounded-xl bg-teal-500 py-3 text-center text-xs font-bold text-white hover:bg-teal-600 transition-all"
-        >
-          Select Dates First
-        </Link>
+      <div className="mx-auto w-full max-w-md px-4 py-16">
+        <Empty className="rounded-xl border">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <CalendarOffIcon />
+            </EmptyMedia>
+            <EmptyTitle>Dates missing</EmptyTitle>
+            <EmptyDescription>
+              No active stay dates found on your profile. Please configure check-in and check-out
+              dates on the portal first.
+            </EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <Button className="w-full" nativeButton={false} render={<Link href="/" />}>
+              Select dates first
+            </Button>
+          </EmptyContent>
+        </Empty>
       </div>
     );
   }
@@ -278,10 +334,11 @@ function BookingsCheckoutContent() {
 
   const handleBookNow = async () => {
     if (dateConflict) {
-      alert("Please resolve the date conflict before proceeding.");
+      setCheckoutError("Please resolve the date conflict before proceeding.");
       return;
     }
 
+    setCheckoutError(null);
     setIsSubmitting(true);
     setCheckoutLog(["1. Validating stay selection...", "2. Registering stay estimate details..."]);
 
@@ -309,7 +366,7 @@ function BookingsCheckoutContent() {
 
       setCheckoutLog(prev => [
         ...prev,
-        "3. ✅ Estimate saved successfully. Preparing payment details...",
+        "3. Estimate saved successfully. Preparing payment details...",
       ]);
 
       const targetType = selectedPackage
@@ -338,7 +395,7 @@ function BookingsCheckoutContent() {
 
       setCheckoutLog(prev => [
         ...prev,
-        "4. ✅ Redirecting to Checkout Gateway..."
+        "4. Redirecting to checkout gateway..."
       ]);
 
       setTimeout(() => {
@@ -347,7 +404,7 @@ function BookingsCheckoutContent() {
 
     } catch (err: unknown) {
       const error = err as Error;
-      setCheckoutLog(prev => [...prev, `❌ Error: ${error.message}`]);
+      setCheckoutError(error.message);
       setIsSubmitting(false);
     }
   };
@@ -362,13 +419,11 @@ function BookingsCheckoutContent() {
       return true;
     });
 
-    const getCountdownLabel = (b: Booking) => {
+    const getCountdownLabel = (
+      b: Booking
+    ): { text: string; variant: "default" | "secondary" | "destructive" | "outline" } => {
       if (b.paymentStatus === "failed" || b.paymentStatus === "cancelled" || b.paymentStatus === "refunded") {
-        return {
-          text: "No active reservation",
-          class:
-            "text-teal-800/70 bg-teal-50/30 border border-teal-100 dark:text-zinc-500 dark:bg-zinc-950/40 dark:border-zinc-800",
-        };
+        return { text: "No active reservation", variant: "outline" };
       }
 
       const now = new Date();
@@ -379,145 +434,126 @@ function BookingsCheckoutContent() {
       end.setHours(0, 0, 0, 0);
 
       if (now > end) {
-        return {
-          text: "Completed stay",
-          class:
-            "text-teal-800/70 bg-teal-50/20 border border-teal-100 dark:text-zinc-400 dark:bg-zinc-950/40 dark:border-zinc-900",
-        };
-      } else if (now >= start && now <= end) {
-        return {
-          text: "Active Now 🟢",
-          class:
-            "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 animate-pulse font-bold",
-        };
-      } else {
-        const diffTime = start.getTime() - now.getTime();
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        if (diffDays === 1) {
-          return {
-            text: "Starts tomorrow 📅",
-            class:
-              "text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-500/10 border border-teal-150 dark:border-teal-500/20 font-bold",
-          };
-        }
-        return {
-          text: `Starts in ${diffDays} days`,
-          class:
-            "text-teal-800 dark:text-zinc-300 bg-teal-50/50 dark:bg-white/5 border border-teal-100 dark:border-white/10",
-        };
+        return { text: "Completed stay", variant: "outline" };
       }
+      if (now >= start && now <= end) {
+        return { text: "Active now", variant: "default" };
+      }
+
+      const diffTime = start.getTime() - now.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      if (diffDays === 1) {
+        return { text: "Starts tomorrow", variant: "default" };
+      }
+      return { text: `Starts in ${diffDays} days`, variant: "secondary" };
     };
 
     return (
-      <div className="relative max-w-5xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
-        <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
-          <div className="absolute -top-[10%] left-[20%] w-[60%] h-[60%] rounded-full bg-teal-500/10 blur-[120px]" />
-        </div>
-
-        <header className="mb-10 border-b border-teal-100 dark:border-white/10 pb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <span className="text-[10px] text-teal-600 dark:text-teal-400 font-extrabold uppercase tracking-wide">
-              Account Stays
+      <div className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
+        <header className="mb-8 flex flex-col gap-4 border-b pb-6 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Account stays
             </span>
-            <h1 className="text-3xl font-black text-teal-950 dark:text-white mt-1">My Bookings Dashboard</h1>
+            <h1 className="font-heading text-3xl font-semibold tracking-tight text-balance">
+              My bookings
+            </h1>
           </div>
-          <Link
-            href="/"
-            className="text-xs text-teal-800 dark:text-zinc-400 hover:text-teal-950 dark:hover:text-white transition-colors"
+          <Button
+            variant="ghost"
+            size="sm"
+            className="self-start sm:self-auto"
+            nativeButton={false}
+            render={<Link href="/" />}
           >
-            ← View Destination Properties
-          </Link>
+            <ArrowLeftIcon data-icon="inline-start" />
+            View destination properties
+          </Button>
         </header>
 
         {latestEstimate && latestEstimate.paymentStatus === "pending" && (() => {
           const estimateProperty = propertiesList.find((p) => p.id === latestEstimate.propertyId);
           return (
-            <div className="mb-8 rounded-3xl border border-orange-500/20 bg-orange-500/5 p-6 backdrop-blur-md relative overflow-hidden">
-              <div className="absolute -right-10 -top-10 w-24 h-24 rounded-full bg-orange-500/10 blur-xl pointer-events-none" />
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center w-full">
+            <Card className="mb-8 border-primary/40 bg-accent/40">
+              <CardContent className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                   {estimateProperty?.images && estimateProperty.images.length > 0 && (
-                    <div className="relative w-full sm:w-28 h-20 rounded-2xl overflow-hidden border border-orange-500/20 bg-zinc-950 shrink-0">
+                    <div className="relative h-20 w-full shrink-0 overflow-hidden rounded-lg border bg-muted sm:w-28">
                       <img
-                        src={estimateProperty.images[0]}
+                        src={estimateProperty.images[0] || "/placeholder.svg"}
                         alt={estimateProperty.title}
-                        className="w-full h-full object-cover"
+                        className="size-full object-cover"
                       />
                     </div>
                   )}
-                  <div>
-                    <span className="inline-block rounded bg-orange-500/10 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-orange-600 dark:text-orange-400">
-                      Unpaid Stay Estimate
-                    </span>
-                    <h3 className="text-lg font-black text-teal-950 dark:text-white mt-1">
+                  <div className="flex flex-col gap-1.5">
+                    <Badge variant="secondary">Unpaid stay estimate</Badge>
+                    <h2 className="font-heading text-lg font-semibold tracking-tight">
                       {estimateProperty?.title || latestEstimate.propertyId}
-                    </h3>
-                    <p className="text-xs text-teal-850/60 dark:text-zinc-400 mt-1">
-                      Dates: <strong>{formatDisplayDate(latestEstimate.fromDate)}</strong> to{" "}
-                      <strong>{formatDisplayDate(latestEstimate.toDate)}</strong>
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      {formatDisplayDate(latestEstimate.fromDate)} to{" "}
+                      {formatDisplayDate(latestEstimate.toDate)}
                     </p>
-                    <p className="text-xs text-teal-800/80 dark:text-zinc-300 mt-1 font-bold">
-                      Total: R {latestEstimate.total ? Number(latestEstimate.total).toLocaleString() : "0"}
+                    <p className="text-sm font-medium">
+                      Total: R{" "}
+                      {latestEstimate.total ? Number(latestEstimate.total).toLocaleString() : "0"}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex flex-wrap gap-2.5 shrink-0">
-                  <Link
-                    href={`/estimate/${latestEstimate.id}`}
-                    className="rounded-xl bg-orange-500 px-4 py-2.5 text-xs font-bold text-white hover:bg-orange-600 transition-all shadow-md shadow-orange-500/10"
-                  >
-                    View Details & Pay
-                  </Link>
-                </div>
-              </div>
-            </div>
+                <Button
+                  className="shrink-0"
+                  nativeButton={false}
+                  render={<Link href={`/estimate/${latestEstimate.id}`} />}
+                >
+                  View details and pay
+                </Button>
+              </CardContent>
+            </Card>
           );
         })()}
 
         {user?.isAdmin && (
-          <div className="flex border-b border-teal-100 dark:border-white/5 mb-8">
-            <button
-              onClick={() => setViewMode("my")}
-              className={`px-4 py-2 text-xs font-bold uppercase tracking-wider border-b-2 transition-all ${viewMode === "my"
-                ? "border-teal-500 text-teal-600 dark:text-teal-400"
-                : "border-transparent text-teal-800/60 dark:text-zinc-500 hover:text-teal-950 dark:hover:text-zinc-300"
-                }`}
-            >
-              My Bookings
-            </button>
-            <button
-              onClick={() => setViewMode("all")}
-              className={`px-4 py-2 text-xs font-bold uppercase tracking-wider border-b-2 transition-all ${viewMode === "all"
-                ? "border-teal-500 text-teal-600 dark:text-teal-400"
-                : "border-transparent text-teal-800/60 dark:text-zinc-500 hover:text-teal-950 dark:hover:text-zinc-300"
-                }`}
-            >
-              All System Bookings (Admin)
-            </button>
-          </div>
+          <ToggleGroup
+            aria-label="Booking scope"
+            value={[viewMode]}
+            onValueChange={(value) => {
+              const next = value[0];
+              if (next === "my" || next === "all") setViewMode(next);
+            }}
+            variant="outline"
+            size="sm"
+            className="mb-8"
+          >
+            <ToggleGroupItem value="my">My bookings</ToggleGroupItem>
+            <ToggleGroupItem value="all">All system bookings</ToggleGroupItem>
+          </ToggleGroup>
         )}
 
         {displayBookings.length === 0 ? (
-          <div className="text-center py-20 rounded-3xl border border-teal-100 dark:border-white/10 bg-teal-50/15 dark:bg-white/5 backdrop-blur-md">
-            <span className="text-4xl">🧳</span>
-            <h3 className="text-lg font-bold text-teal-950 dark:text-white mt-4">No Stays Found</h3>
-            <p className="text-xs text-teal-800/80 dark:text-zinc-400 mt-2 max-w-sm mx-auto leading-relaxed">
-              {viewMode === "my"
-                ? "You haven't reserved any stays yet. Visit the homepage to choose a property and dates."
-                : "No bookings recorded in the system ledger yet."}
-            </p>
+          <Empty className="rounded-xl border">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <LuggageIcon />
+              </EmptyMedia>
+              <EmptyTitle>No stays found</EmptyTitle>
+              <EmptyDescription>
+                {viewMode === "my"
+                  ? "You haven't reserved any stays yet. Visit the homepage to choose a property and dates."
+                  : "No bookings recorded in the system ledger yet."}
+              </EmptyDescription>
+            </EmptyHeader>
             {viewMode === "my" && (
-              <Link
-                href="/"
-                className="mt-6 inline-block rounded-xl bg-teal-500 px-6 py-2.5 text-xs font-bold text-white hover:bg-teal-600 transition-all shadow-md shadow-teal-500/10"
-              >
-                Explore Properties
-              </Link>
+              <EmptyContent>
+                <Button nativeButton={false} render={<Link href="/" />}>
+                  Explore properties
+                </Button>
+              </EmptyContent>
             )}
-          </div>
+          </Empty>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             {displayBookings.map((b) => {
               const propertyForBooking = propertiesList.find((p) => p.id === b.propertyId);
               const isHourlyBooking = propertyForBooking?.bookingType === "hourly";
@@ -544,118 +580,103 @@ function BookingsCheckoutContent() {
               const guestCount = b.guests?.length || 0;
 
               return (
-                <Link
+                <Card
                   key={b.id}
-                  href={`/bookings/${b.id}`}
-                  className="group relative overflow-hidden rounded-3xl border border-teal-100 dark:border-white/10 bg-white/80 dark:bg-zinc-900/70 p-6 backdrop-blur-xl shadow-lg hover:shadow-2xl hover:border-teal-300 dark:hover:border-teal-500/30 transition-all duration-300 flex flex-col justify-between"
+                  className="group flex flex-col transition-colors hover:border-primary/50"
                 >
-                  {/* Decorative Glow Effect */}
-                  <div className="absolute -right-12 -top-12 w-32 h-32 rounded-full bg-teal-500/10 dark:bg-teal-500/20 blur-2xl group-hover:bg-teal-500/20 transition-all pointer-events-none" />
-
-                  <div className="space-y-5">
-                    {/* Top Header: Badge, Title, Status & Thumbnail on the right */}
-                    <div className="flex gap-4 items-start justify-between">
-                      <div className="flex-1 min-w-0 space-y-1">
-                        <span className="inline-block rounded-full bg-teal-500/10 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-teal-700 dark:text-teal-300 border border-teal-500/20">
-                          {b.propertyId === "shack"
-                            ? "Beach Shack"
-                            : b.propertyId === "cottage"
-                              ? "Cozy Cottage"
-                              : "Luxury Villa"}
-                        </span>
-                        <h3 className="text-xl font-black text-teal-950 dark:text-white tracking-tight group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">
+                  <CardHeader className="flex-row items-start justify-between gap-4">
+                    <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                      <CardTitle className="truncate text-xl">
+                        <Link href={`/bookings/${b.id}`} className="hover:underline">
                           {propName}
-                        </h3>
-                        <p className="text-[10px] font-mono text-teal-800/60 dark:text-zinc-500">Ref: {b.id}</p>
-                      </div>
-
-                      <div className="flex flex-col items-end gap-2 shrink-0">
-                        <span
-                          className={`inline-block rounded-full px-3 py-0.5 text-[9px] font-black uppercase tracking-wider border ${b.paymentStatus === "paid" || b.paymentStatus === "success"
-                            ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/25"
-                            : b.paymentStatus === "failed"
-                              ? "bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border-red-200 dark:border-red-500/25"
-                              : "bg-orange-50 dark:bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-500/25"
-                            }`}
-                        >
+                        </Link>
+                      </CardTitle>
+                      <CardDescription className="truncate font-mono text-xs">
+                        Ref: {b.id}
+                      </CardDescription>
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        <Badge variant={paymentBadgeVariant(b.paymentStatus)}>
                           {b.paymentStatus}
-                        </span>
-                        {propertyForBooking?.images && propertyForBooking.images.length > 0 && (
-                          <div className="relative w-16 h-16 rounded-xl overflow-hidden border border-teal-100/40 dark:border-white/5 bg-zinc-950">
-                            <img
-                              src={propertyForBooking.images[0]}
-                              alt={propName}
-                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                            />
-                          </div>
-                        )}
+                        </Badge>
+                        <Badge variant={countdown.variant}>{countdown.text}</Badge>
                       </div>
                     </div>
 
-                    {/* Countdown / Schedule State */}
-                    <div>
-                      <span className={`inline-block rounded-xl px-3 py-1 text-[11px] font-semibold tracking-wide ${countdown.class}`}>
-                        {countdown.text}
-                      </span>
-                    </div>
+                    {propertyForBooking?.images && propertyForBooking.images.length > 0 && (
+                      <div className="relative size-16 shrink-0 overflow-hidden rounded-lg border bg-muted">
+                        <img
+                          src={propertyForBooking.images[0] || "/placeholder.svg"}
+                          alt={propName}
+                          className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        />
+                      </div>
+                    )}
+                  </CardHeader>
 
-                    {/* Stay Dates Box */}
-                    <div className="grid grid-cols-2 gap-3 rounded-2xl bg-teal-50/50 dark:bg-black/40 p-4 border border-teal-100/80 dark:border-white/5">
-                      <div>
-                        <span className="text-[10px] font-bold text-teal-800/60 dark:text-zinc-500 uppercase tracking-wider block">
+                  <CardContent className="flex flex-1 flex-col gap-4">
+                    <div className="grid grid-cols-2 gap-4 rounded-lg border bg-muted/50 p-4">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                           Check-in
                         </span>
-                        <span className="font-bold text-teal-950 dark:text-white text-xs mt-0.5 block">{checkIn}</span>
+                        <span className="text-sm font-medium">{checkIn}</span>
                       </div>
-                      <div className="border-l border-teal-100/80 dark:border-white/5 pl-3">
-                        <span className="text-[10px] font-bold text-teal-800/60 dark:text-zinc-500 uppercase tracking-wider block">
+                      <div className="flex flex-col gap-1 border-l pl-4">
+                        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                           Check-out
                         </span>
-                        <span className="font-bold text-teal-950 dark:text-white text-xs mt-0.5 block">{checkOut}</span>
+                        <span className="text-sm font-medium">{checkOut}</span>
                       </div>
                     </div>
 
-                    {/* Guest Count Summary */}
                     {(b.paymentStatus === "paid" || b.paymentStatus === "success") && (
-                      <div className="border-t border-teal-100/60 dark:border-white/5 pt-3.5 flex items-center justify-between">
-                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-teal-700 dark:text-teal-400">
-                          Total Guests
-                        </span>
-                        <span className="text-xs font-bold text-teal-950 dark:text-white">
-                          👥 {guestCount} {guestCount === 1 ? "Guest" : "Guests"}
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Total guests</span>
+                        <span className="flex items-center gap-1.5 font-medium">
+                          <UsersIcon className="size-4 text-muted-foreground" />
+                          {guestCount} {guestCount === 1 ? "guest" : "guests"}
                         </span>
                       </div>
                     )}
-                  </div>
 
-                  {/* Card Footer */}
-                  <div className="mt-6 border-t border-teal-100 dark:border-white/5 pt-4 flex items-end justify-between">
-                    <div className="space-y-1">
-                      {viewMode === "all" && (
-                        <p className="text-[10px] text-teal-800/80 dark:text-zinc-400">
-                          Guest: <strong className="text-teal-950 dark:text-white">{b.customerName}</strong>
-                        </p>
-                      )}
-                      <span className="text-[10px] text-teal-800/60 dark:text-zinc-500 font-bold uppercase block">Duration</span>
-                      <span className="font-extrabold text-xs text-teal-950 dark:text-white block">
-                        {isHourlyBooking ? "1 Slot Booking" : `${stayNights} Night(s)`}
+                    {viewMode === "all" && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Guest</span>
+                        <span className="font-medium">{b.customerName}</span>
+                      </div>
+                    )}
+                  </CardContent>
+
+                  <CardFooter className="mt-auto flex-row items-end justify-between border-t pt-6">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        Duration
+                      </span>
+                      <span className="text-sm font-medium">
+                        {isHourlyBooking ? "1 slot booking" : `${stayNights} night(s)`}
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                      <div className="text-right">
-                        <span className="text-[10px] text-teal-800/60 dark:text-zinc-500 font-bold uppercase block">Total</span>
-                        <span className="text-lg font-black text-teal-600 dark:text-teal-400 block">
+                    <div className="flex items-end gap-4">
+                      <div className="flex flex-col items-end gap-1">
+                        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                          Total
+                        </span>
+                        <span className="font-heading text-xl font-semibold tabular-nums">
                           R {b.total ? b.total.toLocaleString() : "0"}
                         </span>
                       </div>
-
-                      <span className="rounded-xl bg-teal-500 text-white px-3.5 py-2 text-xs font-bold shadow-md shadow-teal-500/20 group-hover:bg-teal-600 transition-all flex items-center gap-1">
-                        Details →
-                      </span>
+                      <Button
+                        size="sm"
+                        nativeButton={false}
+                        render={<Link href={`/bookings/${b.id}`} />}
+                      >
+                        Details
+                        <ArrowRightIcon data-icon="inline-end" />
+                      </Button>
                     </div>
-                  </div>
-                </Link>
+                  </CardFooter>
+                </Card>
               );
             })}
           </div>
@@ -665,313 +686,317 @@ function BookingsCheckoutContent() {
   }
 
   return (
-    <div className="relative max-w-5xl mx-auto px-4 py-12 sm:px-6 lg:px-8 font-sans">
-      {/* Background Glow */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
-        <div className="absolute -top-[10%] left-[10%] w-[50%] h-[50%] rounded-full bg-teal-500/10 blur-[100px]" />
-      </div>
-
-      {/* Page Header */}
-      <header className="mb-10 border-b border-teal-100 dark:border-white/10 pb-6 flex items-center justify-between">
-        <div>
-          <span className="text-[10px] text-teal-600 dark:text-teal-400 font-extrabold uppercase tracking-wide">
-            Step 2: Checkout
+    <div className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
+      <header className="mb-8 flex flex-col gap-4 border-b pb-6 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Step 2 of 2 &middot; Checkout
           </span>
-          <h1 className="text-3xl font-black text-teal-950 dark:text-white mt-1">
-            Book Your Stay
+          <h1 className="font-heading text-3xl font-semibold tracking-tight text-balance">
+            Book your stay
           </h1>
         </div>
-        <Link
-          href="/"
-          className="text-xs font-semibold text-teal-800 dark:text-zinc-400 hover:text-teal-950 dark:hover:text-white transition-colors flex items-center gap-1"
+        <Button
+          variant="ghost"
+          size="sm"
+          className="self-start sm:self-auto"
+          nativeButton={false}
+          render={<Link href="/" />}
         >
-          ← Change Dates / Property
-        </Link>
+          <ArrowLeftIcon data-icon="inline-start" />
+          Change dates or property
+        </Button>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
+      <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-5">
         {/* Left Side: Summary & Package Select Tiles */}
-        <div className="lg:col-span-3 space-y-6">
-
-          {/* Stay Details Summary */}
-          <div className="rounded-3xl border border-teal-100/80 dark:border-white/10 bg-teal-50/20 dark:bg-white/5 p-6 backdrop-blur-md space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-teal-950 dark:text-white">
-                1. Stay Configuration
-              </h3>
-              {/* Booking Type Badge */}
-              <span
-                className={`rounded-full px-3 py-1 text-[10px] font-extrabold uppercase tracking-wide border ${isHourly
-                  ? "bg-amber-500/10 text-amber-700 border-amber-500/20 dark:text-amber-400"
-                  : "bg-indigo-500/10 text-indigo-700 border-indigo-500/20 dark:text-indigo-400"
-                  }`}
-              >
-                {isHourly ? "🕒 Hourly Slot Booking" : "🌙 Nightly Overnight Stay"}
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-              {/* Destination Tile */}
-              <div className="rounded-2xl bg-white dark:bg-black/40 p-4 border border-teal-100/60 dark:border-white/5 shadow-sm space-y-1">
-                <span className="text-[10px] text-teal-800/70 dark:text-zinc-500 uppercase font-bold block">
-                  Selected Destination
+        <div className="flex flex-col gap-6 lg:col-span-3">
+          <Card>
+            <CardHeader className="flex-row items-center justify-between gap-4">
+              <CardTitle>1. Stay configuration</CardTitle>
+              <Badge variant="secondary">
+                {isHourly ? (
+                  <>
+                    <ClockIcon className="size-3.5" />
+                    Hourly slot
+                  </>
+                ) : (
+                  <>
+                    <BedDoubleIcon className="size-3.5" />
+                    Nightly stay
+                  </>
+                )}
+              </Badge>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-1.5 rounded-lg border bg-muted/50 p-4">
+                <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Selected destination
                 </span>
-                <span className="text-sm font-extrabold text-teal-950 dark:text-white block">
+                <span className="font-heading text-sm font-medium">
                   {property ? property.title : "Llandudno Villa"}
                 </span>
-                <span className="text-[10px] text-teal-800/60 dark:text-zinc-500 font-mono block">
-                  id: {propertyId}
-                </span>
+                <span className="font-mono text-xs text-muted-foreground">id: {propertyId}</span>
               </div>
 
-              {/* Booking Date & Time Tile */}
-              <div className="rounded-2xl bg-white dark:bg-black/40 p-4 border border-teal-100/60 dark:border-white/5 shadow-sm space-y-1.5">
-                <div className="flex justify-between items-center">
-                  <span className="text-[10px] text-teal-800/70 dark:text-zinc-500 uppercase font-bold block">
-                    {isHourly ? "Booking Date & Time Slot" : "Check-in & Check-out Dates"}
+              <div className="flex flex-col gap-1.5 rounded-lg border bg-muted/50 p-4">
+                <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  {isHourly ? "Booking date and time slot" : "Check-in and check-out"}
+                </span>
+                {isHourly ? (
+                  <>
+                    <span className="font-heading text-sm font-medium">
+                      {formatDisplayDate(from)}
+                    </span>
+                    <span className="flex items-center gap-1.5 text-sm font-medium text-primary">
+                      <ClockIcon className="size-3.5" />
+                      Slot time:{" "}
+                      {from.toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: false,
+                      })}
+                    </span>
+                  </>
+                ) : (
+                  <span className="font-heading text-sm font-medium">
+                    {formatDisplayDate(from)} &ndash; {formatDisplayDate(to)}
                   </span>
-                </div>
+                )}
 
-                <span className="text-sm font-extrabold text-teal-950 dark:text-white block">
+                <Separator className="my-1" />
+                <p className="flex items-start gap-1.5 text-xs leading-relaxed text-muted-foreground">
                   {isHourly ? (
                     <>
-                      <div>{formatDisplayDate(from)}</div>
-                      <div className="text-xs font-bold text-teal-600 dark:text-teal-400 mt-1 flex items-center gap-1.5">
-                        <span className="inline-block w-2 h-2 rounded-full bg-teal-500 animate-pulse" />
-                        Slot Time: {from.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false })}
-                      </div>
+                      <ClockIcon className="mt-0.5 size-3.5 shrink-0" />
+                      Access granted only during the selected hourly slot. No overnight stay.
                     </>
                   ) : (
-                    `${formatDisplayDate(from)} – ${formatDisplayDate(to)}`
+                    <>
+                      <BedDoubleIcon className="mt-0.5 size-3.5 shrink-0" />
+                      Standard overnight accommodation ({nights} night{nights > 1 ? "s" : ""}).
+                    </>
                   )}
-                </span>
-
-                {/* Explicit Distinction Disclaimer / Metadata */}
-                <div className="pt-1.5 border-t border-slate-100 dark:border-white/5 text-[10px] text-teal-900/70 dark:text-zinc-400">
-                  {isHourly ? (
-                    <p className="flex items-center gap-1 font-medium text-amber-800/90 dark:text-amber-300/80">
-                      <span>⏱</span> Access granted only during the selected hourly slot (No overnight stay).
-                    </p>
-                  ) : (
-                    <p className="flex items-center gap-1 font-medium text-indigo-800/90 dark:text-indigo-300/80">
-                      <span>🛏</span> Standard overnight accommodation ({nights} night{nights > 1 ? "s" : ""}).
-                    </p>
-                  )}
-                </div>
+                </p>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
+
           {/* Package Configuration - TILE SELECTOR */}
-          <div className="rounded-3xl border border-teal-100/80 dark:border-white/10 bg-teal-50/20 dark:bg-white/5 p-6 backdrop-blur-md space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-teal-950 dark:text-white">
-                2. Select Package Option
-              </h3>
-              <span className="text-xs text-teal-700 dark:text-zinc-400 font-medium">
-                Optional Enhancements
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 gap-3">
-              {/* Option: Standard / No Package Tile */}
-              <button
-                type="button"
-                onClick={() => setSelectedPackageId("")}
-                className={`relative w-full text-left rounded-2xl p-4 transition-all border flex items-start justify-between gap-4 ${selectedPackageId === ""
-                  ? "bg-white dark:bg-zinc-900 border-teal-500 ring-2 ring-teal-500/20 shadow-md"
-                  : "bg-white/70 dark:bg-black/30 border-teal-100 dark:border-white/5 hover:border-teal-300 dark:hover:border-white/20"
+          <Card>
+            <CardHeader className="flex-row items-center justify-between gap-4">
+              <CardTitle>2. Select package option</CardTitle>
+              <CardDescription>Optional enhancements</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div role="radiogroup" aria-label="Package option" className="flex flex-col gap-3">
+                {/* Option: Standard / No Package Tile */}
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={selectedPackageId === ""}
+                  onClick={() => setSelectedPackageId("")}
+                  className={`flex w-full items-start gap-4 rounded-lg border p-4 text-left transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none ${
+                    selectedPackageId === ""
+                      ? "border-primary bg-accent/50"
+                      : "bg-card hover:border-primary/50"
                   }`}
-              >
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-extrabold text-teal-950 dark:text-white">
-                      Standard Stay
-                    </span>
-                    <span className="rounded bg-slate-100 dark:bg-white/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-600 dark:text-zinc-400">
-                      Basic
-                    </span>
-                  </div>
-                  <p className="text-xs text-teal-900/70 dark:text-zinc-400 leading-relaxed">
-                    Standard booking with base amenities included. No additional package added.
-                  </p>
-                </div>
-
-                <div className="flex flex-col items-end shrink-0">
-                  <span className="text-sm font-black text-teal-950 dark:text-white">
-                    R 0
-                  </span>
-                  <div
-                    className={`mt-2 h-5 w-5 rounded-full border flex items-center justify-center transition-all ${selectedPackageId === ""
-                      ? "border-teal-500 bg-teal-500 text-white"
-                      : "border-slate-300 dark:border-white/20"
-                      }`}
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border ${
+                      selectedPackageId === ""
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-input"
+                    }`}
                   >
-                    {selectedPackageId === "" && <span className="text-[10px] leading-none">✓</span>}
+                    {selectedPackageId === "" && <CheckIcon className="size-3" />}
+                  </span>
+
+                  <div className="flex flex-1 flex-col gap-1.5">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-heading text-sm font-medium">Standard stay</span>
+                      <Badge variant="outline">Basic</Badge>
+                    </div>
+                    <p className="text-sm leading-relaxed text-muted-foreground">
+                      Standard booking with base amenities included. No additional package added.
+                    </p>
                   </div>
-                </div>
-              </button>
 
-              {/* Dynamic Package Tiles */}
-              {packages
-                .filter((p) => p.category !== "addon")
-                .map((pkg) => {
-                  const isSelected = selectedPackageId === pkg.id;
-                  const price = pkg.price || pkg.baseRate || 0;
+                  <span className="mt-0.5 shrink-0 font-heading text-sm font-semibold">R 0</span>
+                </button>
 
-                  return (
-                    <button
-                      key={pkg.id}
-                      type="button"
-                      onClick={() => setSelectedPackageId(pkg.id)}
-                      className={`relative w-full text-left rounded-2xl p-4 transition-all border flex items-start justify-between gap-4 ${isSelected
-                        ? "bg-white dark:bg-zinc-900 border-teal-500 ring-2 ring-teal-500/20 shadow-md"
-                        : "bg-white/70 dark:bg-black/30 border-teal-100 dark:border-white/5 hover:border-teal-300 dark:hover:border-white/20"
+                {/* Dynamic Package Tiles */}
+                {packages
+                  .filter((p) => p.category !== "addon")
+                  .map((pkg) => {
+                    const isSelected = selectedPackageId === pkg.id;
+                    const price = pkg.price || pkg.baseRate || 0;
+
+                    return (
+                      <button
+                        key={pkg.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={isSelected}
+                        onClick={() => setSelectedPackageId(pkg.id)}
+                        className={`flex w-full items-start gap-4 rounded-lg border p-4 text-left transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none ${
+                          isSelected
+                            ? "border-primary bg-accent/50"
+                            : "bg-card hover:border-primary/50"
                         }`}
-                    >
-                      <div className="space-y-1.5 pr-2">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-extrabold text-teal-950 dark:text-white">
-                            {pkg.name}
-                          </span>
-                          {pkg.category && (
-                            <span className="rounded bg-teal-500/10 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-teal-600 dark:text-teal-400">
-                              {pkg.category}
-                            </span>
-                          )}
-                          {pkg.multiplier && pkg.multiplier !== 1 && (
-                            <span className="rounded bg-amber-500/10 px-2 py-0.5 text-[9px] font-bold text-amber-600 dark:text-amber-400">
-                              {pkg.multiplier}x Multiplier
-                            </span>
+                      >
+                        <span
+                          aria-hidden="true"
+                          className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border ${
+                            isSelected
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : "border-input"
+                          }`}
+                        >
+                          {isSelected && <CheckIcon className="size-3" />}
+                        </span>
+
+                        <div className="flex flex-1 flex-col gap-1.5">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-heading text-sm font-medium">{pkg.name}</span>
+                            {pkg.category && <Badge variant="secondary">{pkg.category}</Badge>}
+                            {pkg.multiplier && pkg.multiplier !== 1 && (
+                              <Badge variant="outline">{pkg.multiplier}x multiplier</Badge>
+                            )}
+                          </div>
+                          {pkg.description && (
+                            <p className="text-sm leading-relaxed text-muted-foreground">
+                              {pkg.description}
+                            </p>
                           )}
                         </div>
-                        {pkg.description && (
-                          <p className="text-xs text-teal-900/70 dark:text-zinc-400 leading-relaxed">
-                            {pkg.description}
-                          </p>
-                        )}
-                      </div>
 
-                      <div className="flex flex-col items-end shrink-0">
-                        <span className="text-sm font-black text-teal-600 dark:text-teal-400">
+                        <span className="mt-0.5 shrink-0 font-heading text-sm font-semibold">
                           +R {price.toLocaleString()}
                         </span>
-                        <div
-                          className={`mt-2 h-5 w-5 rounded-full border flex items-center justify-center transition-all ${isSelected
-                            ? "border-teal-500 bg-teal-500 text-white"
-                            : "border-slate-300 dark:border-white/20"
-                            }`}
-                        >
-                          {isSelected && <span className="text-[10px] leading-none">✓</span>}
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-            </div>
-          </div>
+                      </button>
+                    );
+                  })}
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Right Side: Total calculations & Secure Book action */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="rounded-3xl border border-teal-100/80 dark:border-white/10 bg-teal-50/20 dark:bg-white/5 p-6 backdrop-blur-md shadow-xl space-y-4">
-            <h3 className="text-base font-bold text-teal-950 dark:text-white border-b border-teal-100/60 dark:border-white/10 pb-3">
-              3. Cost Estimate & Pay
-            </h3>
-
-            <div className="space-y-3 text-xs">
-              <div className="flex justify-between text-teal-900/80 dark:text-zinc-400">
-                <span>{isHourly ? "Booking Duration:" : "Stay Duration:"}</span>
-                <span className="font-bold text-teal-950 dark:text-white">
-                  {isHourly ? "1 Slot" : `${nights} night(s)`}
+        <div className="flex flex-col gap-6 lg:col-span-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>3. Cost estimate</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">
+                  {isHourly ? "Booking duration" : "Stay duration"}
+                </span>
+                <span className="font-medium tabular-nums">
+                  {isHourly ? "1 slot" : `${nights} night(s)`}
                 </span>
               </div>
 
-              <div className="flex justify-between text-teal-900/80 dark:text-zinc-400">
-                <span>
+              <div className="flex items-center justify-between gap-4 text-sm">
+                <span className="text-muted-foreground">
                   {isHourly
-                    ? `Slot Cost (R ${basePricePerNight} × 1 slot):`
-                    : `Nightly Cost (R ${basePricePerNight} × ${nights}):`}
+                    ? `Slot cost (R ${basePricePerNight} x 1)`
+                    : `Nightly cost (R ${basePricePerNight} x ${nights})`}
                 </span>
-                <span className="font-bold text-teal-950 dark:text-white">
-                  R {baseCost.toLocaleString()}
-                </span>
+                <span className="font-medium tabular-nums">R {baseCost.toLocaleString()}</span>
               </div>
 
               {selectedPackage && (
                 <>
-                  <div className="flex justify-between text-teal-900/80 dark:text-zinc-400">
-                    <span>Package Cost ({selectedPackage.name}):</span>
-                    <span className="font-bold text-teal-950 dark:text-white">
+                  <div className="flex items-center justify-between gap-4 text-sm">
+                    <span className="text-muted-foreground">
+                      Package cost ({selectedPackage.name})
+                    </span>
+                    <span className="font-medium tabular-nums">
                       R {packagePrice.toLocaleString()}
                     </span>
                   </div>
                   {packageMultiplier > 1 && (
-                    <div className="flex justify-between text-teal-900/80 dark:text-zinc-400">
-                      <span>Package Multiplier:</span>
-                      <span className="font-bold text-teal-950 dark:text-white">
-                        × {packageMultiplier}
-                      </span>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Package multiplier</span>
+                      <span className="font-medium tabular-nums">x {packageMultiplier}</span>
                     </div>
                   )}
                 </>
               )}
 
-              <div className="border-t border-teal-100 dark:border-white/10 pt-4 flex justify-between items-center">
-                <span className="text-sm font-bold text-teal-950 dark:text-white">
-                  Payable Total ZAR:
-                </span>
-                <span className="text-2xl font-black text-teal-600 dark:text-teal-400">
+              <Separator />
+
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-sm font-medium">Payable total (ZAR)</span>
+                <span className="font-heading text-2xl font-semibold tabular-nums">
                   R {finalTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </span>
               </div>
-            </div>
 
-            {/* Date Overlap block alert & visual resolver */}
-            {dateConflict && (
-              <div className="space-y-4">
-                <div className="rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 p-3 text-center text-xs font-bold text-red-600 dark:text-red-400">
-                  ⚠️ {dateConflict}
+              {/* Date Overlap block alert & visual resolver */}
+              {dateConflict && (
+                <div className="flex flex-col gap-4">
+                  <Alert variant="destructive">
+                    <TriangleAlertIcon />
+                    <AlertTitle>Date conflict</AlertTitle>
+                    <AlertDescription>{dateConflict}</AlertDescription>
+                  </Alert>
+                  <div className="flex flex-col gap-3 rounded-lg border bg-muted/50 p-4">
+                    <p className="text-sm leading-relaxed text-muted-foreground">
+                      {isHourly
+                        ? "Select an available date on the calendar below to update your booking date:"
+                        : "Select an available date range on the calendar below to update your stay dates:"}
+                    </p>
+                    <CalendarPicker
+                      selectedFromDate={savedDates?.fromDate.split("T")[0] || ""}
+                      selectedToDate={savedDates?.toDate.split("T")[0] || ""}
+                      bookings={bookingsList}
+                      singleMonth={true}
+                      bookingType={property?.bookingType}
+                      onChange={handleUpdateDates}
+                    />
+                  </div>
                 </div>
-                <div className="rounded-3xl border border-teal-100 dark:border-white/5 bg-teal-50/10 dark:bg-zinc-950 p-4 space-y-3">
-                  <p className="text-[11px] text-teal-800/80 dark:text-zinc-400 leading-relaxed">
-                    {isHourly
-                      ? "Select an available date on the calendar below to update your booking date:"
-                      : "Select an available date range on the calendar below to update your stay dates:"}
-                  </p>
-                  <CalendarPicker
-                    selectedFromDate={savedDates?.fromDate.split("T")[0] || ""}
-                    selectedToDate={savedDates?.toDate.split("T")[0] || ""}
-                    bookings={bookingsList}
-                    singleMonth={true}
-                    bookingType={property?.bookingType}
-                    onChange={handleUpdateDates}
-                  />
-                </div>
-              </div>
-            )}
+              )}
 
-            <button
-              onClick={handleBookNow}
-              disabled={isSubmitting || !!dateConflict}
-              className={`w-full rounded-xl py-3.5 text-center text-xs font-bold text-white transition-all ${!!dateConflict
-                ? "bg-neutral-800 text-white/30 cursor-not-allowed border border-neutral-700"
-                : "bg-gradient-to-r from-teal-500 to-emerald-500 shadow-lg shadow-teal-500/15 hover:scale-[1.01] hover:brightness-110 active:scale-95"
-                }`}
-            >
-              {isSubmitting ? "Generating Yoco transaction..." : "Confirm & Pay via Yoco"}
-            </button>
-          </div>
+              {checkoutError && (
+                <Alert variant="destructive">
+                  <TriangleAlertIcon />
+                  <AlertTitle>Checkout failed</AlertTitle>
+                  <AlertDescription>{checkoutError}</AlertDescription>
+                </Alert>
+              )}
+            </CardContent>
+            <CardFooter>
+              <Button
+                onClick={handleBookNow}
+                disabled={isSubmitting || !!dateConflict}
+                className="w-full"
+                size="lg"
+              >
+                {isSubmitting && <Spinner className="size-4" />}
+                {isSubmitting ? "Generating Yoco transaction..." : "Confirm and pay via Yoco"}
+              </Button>
+            </CardFooter>
+          </Card>
 
           {/* Checkout console logger */}
           {checkoutLog.length > 0 && (
-            <div className="rounded-3xl border border-teal-100/50 dark:border-white/5 bg-black/90 p-4 font-mono text-[9px] text-teal-400 space-y-1 max-h-40 overflow-y-auto shadow-inner">
-              <div className="text-teal-600/70 dark:text-white/40 mb-1 border-b border-teal-900/30 dark:border-white/5 pb-1 font-sans text-[10px]">
-                Session Logs
-              </div>
-              {checkoutLog.map((log, idx) => (
-                <div key={idx}>{log}</div>
-              ))}
-            </div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">Session log</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ol className="flex max-h-40 flex-col gap-1.5 overflow-y-auto font-mono text-xs text-muted-foreground">
+                  {checkoutLog.map((log, idx) => (
+                    <li key={idx}>{log}</li>
+                  ))}
+                </ol>
+              </CardContent>
+            </Card>
           )}
         </div>
       </div>
@@ -983,8 +1008,8 @@ export default function BookingsPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-[400px] flex-col items-center justify-center text-teal-950 dark:text-white">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-t-teal-500 border-teal-150 dark:border-white/10" />
+        <div className="flex min-h-[400px] items-center justify-center">
+          <Spinner className="size-6 text-primary" />
         </div>
       }
     >

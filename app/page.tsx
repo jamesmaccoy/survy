@@ -1,10 +1,39 @@
 "use client";
 
 import React, { useState, useEffect, Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { AuthProvider, useAuth } from "@/components/auth";
 import Link from "next/link";
 import { formatDisplayDate } from "@/lib/utils";
+import {
+  ArrowRightIcon,
+  CalendarCheckIcon,
+  CheckIcon,
+  ClockIcon,
+  CopyIcon,
+  HouseIcon,
+  ImageOffIcon,
+  LockIcon,
+  PinIcon,
+  TriangleAlertIcon,
+} from "lucide-react";
+
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
+import { Field, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 
 interface Property {
   id: string;
@@ -18,12 +47,19 @@ interface Property {
   slots?: string[];
 }
 
+/** Renders a saved date/time in the compact 24h form used across the schedule UI. */
+function formatSlotTime(value: string) {
+  return new Date(value).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
 function HomePageContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
 
   const paymentStatus = searchParams.get("payment");
-  const packageType = searchParams.get("type");
   const amountPaid = searchParams.get("amount");
   const bookingId = searchParams.get("bookingId");
   const estimateId = searchParams.get("estimateId");
@@ -40,6 +76,7 @@ function HomePageContent() {
   const [isSavingDates, setIsSavingDates] = useState(false);
   const [savedDates, setSavedDates] = useState<{ fromDate: string; toDate: string } | null>(null);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [nights, setNights] = useState<number>(3);
   const [hasUpdatedStatus, setHasUpdatedStatus] = useState(false);
   const [latestEstimate, setLatestEstimate] = useState<any | null>(null);
@@ -209,16 +246,18 @@ function HomePageContent() {
     fetchLatestEstimate();
   }, [user]);
 
+  const isHourlySaved = !!(savedDates && savedDates.fromDate.split("T")[0] === savedDates.toDate.split("T")[0]);
+
   const handleSaveDates = async () => {
+    setSaveError(null);
+
     if (!user) {
-      alert("Please sign in or register to save your stay dates.");
+      setSaveError("Please sign in or register to save your stay dates.");
       return;
     }
 
     let start: Date;
     let end: Date;
-
-    const isHourlySaved = savedDates && savedDates.fromDate.split("T")[0] === savedDates.toDate.split("T")[0];
 
     if (isHourlySaved && savedDates) {
       const oldFrom = new Date(savedDates.fromDate);
@@ -234,7 +273,11 @@ function HomePageContent() {
     }
 
     if (isNaN(start.getTime()) || isNaN(end.getTime()) || start >= end) {
-      alert(isHourlySaved ? "Please select a valid date." : "Please select valid check-in and check-out dates.");
+      setSaveError(
+        isHourlySaved
+          ? "Please select a valid date."
+          : "Please select valid check-in and check-out dates."
+      );
       return;
     }
 
@@ -259,10 +302,10 @@ function HomePageContent() {
       }
 
       setSavedDates(result.data);
-      setSaveStatus("Saved ✓");
+      setSaveStatus("Saved");
       setTimeout(() => setSaveStatus(null), 3000);
     } catch (err: any) {
-      setSaveStatus(`Error`);
+      setSaveError(err?.message || "Failed to save your schedule. Please try again.");
     } finally {
       setIsSavingDates(false);
     }
@@ -276,318 +319,329 @@ function HomePageContent() {
     setTimeout(() => setCopiedEstimateUrl(false), 2500);
   };
 
-  const isHourlySaved = !!(savedDates && savedDates.fromDate.split("T")[0] === savedDates.toDate.split("T")[0]);
+  const isEstimatePaid =
+    latestEstimate?.paymentStatus === "paid" || latestEstimate?.paymentStatus === "success";
 
   return (
-    <div className="min-h-screen bg-background text-foreground font-sans selection:bg-teal-500/30 selection:text-teal-200 pb-20">
-      {/* Background gradients */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-30">
-        <div className="absolute -top-[40%] -left-[20%] w-[85%] h-[85%] rounded-full bg-emerald-500/5 blur-[130px]" />
-        <div className="absolute -bottom-[20%] -right-[10%] w-[70%] h-[75%] rounded-full bg-teal-500/5 blur-[130px]" />
-      </div>
-
-      <div className="relative max-w-5xl mx-auto px-4 py-10 sm:px-6 lg:px-8 space-y-8">
-        {/* Header */}
-        <header className="text-center space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-50/50 dark:bg-white/5 border border-teal-100 dark:border-white/10 text-[10px] font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400">
-            <span>✨ Surf Yoga Community</span>
-          </div>
-          <h1 className="text-4xl sm:text-5xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-teal-950 via-zinc-800 to-zinc-600 dark:from-white dark:via-zinc-200 dark:to-zinc-400">
+    // The root layout already renders the <main> landmark.
+    <div className="min-h-screen bg-background pb-20 font-sans text-foreground">
+      <div className="mx-auto flex max-w-5xl flex-col gap-8 px-4 py-10 sm:px-6 lg:px-8">
+        <header className="flex flex-col items-center gap-3 text-center">
+          <Badge variant="secondary">Surf Yoga Community</Badge>
+          <h1 className="font-heading text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
             Find Your Retreat
           </h1>
+          <p className="max-w-md text-sm leading-relaxed text-muted-foreground text-pretty">
+            Sync your travel dates once, then browse every listing with live pricing for your stay.
+          </p>
         </header>
 
-        {/* Payment Banners */}
-        {paymentStatus && (
-          <div className="w-full max-w-3xl mx-auto animate-fade-in">
-            {paymentStatus === "success" && (
-              <div className="rounded-3xl border border-emerald-500/30 bg-emerald-500/10 p-5 flex items-center gap-4 text-left">
-                <div className="h-10 w-10 rounded-full bg-emerald-500 flex items-center justify-center text-xl text-white shrink-0">
-                  ✓
+        {paymentStatus === "success" && (
+          <Alert className="mx-auto w-full max-w-3xl">
+            <CheckIcon />
+            <AlertTitle>Payment received</AlertTitle>
+            <AlertDescription>
+              Your stay booking is secured for R {amountPaid}.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {user && latestEstimate && (
+          <Card size="sm" className="mx-auto w-full max-w-3xl">
+            <CardContent className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <PinIcon className="size-5" />
                 </div>
-                <div>
-                  <h3 className="text-sm font-bold text-white">Payment Received!</h3>
-                  <p className="text-xs text-zinc-300 mt-0.5">
-                    Stay booking secured for <strong className="text-emerald-400">R {amountPaid}</strong>.
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                      Latest active estimate
+                    </span>
+                    <Badge variant={isEstimatePaid ? "default" : "outline"}>
+                      {isEstimatePaid ? "Paid" : "Pending"}
+                    </Badge>
+                  </div>
+                  <p className="font-heading text-base font-medium">
+                    {estimatePropertyTitle || "Llandudno Stay"}
+                    <span className="ml-2 text-sm font-normal text-muted-foreground">
+                      R {latestEstimate.total.toLocaleString()}
+                    </span>
                   </p>
                 </div>
               </div>
-            )}
-          </div>
+
+              <div className="flex w-full items-center gap-2 sm:w-auto">
+                <Button
+                  className="flex-1 sm:flex-none"
+                  nativeButton={false}
+                  render={<Link href={`/estimate/${latestEstimate.id}`} />}
+                >
+                  Resume
+                  <ArrowRightIcon data-icon="inline-end" />
+                </Button>
+                <Button variant="outline" onClick={handleShareEstimate}>
+                  {copiedEstimateUrl ? (
+                    <CheckIcon data-icon="inline-start" />
+                  ) : (
+                    <CopyIcon data-icon="inline-start" />
+                  )}
+                  {copiedEstimateUrl ? "Copied" : "Share"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
-        {/* Active Estimate Banner */}
-        {user && latestEstimate && (
-          <div className="w-full max-w-3xl mx-auto rounded-3xl border border-teal-500/30 bg-gradient-to-r from-teal-500/10 via-teal-500/5 to-transparent p-5 shadow-lg backdrop-blur-xl flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3.5">
-              <div className="h-10 w-10 rounded-2xl bg-teal-500 flex items-center justify-center text-lg text-white shrink-0">
-                📌
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-teal-600 dark:text-teal-400">
-                    Latest Active Estimate
-                  </span>
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${latestEstimate.paymentStatus === "paid" || latestEstimate.paymentStatus === "success"
-                      ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
-                      : "bg-amber-500/15 border-amber-500/30 text-amber-600 dark:text-amber-400"
-                      }`}
-                  >
-                    {latestEstimate.paymentStatus === "paid" ? "Paid" : "Pending"}
-                  </span>
-                </div>
-                <h3 className="text-base font-black text-teal-950 dark:text-white mt-0.5">
-                  {estimatePropertyTitle || "Llandudno Stay"}{" "}
-                  <span className="text-xs font-normal text-teal-800/80 dark:text-zinc-400">
-                    • R {latestEstimate.total.toLocaleString()}
-                  </span>
-                </h3>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <Link
-                href={`/estimate/${latestEstimate.id}`}
-                className="flex-1 sm:flex-none text-center rounded-xl bg-teal-500 hover:bg-teal-600 px-4 py-2 text-xs font-bold text-white transition-all"
-              >
-                Resume →
-              </Link>
-              <button
-                onClick={handleShareEstimate}
-                className="rounded-xl border border-teal-500/30 bg-white/5 hover:bg-teal-500/10 p-2 text-xs font-bold text-teal-700 dark:text-teal-300 transition-all"
-                title="Share Link"
-              >
-                {copiedEstimateUrl ? "✓ Copied" : "🔗 Share"}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Date Search Bar */}
-        <div className="sticky top-4 z-30 w-full max-w-3xl mx-auto">
-          <div className="rounded-2xl border border-teal-200/80 dark:border-white/15 bg-white/90 dark:bg-zinc-900/90 shadow-2xl backdrop-blur-xl p-2 sm:p-2.5 flex flex-col sm:flex-row items-center gap-2">
-            {/* Check-in input */}
-            <div className="flex-1 w-full bg-teal-50/50 dark:bg-white/5 rounded-xl px-3 py-1.5 border border-teal-100/60 dark:border-white/5 h-[42px] flex flex-col justify-center">
-              <label className="block text-[8px] font-black uppercase tracking-wider text-teal-800/60 dark:text-zinc-400 leading-none mb-0.5">
-                Check-in Date
-              </label>
-              <input
-                type="date"
-                value={fromDate}
-                onChange={(e) => {
-                  setFromDate(e.target.value);
-                  if (isHourlySaved && savedDates) {
-                    setToDate(e.target.value);
-                  } else {
-                    const d = new Date(e.target.value);
-                    if (!isNaN(d.getTime())) {
-                      d.setDate(d.getDate() + nights);
-                      setToDate(d.toISOString().split("T")[0]);
+        <div className="sticky top-4 z-30 mx-auto w-full max-w-3xl">
+          <Card size="sm" className="shadow-lg">
+            <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <Field className="flex-1">
+                <FieldLabel htmlFor="from-date">Check-in date</FieldLabel>
+                <Input
+                  id="from-date"
+                  type="date"
+                  value={fromDate}
+                  onChange={(e) => {
+                    setFromDate(e.target.value);
+                    if (isHourlySaved && savedDates) {
+                      setToDate(e.target.value);
+                    } else {
+                      const d = new Date(e.target.value);
+                      if (!isNaN(d.getTime())) {
+                        d.setDate(d.getDate() + nights);
+                        setToDate(d.toISOString().split("T")[0]);
+                      }
                     }
-                  }
-                }}
-                className="w-full bg-transparent text-xs font-bold text-teal-950 dark:text-white focus:outline-none cursor-pointer leading-tight"
-              />
-            </div>
+                  }}
+                />
+              </Field>
 
-            {/* Duration or Slot field */}
-            <div className="flex-1 w-full bg-teal-50/50 dark:bg-white/5 rounded-xl px-3 py-1.5 border border-teal-100/60 dark:border-white/5 h-[42px] flex flex-col justify-center">
               {isHourlySaved && savedDates ? (
-                <>
-                  <label className="block text-[8px] font-black uppercase tracking-wider text-teal-800/60 dark:text-zinc-400 leading-none mb-0.5">
-                    Slot Window
-                  </label>
-                  <div className="text-xs font-bold text-teal-600 dark:text-teal-400 leading-tight">
-                    🕒{" "}
-                    {new Date(savedDates.fromDate).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      hour12: false,
-                    })}{" "}
-
+                <Field className="flex-1">
+                  <FieldLabel htmlFor="slot-window">Slot window</FieldLabel>
+                  <div
+                    id="slot-window"
+                    className="flex h-9 items-center gap-2 rounded-md border bg-muted/50 px-3 text-sm font-medium"
+                  >
+                    <ClockIcon className="size-4 text-muted-foreground" />
+                    {formatSlotTime(savedDates.fromDate)}
                   </div>
-                </>
+                </Field>
               ) : (
-                <>
-                  <label className="block text-[8px] font-black uppercase tracking-wider text-teal-800/60 dark:text-zinc-400 leading-none mb-0.5">
-                    Duration
-                  </label>
-                  <div className="flex items-center gap-1 leading-tight">
-                    <input
-                      type="number"
-                      min="1"
-                      max="30"
-                      value={nights}
-                      onChange={(e) => {
-                        const val = Math.max(1, parseInt(e.target.value) || 1);
-                        setNights(val);
-                        const d = new Date(fromDate);
-                        if (!isNaN(d.getTime())) {
-                          d.setDate(d.getDate() + val);
-                          setToDate(d.toISOString().split("T")[0]);
-                        }
-                      }}
-                      className="w-10 bg-transparent text-xs font-bold text-teal-950 dark:text-white focus:outline-none"
-                    />
-                    <span className="text-xs text-teal-800/70 dark:text-zinc-400 font-medium">Nights</span>
-                  </div>
-                </>
+                <Field className="flex-1">
+                  <FieldLabel htmlFor="nights">Nights</FieldLabel>
+                  <Input
+                    id="nights"
+                    type="number"
+                    min={1}
+                    max={30}
+                    value={nights}
+                    onChange={(e) => {
+                      const val = Math.max(1, parseInt(e.target.value) || 1);
+                      setNights(val);
+                      const d = new Date(fromDate);
+                      if (!isNaN(d.getTime())) {
+                        d.setDate(d.getDate() + val);
+                        setToDate(d.toISOString().split("T")[0]);
+                      }
+                    }}
+                  />
+                </Field>
               )}
-            </div>
 
-            {/* Sync Schedule Button */}
-            <button
-              onClick={handleSaveDates}
-              disabled={isSavingDates || authLoading}
-              className={`w-full sm:w-auto h-[42px] px-5 rounded-xl text-xs font-extrabold transition-all shrink-0 flex items-center justify-center gap-1.5 ${!user
-                ? "bg-zinc-800 text-zinc-400 cursor-not-allowed border border-transparent"
-                : "border-2 border-teal-500/80 bg-teal-500/10 text-teal-700 dark:text-teal-300 hover:bg-teal-500/20 active:scale-95"
-                }`}
-            >
-              {!user ? "🔒 Login to Apply" : isSavingDates ? "Syncing..." : saveStatus ? saveStatus : "Sync Schedule"}
-            </button>
-          </div>
+              <Button
+                onClick={handleSaveDates}
+                disabled={isSavingDates || authLoading}
+                className="w-full sm:w-auto"
+              >
+                {isSavingDates ? (
+                  <Spinner data-icon="inline-start" />
+                ) : !user ? (
+                  <LockIcon data-icon="inline-start" />
+                ) : (
+                  <CalendarCheckIcon data-icon="inline-start" />
+                )}
+                {isSavingDates
+                  ? "Syncing"
+                  : saveStatus
+                    ? saveStatus
+                    : !user
+                      ? "Sign in to sync"
+                      : "Sync schedule"}
+              </Button>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Listings Section */}
-        <div className="space-y-6 pt-4">
-          <div className="flex items-center justify-between max-w-5xl mx-auto px-1">
-            <h2 className="text-lg font-black text-teal-950 dark:text-white flex items-center gap-2">
-              <span>🏡</span> Destination Listings
+        {saveError && (
+          <Alert variant="destructive" className="mx-auto w-full max-w-3xl">
+            <TriangleAlertIcon />
+            <AlertTitle>Could not sync your schedule</AlertTitle>
+            <AlertDescription>{saveError}</AlertDescription>
+          </Alert>
+        )}
+
+        <section className="flex flex-col gap-6 pt-4">
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="flex items-center gap-2 font-heading text-lg font-medium">
+              <HouseIcon className="size-5 text-muted-foreground" />
+              Destination listings
             </h2>
-            <span className="text-xs text-teal-800/60 dark:text-zinc-400 font-medium">
-              {properties.length} locations available
-            </span>
+            {!isLoadingProps && (
+              <span className="text-sm text-muted-foreground">
+                {properties.length} location{properties.length === 1 ? "" : "s"} available
+              </span>
+            )}
           </div>
 
           {isLoadingProps ? (
-            <div className="flex items-center py-12 justify-center">
-              <div className="h-6 w-6 animate-spin rounded-full border-2 border-t-teal-500 border-teal-150 dark:border-white/10" />
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              {[0, 1].map((i) => (
+                <Card key={i} className="gap-0 pt-0">
+                  <Skeleton className="aspect-video w-full rounded-none" />
+                  <CardHeader className="pt-4">
+                    <Skeleton className="h-5 w-2/3" />
+                    <Skeleton className="mt-2 h-4 w-1/3" />
+                  </CardHeader>
+                  <CardContent className="pt-4">
+                    <Skeleton className="h-16 w-full" />
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           ) : properties.length === 0 ? (
-            <div className="text-center py-10 rounded-3xl border border-teal-100 dark:border-white/5 bg-teal-50/15 dark:bg-white/5 text-teal-850 dark:text-zinc-500 text-xs">
-              No destination properties available.
-            </div>
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <HouseIcon />
+                </EmptyMedia>
+                <EmptyTitle>No listings yet</EmptyTitle>
+                <EmptyDescription>
+                  There are no destination properties available right now. Check back soon.
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               {properties.map((p) => {
                 const isHourly = p.bookingType === "hourly";
                 return (
-                  <div
+                  <Card
                     key={p.id}
-                    className="group relative rounded-3xl border border-teal-100/80 dark:border-white/10 bg-white dark:bg-zinc-900/80 p-5 hover:border-teal-400 dark:hover:border-teal-500/50 hover:shadow-2xl transition-all duration-300 flex flex-col justify-between overflow-hidden cursor-pointer"
+                    className="group relative gap-0 pt-0 transition-shadow hover:shadow-lg"
                   >
-                    {/* Full Card Overlay Link */}
-                    <Link href={`/posts/${p.slug}`} className="absolute inset-0 z-10" aria-label={p.title} />
+                    <Link
+                      href={`/posts/${p.slug}`}
+                      className="absolute inset-0 z-10 rounded-xl focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+                      aria-label={`View ${p.title}`}
+                    />
 
-                    <div>
-                      {/* Image Banner with Title Overlay */}
-                      <div className="relative aspect-video rounded-2xl overflow-hidden mb-4 border border-teal-100/40 dark:border-white/5 bg-zinc-950">
-                        {p.images && p.images.length > 0 ? (
-                          <img
-                            src={p.images[0]}
-                            alt={p.title}
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-zinc-800 flex items-center justify-center text-zinc-500 text-xs font-medium">
-                            No image preview
-                          </div>
-                        )}
-
-                        {/* Top Badge */}
-                        <span className="absolute top-3 left-3 rounded-full bg-black/60 backdrop-blur-md border border-white/20 px-2.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-white z-0">
-                          {isHourly ? "Hourly Slot" : "Nightly Stay"}
-                        </span>
-
-                        {/* Bottom Gradient Overlay for Title */}
-                        <div className="absolute inset-x-0 bottom-0 pt-12 pb-3 px-4 bg-gradient-to-t from-black/85 via-black/40 to-transparent flex flex-col justify-end">
-                          <h3 className="text-lg font-black text-white group-hover:text-teal-300 transition-colors drop-shadow-sm">
-                            {p.title}
-                          </h3>
-                          <p className="text-[10px] font-mono text-zinc-300/80">
-                            slug: {p.slug}
-                          </p>
+                    <div className="relative aspect-video overflow-hidden bg-muted">
+                      {p.images && p.images.length > 0 ? (
+                        <img
+                          src={p.images[0] || "/placeholder.svg"}
+                          alt={p.title}
+                          className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        />
+                      ) : (
+                        <div className="flex size-full flex-col items-center justify-center gap-2 text-muted-foreground">
+                          <ImageOffIcon className="size-6" />
+                          <span className="text-xs">No image preview</span>
                         </div>
-                      </div>
+                      )}
 
-                      {/* Integrated Date/Slot Schedule Display */}
-                      <div className="mt-2 rounded-2xl bg-teal-50/60 dark:bg-teal-500/10 border border-teal-100 dark:border-teal-500/20 p-3 space-y-1.5">
-                        <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-wider text-teal-700 dark:text-teal-400">
-                          <span>{isHourly ? "⏰ Applied Slot" : "🗓️ Schedule Window"}</span>
+                      <Badge variant="secondary" className="absolute top-3 left-3">
+                        {isHourly ? "Hourly slot" : "Nightly stay"}
+                      </Badge>
+                    </div>
+
+                    <CardHeader className="pt-4">
+                      <CardTitle>{p.title}</CardTitle>
+                      <CardDescription>
+                        {isHourly
+                          ? "Book a single time slot"
+                          : `Priced per night for your synced window`}
+                      </CardDescription>
+                    </CardHeader>
+
+                    <CardContent className="pt-4">
+                      <div className="flex flex-col gap-2 rounded-lg border bg-muted/40 p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="flex items-center gap-1.5 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                            {isHourly ? (
+                              <ClockIcon className="size-3.5" />
+                            ) : (
+                              <CalendarCheckIcon className="size-3.5" />
+                            )}
+                            {isHourly ? "Applied slot" : "Schedule window"}
+                          </span>
                           {savedDates && !isHourly && (
-                            <span className="bg-teal-500/15 px-2 py-0.5 rounded-full border border-teal-500/20">
-                              {nights} Night{nights > 1 ? "s" : ""}
-                            </span>
+                            <Badge variant="outline">
+                              {nights} night{nights > 1 ? "s" : ""}
+                            </Badge>
                           )}
                         </div>
 
                         {savedDates ? (
                           isHourly ? (
-                            <div className="flex items-center justify-between text-xs font-mono bg-white dark:bg-black/40 px-3 py-1.5 rounded-xl border border-teal-100/80 dark:border-white/5">
-                              <span className="font-bold text-teal-950 dark:text-white">
+                            <div className="flex items-center justify-between gap-2 rounded-md bg-background px-3 py-1.5 text-sm">
+                              <span className="font-medium">
                                 {formatDisplayDate(savedDates.fromDate)}
                               </span>
-                              <span className="bg-teal-500/10 text-teal-600 dark:text-teal-300 font-extrabold px-2 py-0.5 rounded-md border border-teal-500/20 text-[10px]">
-                                🕒{" "}
-                                {new Date(savedDates.fromDate).toLocaleTimeString([], {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                  hour12: false,
-                                })}{" "}
-
-                              </span>
+                              <Badge variant="outline">
+                                <ClockIcon data-icon="inline-start" />
+                                {formatSlotTime(savedDates.fromDate)}
+                              </Badge>
                             </div>
                           ) : (
-                            <div className="grid grid-cols-2 gap-2 text-xs">
-                              <div className="bg-white dark:bg-black/40 px-3 py-1.5 rounded-xl border border-teal-100/80 dark:border-white/5">
-                                <span className="text-[8px] text-teal-800/60 dark:text-zinc-500 font-bold block uppercase">
-                                  Check-In
-                                </span>
-                                <span className="font-extrabold text-teal-950 dark:text-white">
+                            <div className="grid grid-cols-2 gap-2">
+                              <div className="flex flex-col gap-0.5 rounded-md bg-background px-3 py-1.5">
+                                <span className="text-xs text-muted-foreground">Check-in</span>
+                                <span className="text-sm font-medium">
                                   {formatDisplayDate(savedDates.fromDate)}
                                 </span>
                               </div>
-                              <div className="bg-white dark:bg-black/40 px-3 py-1.5 rounded-xl border border-teal-100/80 dark:border-white/5">
-                                <span className="text-[8px] text-teal-800/60 dark:text-zinc-500 font-bold block uppercase">
-                                  Check-Out
-                                </span>
-                                <span className="font-extrabold text-teal-950 dark:text-white">
+                              <div className="flex flex-col gap-0.5 rounded-md bg-background px-3 py-1.5">
+                                <span className="text-xs text-muted-foreground">Check-out</span>
+                                <span className="text-sm font-medium">
                                   {formatDisplayDate(savedDates.toDate)}
                                 </span>
                               </div>
                             </div>
                           )
                         ) : (
-                          <div className="text-xs text-teal-800/60 dark:text-zinc-400 font-medium italic">
+                          <p className="text-sm text-muted-foreground">
                             Sync dates above to configure pricing.
-                          </div>
+                          </p>
                         )}
                       </div>
-                    </div>
+                    </CardContent>
 
-                    {/* Bottom Action Area */}
-                    <div className="mt-5 border-t border-teal-100/60 dark:border-white/5 pt-3.5 flex items-center justify-between">
-                      <div>
-                        <span className="text-[9px] text-teal-800/60 dark:text-zinc-500 block uppercase font-bold">
-                          {isHourly ? "Hourly Rate" : "Nightly Rate"}
+                    <CardFooter className="justify-between">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-xs text-muted-foreground">
+                          {isHourly ? "Hourly rate" : "Nightly rate"}
                         </span>
-                        <span className="text-base font-black text-teal-600 dark:text-teal-400">
-                          {`R ${p.basePricePerNight.toLocaleString()}${isHourly ? "/slot" : "/night"}`}
+                        <span className="font-heading text-base font-semibold">
+                          R {p.basePricePerNight.toLocaleString()}
+                          <span className="text-sm font-normal text-muted-foreground">
+                            {isHourly ? "/slot" : "/night"}
+                          </span>
                         </span>
                       </div>
 
-                      <span className="relative z-20 pointer-events-none rounded-xl bg-teal-500 group-hover:bg-teal-600 px-4 py-2 text-xs font-extrabold text-white transition-all shadow-md shadow-teal-500/20">
-                        View Details →
+                      <span className="pointer-events-none inline-flex items-center gap-1.5 text-sm font-medium text-primary">
+                        View details
+                        <ArrowRightIcon className="size-4 transition-transform group-hover:translate-x-0.5" />
                       </span>
-                    </div>
-                  </div>
+                    </CardFooter>
+                  </Card>
                 );
               })}
             </div>
           )}
-        </div>
+        </section>
       </div>
     </div>
   );
@@ -597,8 +651,8 @@ export default function HomePage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-t-teal-500 border-teal-150 dark:border-white/10" />
+        <div className="flex min-h-screen items-center justify-center bg-background">
+          <Spinner className="size-6 text-muted-foreground" />
         </div>
       }
     >
