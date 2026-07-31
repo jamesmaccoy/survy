@@ -206,24 +206,38 @@ export default function CalendarPicker({
         tooltipText = "Today";
       }
 
-      // Styles
+      // Styles. The continuous range band is painted on the wrapper (which has no
+      // gap between cells) so a multi-day stay reads as one connected band rather
+      // than a row of disconnected pills.
+      const isRangeInterior = isSelectedRange && !isSelectedFrom && !isSelectedTo;
+      const hasRange = Boolean(selectedFromDate && selectedToDate);
+      let bandClass = "absolute inset-y-0.5 -inset-x-px bg-accent ";
+      if (isSelectedFrom && hasRange) {
+        bandClass += "left-1/2 rounded-l-full";
+      } else if (isSelectedTo && hasRange) {
+        bandClass += "right-1/2 rounded-r-full";
+      }
+
       let dayClass =
-        "relative flex aspect-square w-full max-w-[44px] items-center justify-center rounded-md border text-xs font-medium transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none ";
+        "relative flex aspect-square w-full items-center justify-center rounded-full text-xs font-medium transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none ";
       if (isBooked) {
-        dayClass +=
-          "cursor-not-allowed border-destructive/25 bg-destructive/10 text-destructive";
+        dayClass += "cursor-not-allowed text-destructive/70 line-through";
       } else if (isSelectedFrom || isSelectedTo) {
-        dayClass += "z-10 border-primary bg-primary font-semibold text-primary-foreground";
-      } else if (isSelectedRange) {
-        dayClass += "border-primary/25 bg-accent text-accent-foreground";
+        dayClass += "bg-primary font-semibold text-primary-foreground";
+      } else if (isRangeInterior) {
+        dayClass += "text-accent-foreground";
       } else if (isToday) {
-        dayClass += "border-primary/50 bg-accent/50 text-foreground hover:bg-accent";
+        dayClass += "ring-1 ring-inset ring-primary/60 text-foreground hover:bg-accent";
       } else {
-        dayClass += "border-transparent bg-muted/50 text-foreground hover:bg-accent";
+        dayClass += "text-foreground hover:bg-accent";
       }
 
       days.push(
-        <div key={dateStr} className="relative group">
+        <div key={dateStr} className="relative group w-full max-w-[44px]">
+          {/* Continuous selection band behind the day cells */}
+          {(isRangeInterior || ((isSelectedFrom || isSelectedTo) && hasRange)) && (
+            <span aria-hidden="true" className={bandClass} />
+          )}
           <button
             type="button"
             onClick={handleDayClick}
@@ -238,7 +252,7 @@ export default function CalendarPicker({
             {isBooked && (
               <span
                 aria-hidden="true"
-                className="absolute bottom-1 left-1/2 size-1 -translate-x-1/2 rounded-full bg-destructive"
+                className="absolute bottom-0.5 left-1/2 size-1 -translate-x-1/2 rounded-full bg-destructive"
               />
             )}
           </button>
@@ -264,7 +278,7 @@ export default function CalendarPicker({
         </div>
 
         {/* Calendar Grid */}
-        <div className="grid grid-cols-7 justify-items-center gap-1.5">
+        <div className="grid grid-cols-7 justify-items-center gap-y-1">
           {/* Weekday headers */}
           {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((dayName) => (
             <div
@@ -333,10 +347,9 @@ export default function CalendarPicker({
             <span>Selected</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span
-              aria-hidden="true"
-              className="size-3.5 rounded-sm border border-destructive/25 bg-destructive/10"
-            />
+            <span aria-hidden="true" className="text-destructive/70 line-through">
+              00
+            </span>
             <span>Unavailable</span>
           </div>
         </div>
