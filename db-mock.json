@@ -132,6 +132,26 @@
       "slug": "ocean-view-villa",
       "basePricePerNight": 2200,
       "id": "ocean-view-villa"
+    },
+    {
+      "title": "Camps Bay Sea View Loft",
+      "name": "Camps Bay Sea View Loft",
+      "slug": "camps-bay-sea-view-loft",
+      "basePricePerNight": 2450,
+      "airbnbCalendarUrl": "",
+      "googleCalendarUrl": "",
+      "hostId": "mock_admin_test_example_com",
+      "description": "A bright loft above the bay with wide ocean views.",
+      "images": [],
+      "bookingType": "hourly",
+      "slots": [
+        "10:00",
+        "14:00"
+      ],
+      "location": "Camps Bay, Cape Town",
+      "id": "camps-bay-sea-view-loft",
+      "createdAt": "2026-07-31T07:22:35.991Z",
+      "updatedAt": "2026-07-31T07:22:35.991Z"
     }
   ]
 }

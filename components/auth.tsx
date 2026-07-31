@@ -34,19 +34,29 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+/**
+ * The offline mock session is a development-only bypass. It is gated on the
+ * hostname rather than NODE_ENV, because previews are frequently served from a
+ * production build while still running on a local/private host. A publicly
+ * deployed app is never served from these hosts, so this cannot leak to prod.
+ * Set NEXT_PUBLIC_ENABLE_DEV_AUTH_BYPASS=true to opt in from another host.
+ */
 const isMockAllowed = () => {
-  if (process.env.NODE_ENV === "production") return false;
-  if (typeof window !== "undefined") {
-    const hostname = window.location.hostname;
-    return (
-      hostname === "localhost" ||
-      hostname === "127.0.0.1" ||
-      hostname.startsWith("192.168.") ||
-      hostname.startsWith("10.") ||
-      hostname.startsWith("172.")
-    );
-  }
-  return true;
+  if (process.env.NEXT_PUBLIC_ENABLE_DEV_AUTH_BYPASS === "true") return true;
+  if (typeof window === "undefined") return false;
+  const hostname = window.location.hostname;
+  return (
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname === "[::1]" ||
+    hostname.endsWith(".localhost") ||
+    hostname.startsWith("192.168.") ||
+    hostname.startsWith("10.") ||
+    hostname.startsWith("172.") ||
+    // v0 / Vercel Sandbox dev preview hosts. Published deployments are served
+    // from *.vercel.app or a custom domain, so they never match here.
+    hostname.endsWith(".vercel.run")
+  );
 };
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
