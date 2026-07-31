@@ -481,7 +481,18 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
                     : "bg-muted/30 hover:bg-muted/60"
                 }`}
               >
-                <div className="flex flex-col gap-1.5">
+                <span
+                  aria-hidden="true"
+                  className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border ${
+                    selectedPackageId === ""
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-input"
+                  }`}
+                >
+                  {selectedPackageId === "" && <CheckIcon className="size-3" />}
+                </span>
+
+                <div className="flex flex-1 flex-col gap-1.5">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-heading text-sm font-medium">Standard stay</span>
                     <Badge variant="outline">Basic</Badge>
@@ -491,19 +502,7 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
                   </p>
                 </div>
 
-                <div className="flex shrink-0 flex-col items-end gap-2">
-                  <span className="font-heading text-sm font-semibold">R 0</span>
-                  <span
-                    aria-hidden="true"
-                    className={`flex size-5 items-center justify-center rounded-full border ${
-                      selectedPackageId === ""
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-input"
-                    }`}
-                  >
-                    {selectedPackageId === "" && <CheckIcon className="size-3" />}
-                  </span>
-                </div>
+                <span className="mt-0.5 shrink-0 font-heading text-sm font-semibold">R 0</span>
               </button>
 
               {/* Dynamic Package Tiles */}
@@ -527,7 +526,18 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
                           : "bg-muted/30 hover:bg-muted/60"
                       }`}
                     >
-                      <div className="flex flex-col gap-1.5">
+                      <span
+                        aria-hidden="true"
+                        className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border ${
+                          isSelected
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-input"
+                        }`}
+                      >
+                        {isSelected && <CheckIcon className="size-3" />}
+                      </span>
+
+                      <div className="flex flex-1 flex-col gap-1.5">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-heading text-sm font-medium">{pkg.name}</span>
                           {pkg.category && <Badge variant="outline">{pkg.category}</Badge>}
@@ -542,21 +552,9 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
                         )}
                       </div>
 
-                      <div className="flex shrink-0 flex-col items-end gap-2">
-                        <span className="font-heading text-sm font-semibold">
-                          +R {price.toLocaleString()}
-                        </span>
-                        <span
-                          aria-hidden="true"
-                          className={`flex size-5 items-center justify-center rounded-full border ${
-                            isSelected
-                              ? "border-primary bg-primary text-primary-foreground"
-                              : "border-input"
-                          }`}
-                        >
-                          {isSelected && <CheckIcon className="size-3" />}
-                        </span>
-                      </div>
+                      <span className="mt-0.5 shrink-0 font-heading text-sm font-semibold">
+                        +R {price.toLocaleString()}
+                      </span>
                     </button>
                   );
                 })}

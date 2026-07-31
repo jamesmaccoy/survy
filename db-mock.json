@@ -110,6 +110,10 @@
     "AVhjttIr8VfcnsEPIWYw7sgfnCG3": {
       "fromDate": "2026-07-20T00:00:00.000Z",
       "toDate": "2026-07-30T00:00:00.000Z"
+    },
+    "mock_admin_test_example_com": {
+      "fromDate": "2026-06-16T00:00:00.000Z",
+      "toDate": "2026-06-19T00:00:00.000Z"
     }
   },
   "properties": [
@@ -169,6 +173,23 @@
       "id": "kalk-bay-harbour-cottage",
       "createdAt": "2026-07-31T07:45:10.440Z",
       "updatedAt": "2026-07-31T07:45:10.440Z"
+    }
+  ],
+  "estimates": [
+    {
+      "paymentStatus": "pending",
+      "token": "rzy4edli2c",
+      "guests": [],
+      "createdAt": "2026-07-31T08:00:39.048Z",
+      "propertyId": "shack",
+      "packageId": "shack_stack",
+      "customerName": "admin",
+      "customerEmail": "admin+test@example.com",
+      "customerId": "mock_admin_test_example_com",
+      "fromDate": "2026-06-16T00:00:00.000Z",
+      "toDate": "2026-06-19T00:00:00.000Z",
+      "total": 13450,
+      "id": "est_pic5l154o"
     }
   ]
 }
