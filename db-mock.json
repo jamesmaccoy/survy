@@ -152,6 +152,23 @@
       "id": "camps-bay-sea-view-loft",
       "createdAt": "2026-07-31T07:22:35.991Z",
       "updatedAt": "2026-07-31T07:22:35.991Z"
+    },
+    {
+      "title": "Kalk Bay Harbour Cottage",
+      "name": "Kalk Bay Harbour Cottage",
+      "slug": "kalk-bay-harbour-cottage",
+      "basePricePerNight": 1890,
+      "airbnbCalendarUrl": "",
+      "googleCalendarUrl": "",
+      "hostId": "mock_admin_test_example_com",
+      "description": "",
+      "images": [],
+      "bookingType": "nightly",
+      "slots": [],
+      "location": "Kalk Bay, Cape Town",
+      "id": "kalk-bay-harbour-cottage",
+      "createdAt": "2026-07-31T07:45:10.440Z",
+      "updatedAt": "2026-07-31T07:45:10.440Z"
     }
   ]
 }

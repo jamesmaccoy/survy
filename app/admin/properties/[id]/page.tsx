@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth";
+import { cn } from "@/lib/utils";
 import {
   ArrowLeft,
   Lock,
@@ -12,12 +13,62 @@ import {
   Clock,
   ImagePlus,
   X,
-  Loader2,
   Sparkles,
   AlertTriangle,
   CheckCircle2,
   Trash2,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+} from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Spinner } from "@/components/ui/spinner";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+  InputGroupText,
+} from "@/components/ui/input-group";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface Property {
   id: string;
@@ -39,6 +90,8 @@ interface UploadingFile {
   name: string;
   progress: number;
 }
+
+type FieldName = "title" | "slug" | "basePrice" | "slots";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp", "image/avif"];
@@ -87,6 +140,14 @@ function uploadWithProgress(
   });
 }
 
+function PageShell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background p-4">
+      {children}
+    </div>
+  );
+}
+
 function EditPropertyContent({ id }: { id: string }) {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -100,6 +161,7 @@ function EditPropertyContent({ id }: { id: string }) {
     type: "success" | "error";
     text: string;
   } | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<FieldName, string>>>({});
   const statusRef = useRef<HTMLDivElement | null>(null);
 
   // Form Fields
@@ -121,6 +183,15 @@ function EditPropertyContent({ id }: { id: string }) {
 
   const notify = useCallback((type: "success" | "error", text: string) => {
     setStatusMessage({ type, text });
+  }, []);
+
+  const clearFieldError = useCallback((field: FieldName) => {
+    setFieldErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
   }, []);
 
   useEffect(() => {
@@ -172,9 +243,11 @@ function EditPropertyContent({ id }: { id: string }) {
 
   const handleTitleChange = (val: string) => {
     setTitle(val);
+    clearFieldError("title");
     // Only auto-fill the slug on new listings while the user hasn't edited it manually.
     if (isNew && !slugTouched) {
       setSlug(slugify(val));
+      clearFieldError("slug");
     }
   };
 
@@ -277,28 +350,46 @@ function EditPropertyContent({ id }: { id: string }) {
     setImages((prev) => prev.filter((img) => img !== url));
   };
 
+  /** Returns per-field errors plus a summary message for the alert. */
   const validateForm = () => {
-    if (!title.trim()) return "Please add a property title.";
-    if (!slug.trim()) return "A slug is required.";
-    if (!SLUG_PATTERN.test(slug))
-      return "Slug can only contain lowercase letters, numbers and single dashes.";
-    if (!basePrice.trim()) return "Please set a base price.";
-    const price = Number(basePrice);
-    if (!Number.isFinite(price) || price <= 0)
-      return "Base price must be a number greater than zero.";
-    if (bookingType === "hourly" && slots.length === 0)
-      return "Select at least one available time slot for hourly bookings.";
-    if (isUploading) return "Please wait for image uploads to finish.";
-    return null;
+    const errors: Partial<Record<FieldName, string>> = {};
+
+    if (!title.trim()) {
+      errors.title = "Please add a property title.";
+    }
+    if (!slug.trim()) {
+      errors.slug = "A slug is required.";
+    } else if (!SLUG_PATTERN.test(slug)) {
+      errors.slug = "Use lowercase letters, numbers and single dashes only.";
+    }
+    if (!basePrice.trim()) {
+      errors.basePrice = "Please set a base price.";
+    } else {
+      const price = Number(basePrice);
+      if (!Number.isFinite(price) || price <= 0) {
+        errors.basePrice = "Base price must be a number greater than zero.";
+      }
+    }
+    if (bookingType === "hourly" && slots.length === 0) {
+      errors.slots = "Select at least one available time slot.";
+    }
+
+    const firstError = Object.values(errors)[0];
+    const summary = isUploading
+      ? "Please wait for image uploads to finish."
+      : firstError;
+
+    return { errors, summary };
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return;
 
-    const validationError = validateForm();
-    if (validationError) {
-      notify("error", validationError);
+    const { errors, summary } = validateForm();
+    setFieldErrors(errors);
+    if (summary) {
+      notify("error", summary);
       return;
     }
 
@@ -337,9 +428,9 @@ function EditPropertyContent({ id }: { id: string }) {
 
       if (!response.ok || !resJson.success) {
         if (response.status === 409) {
+          setFieldErrors({ slug: "That slug is already in use." });
           throw new Error(
-            "That slug is already in use. Try a different one, e.g. " +
-              `${slug}-2.`
+            `That slug is already in use. Try a different one, e.g. ${slug}-2.`
           );
         }
         throw new Error(
@@ -364,13 +455,6 @@ function EditPropertyContent({ id }: { id: string }) {
 
   const handleDelete = async () => {
     if (isNew) return;
-    if (
-      !window.confirm(
-        "Are you sure you want to delete this property? All associated packages will also be deleted."
-      )
-    ) {
-      return;
-    }
 
     setIsSubmitting(true);
     setStatusMessage(null);
@@ -402,9 +486,9 @@ function EditPropertyContent({ id }: { id: string }) {
 
   if (authLoading || isLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-white flex items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-teal-500" aria-label="Loading" />
-      </div>
+      <PageShell>
+        <Spinner className="size-6 text-primary" aria-label="Loading" />
+      </PageShell>
     );
   }
 
@@ -418,416 +502,392 @@ function EditPropertyContent({ id }: { id: string }) {
 
   if (!user || !user.isAdmin || !hasAccess) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-white flex items-center justify-center p-4">
-        <div className="max-w-md w-full rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 p-8 text-center shadow-sm backdrop-blur-md">
-          <Lock className="mx-auto h-8 w-8 text-teal-500" />
-          <h2 className="text-xl font-black text-slate-900 dark:text-white mt-4">
-            Access Denied
-          </h2>
-          <p className="text-xs text-slate-500 dark:text-zinc-400 mt-2 leading-relaxed">
-            Administrative privileges or listing ownership is required to access
-            this portal.
-          </p>
-          <div className="mt-6 flex flex-col gap-2">
-            <Link
-              href="/admin/properties"
-              className="w-full rounded-xl bg-teal-500 py-3 text-center text-xs font-bold text-white hover:bg-teal-600 transition-all shadow-md shadow-teal-500/10"
-            >
+      <PageShell>
+        <Empty className="w-full max-w-md rounded-xl border bg-card">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <Lock />
+            </EmptyMedia>
+            <EmptyTitle>Access Denied</EmptyTitle>
+            <EmptyDescription>
+              Administrative privileges or listing ownership is required to
+              access this portal.
+            </EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <Button nativeButton={false} render={<Link href="/admin/properties" />}>
               Back to Properties
-            </Link>
-            <Link
-              href="/"
-              className="w-full rounded-xl border border-slate-200 dark:border-white/10 py-3 text-center text-xs font-bold text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white transition-all"
-            >
+            </Button>
+            <Button nativeButton={false} variant="ghost" render={<Link href="/" />}>
               Back to Home
-            </Link>
-          </div>
-        </div>
-      </div>
+            </Button>
+          </EmptyContent>
+        </Empty>
+      </PageShell>
     );
   }
 
   const submitDisabled = isSubmitting || isUploading;
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-white font-sans selection:bg-teal-500/30 selection:text-teal-600 transition-colors duration-200">
-      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
-        <div className="absolute -top-[10%] left-[10%] w-[50%] h-[50%] rounded-full bg-teal-500/10 blur-[100px]" />
-      </div>
-
-      <div className="relative max-w-3xl mx-auto px-4 py-12 sm:px-6 lg:px-8 space-y-8">
-        {/* Header Navigation */}
-        <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-slate-200 dark:border-white/10 pb-6 gap-4">
-          <div>
-            <Link
-              href="/admin/properties"
-              className="text-xs font-bold text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white transition-colors mb-2 inline-flex items-center gap-1"
+    <div className="min-h-screen bg-background font-sans">
+      <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-10 sm:px-6 lg:px-8">
+        <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-1">
+            <Button
+              variant="link"
+              size="sm"
+              className="h-auto w-fit p-0"
+              nativeButton={false}
+              render={<Link href="/admin/properties" />}
             >
-              <ArrowLeft className="h-3.5 w-3.5" />
+              <ArrowLeft data-icon="inline-start" />
               Back to Listings
-            </Link>
-            <h1 className="text-2xl font-black text-slate-900 dark:text-white text-balance">
+            </Button>
+            <h1 className="text-2xl font-semibold tracking-tight text-balance">
               {isNew ? "Create Property Listing" : "Edit Property Configuration"}
             </h1>
           </div>
-          <span className="inline-flex items-center gap-1.5 rounded-lg bg-teal-500/10 border border-teal-500/20 px-3 py-1.5 text-xs font-semibold text-teal-600 dark:text-teal-400 shrink-0">
+          <Badge variant="secondary" className="w-fit shrink-0">
             {isNew ? (
               <>
-                <Sparkles className="h-3.5 w-3.5" />
+                <Sparkles />
                 New Listing
               </>
             ) : (
               `ID: ${id}`
             )}
-          </span>
+          </Badge>
         </header>
 
-        {/* Form Container */}
-        <div className="rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 p-6 sm:p-8 shadow-sm backdrop-blur-md">
-          <div ref={statusRef} aria-live="polite" role="status">
-            {statusMessage && (
-              <div
-                className={`mb-6 flex items-center justify-center gap-2 rounded-xl border p-3.5 text-center text-xs font-bold ${
-                  statusMessage.type === "success"
-                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                    : "border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400"
-                }`}
-              >
-                {statusMessage.type === "success" ? (
-                  <CheckCircle2 className="h-4 w-4 shrink-0" />
-                ) : (
-                  <AlertTriangle className="h-4 w-4 shrink-0" />
-                )}
-                <span className="text-pretty">{statusMessage.text}</span>
-              </div>
-            )}
-          </div>
-
-          {isNew || property ? (
-            <form onSubmit={handleSubmit} className="space-y-6" noValidate>
-              {/* LARGER TITLE INPUT */}
-              <div>
-                <label
-                  htmlFor="property-title"
-                  className="mb-2 block text-xs text-slate-500 dark:text-zinc-400 font-bold uppercase tracking-wider"
-                >
-                  Property Title *
-                </label>
-                <input
-                  id="property-title"
-                  type="text"
-                  required
-                  placeholder="e.g. Llandudno Cliffside Villa"
-                  value={title}
-                  onChange={(e) => handleTitleChange(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-300 dark:border-white/10 bg-slate-50 dark:bg-black/40 px-4 py-3 text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white focus:border-teal-500 focus:bg-white dark:focus:bg-black/60 focus:outline-none placeholder:text-slate-300 dark:placeholder:text-zinc-700 transition-all shadow-inner"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label
-                    htmlFor="property-slug"
-                    className="mb-1 block text-xs text-slate-500 dark:text-zinc-400 font-semibold uppercase tracking-wider"
-                  >
-                    Slug {isNew && !slugTouched ? "(Auto-generated)" : ""} *
-                  </label>
-                  <input
-                    id="property-slug"
-                    type="text"
-                    required
-                    inputMode="url"
-                    placeholder="e.g. llandudno-cliffside-villa"
-                    value={slug}
-                    onChange={(e) => {
-                      setSlugTouched(true);
-                      setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"));
-                    }}
-                    onBlur={() => setSlug((prev) => slugify(prev).replace(/^-|-$/g, ""))}
-                    className="w-full rounded-xl border border-slate-300 dark:border-white/10 bg-slate-100 dark:bg-black/40 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white/80 focus:border-teal-500 focus:outline-none placeholder:text-slate-400 dark:placeholder:text-zinc-600 font-mono"
-                  />
-                  <p className="mt-1 text-[10px] text-slate-400 dark:text-zinc-600">
-                    Lowercase letters, numbers and dashes only.
-                  </p>
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="property-location"
-                    className="mb-1 block text-xs text-slate-500 dark:text-zinc-400 font-semibold uppercase tracking-wider"
-                  >
-                    Location
-                  </label>
-                  <input
-                    id="property-location"
-                    type="text"
-                    placeholder="e.g. Llandudno, Cape Town"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 dark:border-white/10 bg-slate-100 dark:bg-black/40 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:border-teal-500 focus:outline-none placeholder:text-slate-400 dark:placeholder:text-zinc-600"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label
-                    htmlFor="property-price"
-                    className="mb-1 block text-xs text-slate-500 dark:text-zinc-400 font-semibold uppercase tracking-wider"
-                  >
-                    {bookingType === "hourly"
-                      ? "Base Price Per Hour (ZAR) *"
-                      : "Base Price Per Night (ZAR) *"}
-                  </label>
-                  <input
-                    id="property-price"
-                    type="number"
-                    required
-                    min={1}
-                    step={1}
-                    placeholder={bookingType === "hourly" ? "e.g. 250" : "e.g. 1500"}
-                    value={basePrice}
-                    onChange={(e) => setBasePrice(e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 dark:border-white/10 bg-slate-100 dark:bg-black/40 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:border-teal-500 focus:outline-none placeholder:text-slate-400 dark:placeholder:text-zinc-600 font-mono"
-                  />
-                </div>
-
-                <div>
-                  <span className="mb-1 block text-xs text-slate-500 dark:text-zinc-400 font-semibold uppercase tracking-wider">
-                    Booking Type
-                  </span>
-                  <div className="flex gap-2" role="group" aria-label="Booking type">
-                    <button
-                      type="button"
-                      aria-pressed={bookingType === "nightly"}
-                      onClick={() => setBookingType("nightly")}
-                      className={`flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-bold transition-all border ${
-                        bookingType === "nightly"
-                          ? "bg-teal-500/10 border-teal-500 text-teal-600 dark:text-teal-400"
-                          : "bg-slate-100 dark:bg-black/40 border-slate-200 dark:border-white/10 text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white"
-                      }`}
-                    >
-                      <Moon className="h-3.5 w-3.5" />
-                      Nightly Stay
-                    </button>
-                    <button
-                      type="button"
-                      aria-pressed={bookingType === "hourly"}
-                      onClick={() => setBookingType("hourly")}
-                      className={`flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-bold transition-all border ${
-                        bookingType === "hourly"
-                          ? "bg-teal-500/10 border-teal-500 text-teal-600 dark:text-teal-400"
-                          : "bg-slate-100 dark:bg-black/40 border-slate-200 dark:border-white/10 text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white"
-                      }`}
-                    >
-                      <Clock className="h-3.5 w-3.5" />
-                      Hourly Slots
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {bookingType === "hourly" && (
-                <div>
-                  <span className="mb-2 block text-xs text-slate-500 dark:text-zinc-400 font-semibold uppercase tracking-wider">
-                    Available Time Slots *
-                  </span>
-                  <div
-                    className="grid grid-cols-3 sm:grid-cols-6 gap-2 bg-slate-100 dark:bg-black/20 border border-slate-200 dark:border-white/10 p-3 rounded-xl"
-                    role="group"
-                    aria-label="Available time slots"
-                  >
-                    {TIME_SLOTS.map((slotTime) => {
-                      const isSelected = slots.includes(slotTime);
-                      const toggleSlot = () => {
-                        setSlots((prev) =>
-                          isSelected
-                            ? prev.filter((s) => s !== slotTime)
-                            : [...prev, slotTime].sort()
-                        );
-                      };
-
-                      return (
-                        <button
-                          key={slotTime}
-                          type="button"
-                          aria-pressed={isSelected}
-                          onClick={toggleSlot}
-                          className={`rounded-lg py-1.5 px-2 text-[10px] font-bold border transition-all ${
-                            isSelected
-                              ? "bg-teal-500/10 border-teal-500 text-teal-600 dark:text-teal-400"
-                              : "bg-white dark:bg-zinc-900 border-slate-200 dark:border-white/5 text-slate-500 dark:text-zinc-500 hover:text-slate-800 dark:hover:text-zinc-300"
-                          }`}
-                        >
-                          {formatSlotLabel(slotTime)}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {slots.length === 0 && (
-                    <p className="mt-1.5 text-[10px] font-semibold text-red-500">
-                      Select at least one slot.
-                    </p>
-                  )}
-                </div>
+        <div ref={statusRef} aria-live="polite" role="status">
+          {statusMessage && (
+            <Alert
+              variant={statusMessage.type === "success" ? "default" : "destructive"}
+            >
+              {statusMessage.type === "success" ? (
+                <CheckCircle2 />
+              ) : (
+                <AlertTriangle />
               )}
+              <AlertTitle>
+                {statusMessage.type === "success" ? "Success" : "Something needs attention"}
+              </AlertTitle>
+              <AlertDescription className="text-pretty">
+                {statusMessage.text}
+              </AlertDescription>
+            </Alert>
+          )}
+        </div>
 
-              <div>
-                <label
-                  htmlFor="property-description"
-                  className="mb-1 block text-xs text-slate-500 dark:text-zinc-400 font-semibold uppercase tracking-wider"
-                >
-                  Description / About Stay
-                </label>
-                <textarea
-                  id="property-description"
-                  placeholder="Describe your stay, amenities, views, scenery..."
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={4}
-                  className="w-full rounded-xl border border-slate-300 dark:border-white/10 bg-slate-100 dark:bg-black/40 px-3.5 py-2.5 text-sm leading-relaxed text-slate-900 dark:text-white focus:border-teal-500 focus:outline-none placeholder:text-slate-400 dark:placeholder:text-zinc-600 resize-y"
-                />
-              </div>
+        {isNew || property ? (
+          <form onSubmit={handleSubmit} noValidate>
+            <Card>
+              <CardHeader>
+                <CardTitle>Listing details</CardTitle>
+                <CardDescription>
+                  {isNew
+                    ? "Describe the property, set pricing, and add photos to publish a new listing."
+                    : "Update the property information, pricing, and imagery for this listing."}
+                </CardDescription>
+              </CardHeader>
 
-              <div>
-                <span className="mb-1 block text-xs text-slate-500 dark:text-zinc-400 font-semibold uppercase tracking-wider">
-                  Property Imagery
-                </span>
-                <div
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    setIsDragging(true);
-                  }}
-                  onDragLeave={() => setIsDragging(false)}
-                  onDrop={handleDrop}
-                  className={`relative group border-2 border-dashed rounded-2xl p-6 transition-all cursor-pointer text-center ${
-                    isDragging
-                      ? "border-teal-500 bg-teal-500/5"
-                      : "border-slate-300 dark:border-white/10 hover:border-teal-500/50 bg-slate-50 dark:bg-black/20 hover:bg-slate-100/50 dark:hover:bg-black/40"
-                  }`}
-                >
-                  <input
-                    type="file"
-                    multiple
-                    accept={ACCEPTED_TYPES.join(",")}
-                    onChange={handleFileUpload}
-                    aria-label="Upload property images"
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  />
-                  <div className="space-y-1 pointer-events-none">
-                    <ImagePlus className="mx-auto h-6 w-6 text-teal-500" />
-                    <span className="text-xs font-bold text-slate-700 dark:text-zinc-300 block">
-                      {isDragging
-                        ? "Drop images to upload"
-                        : "Drag & drop files or click to upload"}
-                    </span>
-                    <span className="text-[10px] text-slate-500 dark:text-zinc-500 block">
-                      PNG, JPG, WEBP up to 10MB each
-                    </span>
+              <CardContent>
+                <FieldGroup>
+                  <Field data-invalid={fieldErrors.title ? true : undefined}>
+                    <FieldLabel htmlFor="property-title">Property title</FieldLabel>
+                    <Input
+                      id="property-title"
+                      placeholder="e.g. Llandudno Cliffside Villa"
+                      value={title}
+                      onChange={(e) => handleTitleChange(e.target.value)}
+                      aria-invalid={fieldErrors.title ? true : undefined}
+                    />
+                    <FieldError errors={fieldErrors.title ? [{ message: fieldErrors.title }] : undefined} />
+                  </Field>
+
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <Field data-invalid={fieldErrors.slug ? true : undefined}>
+                      <FieldLabel htmlFor="property-slug">
+                        Slug{isNew && !slugTouched ? " (auto-generated)" : ""}
+                      </FieldLabel>
+                      <Input
+                        id="property-slug"
+                        inputMode="url"
+                        className="font-mono"
+                        placeholder="llandudno-cliffside-villa"
+                        value={slug}
+                        onChange={(e) => {
+                          setSlugTouched(true);
+                          setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"));
+                          clearFieldError("slug");
+                        }}
+                        onBlur={() => setSlug((prev) => slugify(prev).replace(/^-|-$/g, ""))}
+                        aria-invalid={fieldErrors.slug ? true : undefined}
+                      />
+                      {fieldErrors.slug ? (
+                        <FieldError errors={[{ message: fieldErrors.slug }]} />
+                      ) : (
+                        <FieldDescription>
+                          Lowercase letters, numbers and dashes only.
+                        </FieldDescription>
+                      )}
+                    </Field>
+
+                    <Field>
+                      <FieldLabel htmlFor="property-location">Location</FieldLabel>
+                      <Input
+                        id="property-location"
+                        placeholder="e.g. Llandudno, Cape Town"
+                        value={location}
+                        onChange={(e) => setLocation(e.target.value)}
+                      />
+                    </Field>
                   </div>
-                </div>
 
-                {uploadingFiles.length > 0 && (
-                  <div className="mt-3 space-y-2">
-                    {uploadingFiles.map((file) => (
-                      <div
-                        key={file.id}
-                        className="rounded-lg border border-slate-200 dark:border-white/5 bg-slate-100 dark:bg-white/5 p-2"
-                      >
-                        <div className="flex items-center justify-between text-xs font-mono">
-                          <span className="truncate max-w-[180px]">{file.name}</span>
-                          <span className="text-teal-600 dark:text-teal-400 font-bold">
-                            {file.progress}%
-                          </span>
-                        </div>
-                        <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-black/40">
-                          <div
-                            className="h-full rounded-full bg-teal-500 transition-all duration-200"
-                            style={{ width: `${file.progress}%` }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {images.length > 0 && (
-                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-3.5">
-                    {images.map((url, index) => (
-                      <div
-                        key={url}
-                        className="group relative aspect-square rounded-xl overflow-hidden border border-slate-200 dark:border-white/10 bg-slate-200 dark:bg-zinc-900"
-                      >
-                        <Image
-                          src={url || "/placeholder.svg"}
-                          alt={`${title || "Property"} photo ${index + 1}`}
-                          fill
-                          unoptimized
-                          sizes="(max-width: 640px) 33vw, 25vw"
-                          className="object-cover"
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <Field data-invalid={fieldErrors.basePrice ? true : undefined}>
+                      <FieldLabel htmlFor="property-price">
+                        {bookingType === "hourly"
+                          ? "Base price per hour"
+                          : "Base price per night"}
+                      </FieldLabel>
+                      <InputGroup>
+                        <InputGroupAddon>
+                          <InputGroupText>R</InputGroupText>
+                        </InputGroupAddon>
+                        <InputGroupInput
+                          id="property-price"
+                          type="number"
+                          min={1}
+                          step={1}
+                          className="font-mono"
+                          placeholder={bookingType === "hourly" ? "250" : "1500"}
+                          value={basePrice}
+                          onChange={(e) => {
+                            setBasePrice(e.target.value);
+                            clearFieldError("basePrice");
+                          }}
+                          aria-invalid={fieldErrors.basePrice ? true : undefined}
                         />
-                        {index === 0 && (
-                          <span className="absolute bottom-1 left-1 rounded-md bg-black/60 px-1.5 py-0.5 text-[9px] font-bold text-white">
-                            Cover
-                          </span>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveImage(url)}
-                          aria-label={`Remove image ${index + 1}`}
-                          className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 leading-none opacity-100 sm:opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity active:scale-95 shadow-md shadow-black/20 z-10"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </div>
-                    ))}
+                        <InputGroupAddon align="inline-end">
+                          <InputGroupText>ZAR</InputGroupText>
+                        </InputGroupAddon>
+                      </InputGroup>
+                      <FieldError errors={fieldErrors.basePrice ? [{ message: fieldErrors.basePrice }] : undefined} />
+                    </Field>
+
+                    <Field>
+                      <FieldLabel htmlFor="booking-type">Booking type</FieldLabel>
+                      <ToggleGroup
+                        id="booking-type"
+                        variant="outline"
+                        className="w-full"
+                        value={[bookingType]}
+                        onValueChange={(value) => {
+                          const next = value[0] as "nightly" | "hourly" | undefined;
+                          if (next) setBookingType(next);
+                        }}
+                      >
+                        <ToggleGroupItem value="nightly" className="flex-1">
+                          <Moon />
+                          Nightly stay
+                        </ToggleGroupItem>
+                        <ToggleGroupItem value="hourly" className="flex-1">
+                          <Clock />
+                          Hourly slots
+                        </ToggleGroupItem>
+                      </ToggleGroup>
+                    </Field>
                   </div>
-                )}
-              </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label
-                    htmlFor="airbnb-ical"
-                    className="mb-1 block text-xs text-slate-500 dark:text-zinc-400 font-semibold uppercase tracking-wider"
-                  >
-                    Airbnb iCal URL (Optional)
-                  </label>
-                  <input
-                    id="airbnb-ical"
-                    type="url"
-                    placeholder="https://www.airbnb.co.za/calendar/ical/..."
-                    value={airbnbCalendarUrl}
-                    onChange={(e) => setAirbnbCalendarUrl(e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 dark:border-white/10 bg-slate-100 dark:bg-black/40 px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:border-teal-500 focus:outline-none placeholder:text-slate-400 dark:placeholder:text-zinc-600"
-                  />
-                </div>
+                  {bookingType === "hourly" && (
+                    <FieldSet data-invalid={fieldErrors.slots ? true : undefined}>
+                      <FieldLegend variant="label">Available time slots</FieldLegend>
+                      <ToggleGroup
+                        multiple
+                        variant="outline"
+                        className="flex-wrap"
+                        value={slots}
+                        onValueChange={(value) => {
+                          setSlots([...value].sort());
+                          if (value.length > 0) clearFieldError("slots");
+                        }}
+                      >
+                        {TIME_SLOTS.map((slotTime) => (
+                          <ToggleGroupItem key={slotTime} value={slotTime}>
+                            {formatSlotLabel(slotTime)}
+                          </ToggleGroupItem>
+                        ))}
+                      </ToggleGroup>
+                      {fieldErrors.slots ? (
+                        <FieldError errors={[{ message: fieldErrors.slots }]} />
+                      ) : (
+                        <FieldDescription>
+                          Guests can book any of the slots you select.
+                        </FieldDescription>
+                      )}
+                    </FieldSet>
+                  )}
 
-                <div>
-                  <label
-                    htmlFor="google-ical"
-                    className="mb-1 block text-xs text-slate-500 dark:text-zinc-400 font-semibold uppercase tracking-wider"
-                  >
-                    Google Calendar iCal URL (Optional)
-                  </label>
-                  <input
-                    id="google-ical"
-                    type="url"
-                    placeholder="https://calendar.google.com/calendar/ical/..."
-                    value={googleCalendarUrl}
-                    onChange={(e) => setGoogleCalendarUrl(e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 dark:border-white/10 bg-slate-100 dark:bg-black/40 px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:border-teal-500 focus:outline-none placeholder:text-slate-400 dark:placeholder:text-zinc-600"
-                  />
-                </div>
-              </div>
+                  <Field>
+                    <FieldLabel htmlFor="property-description">
+                      Description
+                    </FieldLabel>
+                    <Textarea
+                      id="property-description"
+                      rows={4}
+                      className="resize-y leading-relaxed"
+                      placeholder="Describe your stay, amenities, views, scenery..."
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                    />
+                    <FieldDescription>
+                      This appears on the public listing page.
+                    </FieldDescription>
+                  </Field>
 
-              <div className="flex gap-3 pt-4 border-t border-slate-200 dark:border-white/10">
-                <button
+                  <Separator />
+
+                  <Field>
+                    <FieldLabel htmlFor="property-images">
+                      Property imagery
+                    </FieldLabel>
+                    <div
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        setIsDragging(true);
+                      }}
+                      onDragLeave={() => setIsDragging(false)}
+                      onDrop={handleDrop}
+                      className={cn(
+                        "relative flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 text-center transition-colors",
+                        isDragging
+                          ? "border-primary bg-primary/5"
+                          : "border-border bg-muted/30 hover:border-primary/50 hover:bg-muted/60"
+                      )}
+                    >
+                      <input
+                        id="property-images"
+                        type="file"
+                        multiple
+                        accept={ACCEPTED_TYPES.join(",")}
+                        onChange={handleFileUpload}
+                        className="absolute inset-0 size-full cursor-pointer opacity-0"
+                      />
+                      <div className="pointer-events-none flex flex-col items-center gap-1">
+                        <ImagePlus className="size-6 text-primary" />
+                        <span className="text-sm font-medium">
+                          {isDragging
+                            ? "Drop images to upload"
+                            : "Drag & drop files or click to upload"}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          PNG, JPG, WEBP up to 10MB each
+                        </span>
+                      </div>
+                    </div>
+
+                    {uploadingFiles.length > 0 && (
+                      <div className="flex flex-col gap-2">
+                        {uploadingFiles.map((file) => (
+                          <div
+                            key={file.id}
+                            className="flex flex-col gap-1.5 rounded-lg border bg-muted/40 p-2"
+                          >
+                            <div className="flex items-center justify-between gap-2 text-xs">
+                              <span className="truncate font-mono">{file.name}</span>
+                              <span className="shrink-0 font-medium text-muted-foreground">
+                                {file.progress}%
+                              </span>
+                            </div>
+                            <Progress value={file.progress} className="h-1" />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {images.length > 0 && (
+                      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                        {images.map((url, index) => (
+                          <div
+                            key={url}
+                            className="group relative aspect-square overflow-hidden rounded-lg border bg-muted"
+                          >
+                            <Image
+                              src={url || "/placeholder.svg"}
+                              alt={`${title || "Property"} photo ${index + 1}`}
+                              fill
+                              unoptimized
+                              sizes="(max-width: 640px) 33vw, 25vw"
+                              className="object-cover"
+                            />
+                            {index === 0 && (
+                              <Badge
+                                variant="secondary"
+                                className="absolute bottom-1 left-1"
+                              >
+                                Cover
+                              </Badge>
+                            )}
+                            <Button
+                              type="button"
+                              size="icon-xs"
+                              variant="destructive"
+                              onClick={() => handleRemoveImage(url)}
+                              aria-label={`Remove image ${index + 1}`}
+                              className="absolute top-1 right-1 z-10 bg-destructive text-destructive-foreground opacity-100 hover:bg-destructive/90 sm:opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+                            >
+                              <X />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </Field>
+
+                  <Separator />
+
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <Field>
+                      <FieldLabel htmlFor="airbnb-ical">
+                        Airbnb iCal URL
+                      </FieldLabel>
+                      <Input
+                        id="airbnb-ical"
+                        type="url"
+                        placeholder="https://www.airbnb.co.za/calendar/ical/..."
+                        value={airbnbCalendarUrl}
+                        onChange={(e) => setAirbnbCalendarUrl(e.target.value)}
+                      />
+                      <FieldDescription>Optional.</FieldDescription>
+                    </Field>
+
+                    <Field>
+                      <FieldLabel htmlFor="google-ical">
+                        Google Calendar iCal URL
+                      </FieldLabel>
+                      <Input
+                        id="google-ical"
+                        type="url"
+                        placeholder="https://calendar.google.com/calendar/ical/..."
+                        value={googleCalendarUrl}
+                        onChange={(e) => setGoogleCalendarUrl(e.target.value)}
+                      />
+                      <FieldDescription>Optional.</FieldDescription>
+                    </Field>
+                  </div>
+                </FieldGroup>
+              </CardContent>
+
+              <CardFooter className="flex-col gap-3 border-t sm:flex-row">
+                <Button
                   type="submit"
+                  size="lg"
                   disabled={submitDisabled}
-                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-teal-500 py-3 text-center text-xs font-bold text-white shadow-lg shadow-teal-500/20 hover:bg-teal-600 active:scale-95 transition-all disabled:opacity-50 disabled:active:scale-100"
+                  className="w-full sm:flex-1"
                 >
-                  {isSubmitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  {isSubmitting && <Spinner data-icon="inline-start" />}
                   {isUploading
                     ? "Waiting for uploads..."
                     : isSubmitting
@@ -837,27 +897,69 @@ function EditPropertyContent({ id }: { id: string }) {
                       : isNew
                         ? "Create Listing"
                         : "Save Listing Changes"}
-                </button>
+                </Button>
 
                 {!isNew && (
-                  <button
-                    type="button"
-                    onClick={handleDelete}
-                    disabled={isSubmitting}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 px-5 py-3 text-center text-xs font-bold text-red-600 dark:text-red-400 hover:bg-red-500 hover:text-white transition-all active:scale-95 disabled:opacity-50"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    Delete Listing
-                  </button>
+                  <AlertDialog>
+                    <AlertDialogTrigger
+                      render={
+                        <Button
+                          type="button"
+                          size="lg"
+                          variant="destructive"
+                          disabled={isSubmitting}
+                          className="w-full sm:w-auto"
+                        />
+                      }
+                    >
+                      <Trash2 data-icon="inline-start" />
+                      Delete Listing
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete this listing?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This permanently removes the property and every package
+                          associated with it. This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          variant="destructive"
+                          onClick={handleDelete}
+                        >
+                          Delete listing
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 )}
-              </div>
-            </form>
-          ) : (
-            <div className="text-center py-6 text-slate-500 dark:text-zinc-500 text-xs font-semibold">
-              Could not retrieve property metadata.
-            </div>
-          )}
-        </div>
+              </CardFooter>
+            </Card>
+          </form>
+        ) : (
+          <Empty className="rounded-xl border bg-card">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <AlertTriangle />
+              </EmptyMedia>
+              <EmptyTitle>Listing unavailable</EmptyTitle>
+              <EmptyDescription>
+                Could not retrieve property metadata for this listing.
+              </EmptyDescription>
+            </EmptyHeader>
+            <EmptyContent>
+              <Button
+                variant="outline"
+                nativeButton={false}
+                render={<Link href="/admin/properties" />}
+              >
+                Back to Listings
+              </Button>
+            </EmptyContent>
+          </Empty>
+        )}
       </div>
     </div>
   );
@@ -873,9 +975,9 @@ export default function EditPropertyPage({
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-white flex items-center justify-center">
-          <Loader2 className="h-6 w-6 animate-spin text-teal-500" aria-label="Loading" />
-        </div>
+        <PageShell>
+          <Spinner className="size-6 text-primary" aria-label="Loading" />
+        </PageShell>
       }
     >
       <EditPropertyContent id={unwrappedParams.id} />
