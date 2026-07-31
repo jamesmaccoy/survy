@@ -81,8 +81,14 @@ export default function CalendarPicker({
       const endTime = new Date(end.getFullYear(), end.getMonth(), end.getDate()).getTime();
 
       if (bookingType === "hourly") {
-        if (time === startTime) {
-          return b;
+        if (startTime === endTime) {
+          if (time === startTime) {
+            return b;
+          }
+        } else {
+          if (time >= startTime && time < endTime) {
+            return b;
+          }
         }
       } else {
         // Block night of check-in up to night before check-out

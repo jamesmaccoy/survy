@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { updateBookingStatus, getEstimate, updateEstimateStatus, createBooking, listBookings, promoteUserToAdmin } from "@/lib/firebase";
+import { updateBookingStatus, getEstimate, updateEstimateStatus, createBooking, listBookings, promoteUserToAdmin, getProperty } from "@/lib/firebase";
+import { sendBookingConfirmationEmail } from "@/lib/email";
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,11 +16,14 @@ export async function POST(request: NextRequest) {
     const estimateId = metadata.estimateId || payload.estimateId || body.estimateId;
     const intent = metadata.intent || payload.intent || body.intent;
     const userId = metadata.userId || payload.userId || body.userId;
+    const customerEmail = metadata.email;
+    const customerName = metadata.name;
 
     if (intent === "subscription" && userId) {
       if (eventType === "payment.succeeded" || eventType === "checkout.succeeded" || eventType === "charge.succeeded") {
-        console.log(`[Yoco Webhook] Subscription payment succeeded for user ${userId}. Promoting to Pro.`);
-        await promoteUserToAdmin(userId);
+        const plan = metadata.plan || "standard";
+        console.log(`[Yoco Webhook] Subscription payment succeeded for user ${userId} with plan ${plan}. Promoting.`);
+        await promoteUserToAdmin(userId, plan);
       }
       return NextResponse.json({ success: true, message: "Subscription processed successfully." });
     }
@@ -37,14 +41,29 @@ export async function POST(request: NextRequest) {
         console.log(`[Yoco Webhook] Payment succeeded for estimate ${estimateId}. Creating booking.`);
         const estimate = await getEstimate(estimateId);
         if (estimate) {
+          const property = await getProperty(estimate.propertyId);
+          const isHourly = property?.bookingType === "hourly";
+          
+          const targetEmail = customerEmail || estimate.customerEmail;
+          const targetId = userId || estimate.customerId;
+          const targetName = customerName || estimate.customerName;
+
           const existingBookings = await listBookings();
-          const alreadyExists = existingBookings.some((b: any) => b.estimateId === estimateId);
+          const alreadyExists = existingBookings.some((b: any) => {
+            if (isHourly) {
+              return b.estimateId === estimateId && (b.customerEmail === targetEmail || b.customerId === targetId);
+            } else {
+              return b.estimateId === estimateId;
+            }
+          });
+
           if (!alreadyExists) {
-            await createBooking({
+            const booking = await createBooking({
               propertyId: estimate.propertyId,
               packageId: estimate.packageId || null,
-              customerName: estimate.customerName,
-              customerEmail: estimate.customerEmail,
+              customerName: targetName,
+              customerEmail: targetEmail,
+              customerId: targetId,
               fromDate: estimate.fromDate,
               toDate: estimate.toDate,
               total: Number(estimate.total),
@@ -53,7 +72,20 @@ export async function POST(request: NextRequest) {
               guests: estimate.guests || [],
               guestsDetails: estimate.guestsDetails || {}
             } as any);
-            await updateEstimateStatus(estimateId, "paid");
+            
+            if (!isHourly) {
+              await updateEstimateStatus(estimateId, "paid");
+            }
+
+            // Trigger email notification asynchronously
+            try {
+              sendBookingConfirmationEmail(booking).catch((err) => {
+                console.error("[Yoco Webhook] Error in sendBookingConfirmationEmail promise:", err);
+              });
+            } catch (err) {
+              console.warn("[Yoco Webhook] Failed to trigger sendBookingConfirmationEmail:", err);
+            }
+            
             console.log(`[Yoco Webhook] Booking created successfully from estimate ${estimateId}`);
           } else {
             console.log(`[Yoco Webhook] Booking already exists for estimate ${estimateId}`);

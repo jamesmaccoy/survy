@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createEstimate } from "@/lib/firebase";
+import { createEstimate, updateEstimate } from "@/lib/firebase";
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,6 +41,31 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, estimate }, { status: 201 });
   } catch (error: any) {
     console.error("POST /api/estimates error:", error);
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json().catch(() => ({}));
+    const { estimateId, packageId, total } = body;
+
+    if (!estimateId) {
+      return NextResponse.json({ success: false, error: "estimateId is required." }, { status: 400 });
+    }
+
+    const updated = await updateEstimate(estimateId, {
+      packageId: packageId || null,
+      total: Number(total)
+    });
+
+    if (!updated) {
+      return NextResponse.json({ success: false, error: "Estimate not found or update failed." }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, message: "Estimate updated successfully." });
+  } catch (error: any) {
+    console.error("PATCH /api/estimates error:", error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }

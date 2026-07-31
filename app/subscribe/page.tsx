@@ -45,7 +45,7 @@ function SubscribeContent() {
   };
 
   // Developer Bypass to become Pro instantly (in mock mode or development)
-  const handleMockBypass = async () => {
+  const handleMockBypass = async (plan: "standard" | "pro") => {
     if (!user) return;
     setIsRedirecting(true);
     setStatusMessage(null);
@@ -53,11 +53,11 @@ function SubscribeContent() {
       const res = await fetch("/api/subscribe/mock-confirm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.uid })
+        body: JSON.stringify({ userId: user.uid, plan })
       });
       const result = await res.json();
       if (res.ok && result.success) {
-        setStatusMessage({ type: "success", text: "Success! Promoted to Pro. Reloading session..." });
+        setStatusMessage({ type: "success", text: `Success! Promoted to ${plan === 'standard' ? 'Standard Pro' : 'Professional Portfolio Manager'}. Reloading session...` });
         setTimeout(() => {
           window.location.href = "/admin/properties";
         }, 1500);
@@ -94,15 +94,15 @@ function SubscribeContent() {
             Become a Pro
           </h1>
           <p className="text-xs sm:text-sm text-zinc-400 mt-2 max-w-lg mx-auto">
-            Choose a plan, unlock listing capabilities, and manage high-resolution imagery with direct Cloudflare R2 bucket integration.
+            Choose a plan, unlock listing capabilities, and manage high-resolution imagery.
           </p>
         </header>
 
         {statusMessage && (
           <div
             className={`max-w-md mx-auto mb-8 rounded-xl border p-3.5 text-center text-xs font-bold ${statusMessage.type === "success"
-                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
-                : "border-red-500/30 bg-red-500/10 text-red-400"
+              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+              : "border-red-500/30 bg-red-500/10 text-red-400"
               }`}
           >
             {statusMessage.text}
@@ -114,7 +114,7 @@ function SubscribeContent() {
             <span className="text-5xl block mb-4">🎉</span>
             <h2 className="text-xl font-black text-white">You are a Pro User!</h2>
             <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
-              Your account has listing management and R2 upload privileges. Go to the Pro Portal to create and publish stays.
+              Your account has listing management and image upload and sharing. Go to the Pro Portal to create and publish stays.
             </p>
             <div className="mt-6 flex flex-col gap-2">
               <Link
@@ -153,7 +153,7 @@ function SubscribeContent() {
                       <span className="text-teal-400">✓</span> List up to 3 properties
                     </li>
                     <li className="flex items-center gap-2">
-                      <span className="text-teal-400">✓</span> Cloudflare R2 high-resolution upload
+                      <span className="text-teal-400">✓</span> High-resolution image uploads and sharing
                     </li>
                     <li className="flex items-center gap-2">
                       <span className="text-teal-400">✓</span> Airbnb / Google Calendar sync
@@ -202,13 +202,13 @@ function SubscribeContent() {
                       <span className="text-teal-400">✓</span> List unlimited properties
                     </li>
                     <li className="flex items-center gap-2">
-                      <span className="text-teal-400">✓</span> Cloudflare R2 high-resolution upload
+                      <span className="text-teal-400">✓</span> High-resolution image uploads and sharing
                     </li>
                     <li className="flex items-center gap-2">
                       <span className="text-teal-400">✓</span> Airbnb / Google Calendar sync
                     </li>
                     <li className="flex items-center gap-2">
-                      <span className="text-teal-400">✓</span> Custom package rate multiplier builder
+                      <span className="text-teal-400">✓</span> Exclusive package for development and payment options
                     </li>
                   </ul>
                 </div>
@@ -236,18 +236,28 @@ function SubscribeContent() {
             {/* Local Developer Bypass block */}
             {process.env.NODE_ENV !== 'production' && user && (
               <div className="max-w-md mx-auto rounded-2xl border border-white/5 bg-white/5 p-6 text-center">
-                <span className="text-xs text-zinc-550 block font-bold tracking-wider uppercase mb-3">🛠 Local Dev Control</span>
-                <p className="text-[10px] text-zinc-500 leading-normal mb-4">
-                  For testing, you can bypass the checkout gateway and upgrade this account to a host role instantly.
+                <span className="text-xs text-zinc-500 block font-bold tracking-wider uppercase mb-3">🛠 Local Dev Control</span>
+                <p className="text-[10px] text-zinc-400 leading-normal mb-4">
+                  For testing, you can bypass the checkout gateway and upgrade this account instantly.
                 </p>
-                <button
-                  type="button"
-                  onClick={handleMockBypass}
-                  disabled={isRedirecting}
-                  className="rounded-xl border border-teal-500/30 bg-teal-500/10 hover:bg-teal-500/20 px-5 py-2.5 text-xs font-bold text-teal-400 hover:text-white transition-all active:scale-95"
-                >
-                  Become Pro Instantly (Dev Bypass)
-                </button>
+                <div className="flex flex-col sm:flex-row justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleMockBypass("standard")}
+                    disabled={isRedirecting}
+                    className="flex-1 rounded-xl border border-teal-500/30 bg-teal-550/10 hover:bg-teal-500/20 px-4 py-2.5 text-xs font-bold text-teal-400 hover:text-white transition-all active:scale-95"
+                  >
+                    Bypass as Standard
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleMockBypass("pro")}
+                    disabled={isRedirecting}
+                    className="flex-1 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 px-4 py-2.5 text-xs font-bold text-white hover:brightness-110 transition-all active:scale-95"
+                  >
+                    Bypass as Pro
+                  </button>
+                </div>
               </div>
             )}
           </div>

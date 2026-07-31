@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isUserAdmin } from "@/lib/firebase";
+import { getUserProfile, isUserAdmin } from "@/lib/firebase";
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,11 +11,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: "userId query parameter is required." }, { status: 400 });
     }
 
+    const profile = await getUserProfile(userId);
     const isAdmin = await isUserAdmin(userId, email);
     return NextResponse.json({
       success: true,
       data: {
-        isAdmin
+        isAdmin,
+        plan: profile?.plan || (isAdmin ? "pro" : "free"),
+        email: profile?.email || email || ""
       }
     });
   } catch (err: any) {

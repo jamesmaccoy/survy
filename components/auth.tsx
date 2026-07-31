@@ -6,7 +6,9 @@ import {
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
   signOut,
-  User as FirebaseUser
+  GoogleAuthProvider,
+  signInWithRedirect,
+  getRedirectResult
 } from "firebase/auth";
 import { auth } from "@/lib/clientApp";
 
@@ -23,18 +25,51 @@ interface AuthContextType {
   loading: boolean;
   signIn: (email: string, pass: string) => Promise<void>;
   signUp: (email: string, pass: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   logOut: () => Promise<void>;
   isMockUser: boolean;
+  authError: string | null;
+  clearAuthError: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
+
+const isMockAllowed = () => {
+  if (process.env.NODE_ENV === "production") return false;
+  if (typeof window !== "undefined") {
+    const hostname = window.location.hostname;
+    return (
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname.startsWith("192.168.") ||
+      hostname.startsWith("10.") ||
+      hostname.startsWith("172.")
+    );
+  }
+  return true;
+};
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [isMockUser, setIsMockUser] = useState<boolean>(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  const clearAuthError = () => setAuthError(null);
 
   useEffect(() => {
+    // Process redirect result if returning from Google Sign-In
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result) {
+          console.log("Successfully signed in via Google redirect:", result.user.email);
+        }
+      })
+      .catch((err) => {
+        console.error("Error during Google redirect sign-in:", err);
+        setAuthError(err instanceof Error ? err.message : String(err));
+      });
+
     try {
       const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
         if (firebaseUser) {
@@ -61,7 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         } else {
           // Check local storage mock session as fallback
-          const localSession = localStorage.getItem("auth:mock_session");
+          const localSession = isMockAllowed() ? localStorage.getItem("auth:mock_session") : null;
           if (localSession) {
             const parsedUser = JSON.parse(localSession);
             setUser(parsedUser);
@@ -95,10 +130,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return unsubscribe;
     } catch (err) {
       console.warn("⚠️ Firebase Auth client failed to load. Toggling offline fallback provider.");
-      const localSession = localStorage.getItem("auth:mock_session");
-      if (localSession) {
-        setUser(JSON.parse(localSession));
-        setIsMockUser(true);
+      if (isMockAllowed()) {
+        const localSession = localStorage.getItem("auth:mock_session");
+        if (localSession) {
+          setUser(JSON.parse(localSession));
+          setIsMockUser(true);
+        }
       }
       setLoading(false);
     }
@@ -109,7 +146,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await signInWithEmailAndPassword(auth, email, pass);
     } catch (err: any) {
-      console.warn(`[Firebase Auth] Failed, trying offline mock login: ${err.message}`);
+      console.warn(`[Firebase Auth] Failed: ${err.message}`);
+      if (!isMockAllowed()) {
+        throw err;
+      }
+      console.warn(`[Firebase Auth] Trying offline mock login fallback.`);
       // Fallback: Create mock session
       const isUserAdminMock = email.toLowerCase().includes("admin") || email.toLowerCase() === "thankyou.digital@gmail.com";
       const mockSession: AuthUser = {
@@ -132,7 +173,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await createUserWithEmailAndPassword(auth, email, pass);
     } catch (err: any) {
-      console.warn(`[Firebase Auth] Signup failed, fall back to mock signup: ${err.message}`);
+      console.warn(`[Firebase Auth] Signup failed: ${err.message}`);
+      if (!isMockAllowed()) {
+        throw err;
+      }
+      console.warn(`[Firebase Auth] Trying offline mock signup fallback.`);
       const isUserAdminMock = email.toLowerCase().includes("admin") || email.toLowerCase() === "thankyou.digital@gmail.com";
       const mockSession: AuthUser = {
         uid: `mock_${email.replace(/[^\w]/g, "_")}`,
@@ -140,6 +185,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         displayName: email.split("@")[0],
         isAnonymous: false,
         isAdmin: isUserAdminMock
+      };
+      localStorage.setItem("auth:mock_session", JSON.stringify(mockSession));
+      setUser(mockSession);
+      setIsMockUser(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const signInWithGoogle = async () => {
+    setLoading(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithRedirect(auth, provider);
+    } catch (err) {
+      console.warn(`[Firebase Auth] Google login failed: ${err instanceof Error ? err.message : String(err)}`);
+      if (!isMockAllowed()) {
+        throw err;
+      }
+      console.warn(`[Firebase Auth] Trying offline mock Google login fallback.`);
+      
+      // Prompt for email in dev to allow mock sign-in with specific developer emails if needed
+      let devEmail = "google-guest@example.com";
+      if (typeof window !== "undefined") {
+        const entered = prompt("Enter email for mock Google sign-in:", "google-guest@example.com");
+        if (entered) {
+          devEmail = entered;
+        }
+      }
+      
+      // Fallback: Create mock session
+      const mockSession: AuthUser = {
+        uid: "mock_google_user",
+        email: devEmail,
+        displayName: devEmail.split("@")[0] || "Google Guest",
+        isAnonymous: false,
+        isAdmin: false
       };
       localStorage.setItem("auth:mock_session", JSON.stringify(mockSession));
       setUser(mockSession);
@@ -163,7 +245,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, logOut, isMockUser }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signUp, signInWithGoogle, logOut, isMockUser, authError, clearAuthError }}>
       {children}
     </AuthContext.Provider>
   );
@@ -179,11 +261,20 @@ export function useAuth() {
 
 // Authentication Forms Component
 export function AuthCard() {
-  const { user, signIn, signUp, logOut, loading, isMockUser } = useAuth();
+  const { user, signIn, signUp, signInWithGoogle, logOut, loading, isMockUser, authError, clearAuthError } = useAuth();
   const [isSignUpMode, setIsSignUpMode] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
+
+  const handleGoogleSignIn = async () => {
+    setFormError(null);
+    try {
+      await signInWithGoogle();
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : "Google authentication failed.");
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -239,7 +330,7 @@ export function AuthCard() {
       <div className="mb-5 grid grid-cols-2 gap-1 rounded-xl bg-white/5 p-1 border border-white/5">
         <button
           type="button"
-          onClick={() => { setIsSignUpMode(false); setFormError(null); }}
+          onClick={() => { setIsSignUpMode(false); setFormError(null); clearAuthError(); }}
           className={`rounded-lg py-2 text-xs font-bold transition-all ${
             !isSignUpMode ? "bg-white text-black shadow-md" : "text-white/60 hover:text-white"
           }`}
@@ -248,7 +339,7 @@ export function AuthCard() {
         </button>
         <button
           type="button"
-          onClick={() => { setIsSignUpMode(true); setFormError(null); }}
+          onClick={() => { setIsSignUpMode(true); setFormError(null); clearAuthError(); }}
           className={`rounded-lg py-2 text-xs font-bold transition-all ${
             isSignUpMode ? "bg-white text-black shadow-md" : "text-white/60 hover:text-white"
           }`}
@@ -261,9 +352,9 @@ export function AuthCard() {
         {isSignUpMode ? "Create a Guest Profile" : "Access Your Booking Account"}
       </h3>
 
-      {formError && (
+      {(formError || authError) && (
         <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-center text-xs text-red-400">
-          ⚠️ {formError}
+          ⚠️ {formError || authError}
         </div>
       )}
 
@@ -297,6 +388,38 @@ export function AuthCard() {
           {isSignUpMode ? "Register Profile" : "Authenticate Session"}
         </button>
       </form>
+
+      <div className="my-5 flex items-center justify-between">
+        <hr className="w-full border-white/10" />
+        <span className="px-3 text-[10px] uppercase tracking-wider text-zinc-500">or</span>
+        <hr className="w-full border-white/10" />
+      </div>
+
+      <button
+        type="button"
+        onClick={handleGoogleSignIn}
+        className="flex w-full items-center justify-center gap-3 rounded-xl border border-white/10 bg-white/5 py-3 text-xs font-bold text-white shadow-md hover:bg-white/10 active:scale-95 transition-all"
+      >
+        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path
+            d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+            fill="#4285F4"
+          />
+          <path
+            d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+            fill="#34A853"
+          />
+          <path
+            d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+            fill="#FBBC05"
+          />
+          <path
+            d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+            fill="#EA4335"
+          />
+        </svg>
+        Continue with Google
+      </button>
     </div>
   );
 }

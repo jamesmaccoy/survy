@@ -122,16 +122,27 @@ async function processGenerateRequest(
   siteUrl?: string
 ) {
   try {
-    const pkg = await getPackage(type);
+    let pkg = await getPackage(type);
     if (!pkg) {
-      return NextResponse.json(
-        {
-          status: false,
-          data: `No package found for type: ${type}`,
-          projectId: getProjectId(),
-        },
-        { status: 404, headers: corsHeaders() }
-      );
+      if (amountInCentsOverride !== undefined) {
+        pkg = {
+          id: type,
+          name: descriptionOverride || "Standard Stay",
+          price: amountInCentsOverride / 100,
+          multiplier: 1.0,
+          baseRate: 0,
+          category: "standard"
+        };
+      } else {
+        return NextResponse.json(
+          {
+            status: false,
+            data: `No package found for type: ${type}`,
+            projectId: getProjectId(),
+          },
+          { status: 404, headers: corsHeaders() }
+        );
+      }
     }
 
     const amountInCents = amountInCentsOverride !== undefined ? amountInCentsOverride : parsePriceToCents(pkg);

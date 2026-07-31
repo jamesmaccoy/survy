@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getEstimate, updateEstimateStatus, createBooking, listBookings } from "@/lib/firebase";
+import { getEstimate, updateEstimateStatus, createBooking, listBookings, getProperty } from "@/lib/firebase";
+import { sendBookingConfirmationEmail } from "@/lib/email";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
-    const { estimateId, paymentStatus } = body;
+    const { estimateId, paymentStatus, customerId, customerEmail, customerName } = body;
 
     if (!estimateId) {
       return NextResponse.json({ success: false, error: "estimateId is required." }, { status: 400 });
@@ -15,12 +16,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Estimate not found." }, { status: 404 });
     }
 
-    // Check if booking already exists for this estimateId
+    const property = await getProperty(estimate.propertyId);
+    const isHourly = property?.bookingType === "hourly";
+
+    // Resolve target customer credentials (passed from checkout redirect fallback or fallback to estimate owner)
+    const targetEmail = customerEmail || estimate.customerEmail;
+    const targetId = customerId || estimate.customerId;
+    const targetName = customerName || estimate.customerName;
+
+    // Check if booking already exists for this estimateId & customer
     const existingBookings = await listBookings();
-    const existingBooking = existingBookings.find((b: any) => b.estimateId === estimateId);
+    const existingBooking = existingBookings.find((b: any) => {
+      if (isHourly) {
+        return b.estimateId === estimateId && (b.customerEmail === targetEmail || b.customerId === targetId);
+      } else {
+        return b.estimateId === estimateId;
+      }
+    });
 
     if (existingBooking) {
-      // If payment status should be updated, update it
       return NextResponse.json({ success: true, booking: existingBooking, message: "Booking already confirmed." });
     }
 
@@ -28,8 +42,9 @@ export async function POST(request: NextRequest) {
     const booking = await createBooking({
       propertyId: estimate.propertyId,
       packageId: estimate.packageId || null,
-      customerName: estimate.customerName,
-      customerEmail: estimate.customerEmail,
+      customerName: targetName,
+      customerEmail: targetEmail,
+      customerId: targetId,
       fromDate: estimate.fromDate,
       toDate: estimate.toDate,
       total: Number(estimate.total),
@@ -39,8 +54,19 @@ export async function POST(request: NextRequest) {
       guestsDetails: estimate.guestsDetails || {}
     } as any);
 
-    // Update estimate status to paid
-    await updateEstimateStatus(estimateId, "paid");
+    // Update estimate status to paid ONLY if nightly stay
+    if (!isHourly) {
+      await updateEstimateStatus(estimateId, "paid");
+    }
+
+    // Trigger email notification asynchronously
+    try {
+      sendBookingConfirmationEmail(booking).catch((err) => {
+        console.error("[confirm route] Error in sendBookingConfirmationEmail promise:", err);
+      });
+    } catch (err) {
+      console.warn("[confirm route] Failed to trigger sendBookingConfirmationEmail:", err);
+    }
 
     return NextResponse.json({ success: true, booking, message: "Booking confirmed successfully!" }, { status: 201 });
   } catch (error: any) {
