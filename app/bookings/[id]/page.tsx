@@ -4,6 +4,38 @@ import React, { useState, useEffect, use, Suspense } from "react";
 import { useAuth, AuthProvider } from "@/components/auth";
 import Link from "next/link";
 import { formatDisplayDate } from "@/lib/utils";
+import {
+  ArrowLeftIcon,
+  CalendarIcon,
+  CheckIcon,
+  KeyRoundIcon,
+  Share2Icon,
+  ShieldXIcon,
+  TriangleAlertIcon,
+  UserIcon,
+  UsersIcon,
+} from "lucide-react";
+
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { Separator } from "@/components/ui/separator";
+import { Spinner } from "@/components/ui/spinner";
 
 interface Property {
   id: string;
@@ -49,6 +81,7 @@ function BookingDetailsContent({ id }: { id: string }) {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [purchasingAddonId, setPurchasingAddonId] = useState<string>("");
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
+  const [addonError, setAddonError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchBookingDetails = async () => {
@@ -96,6 +129,7 @@ function BookingDetailsContent({ id }: { id: string }) {
 
   const handlePurchaseAddon = async (addon: PackageData) => {
     if (!booking) return;
+    setAddonError(null);
     setPurchasingAddonId(addon.id);
     try {
       const response = await fetch("/api/v1/generate_checkout_link", {
@@ -117,56 +151,71 @@ function BookingDetailsContent({ id }: { id: string }) {
       window.location.assign(result.data.redirectUrl);
     } catch (err: unknown) {
       const error = err as Error;
-      alert(error.message || "Failed to initiate purchase.");
+      setAddonError(error.message || "Failed to initiate purchase.");
       setPurchasingAddonId("");
     }
   };
 
   if (authLoading || isLoading) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-white dark:bg-zinc-950 text-teal-950 dark:text-white">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-t-teal-500 border-teal-150 dark:border-white/10" />
-        <span className="mt-3 text-xs text-teal-800/60 dark:text-zinc-500 font-medium">Retrieving Stay Details...</span>
+      <div className="flex min-h-[400px] flex-col items-center justify-center gap-3">
+        <Spinner className="size-6 text-primary" />
+        <span className="text-sm text-muted-foreground">Retrieving stay details...</span>
       </div>
     );
   }
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-white dark:bg-zinc-950 text-teal-950 dark:text-white flex items-center justify-center p-4">
-        <div className="max-w-md w-full rounded-3xl border border-teal-100 dark:border-white/10 bg-white/80 dark:bg-zinc-900/70 p-8 text-center backdrop-blur-xl shadow-2xl">
-          <span className="text-4xl">🔑</span>
-          <h2 className="text-xl font-black text-teal-950 dark:text-white mt-4">Authentication Required</h2>
-          <p className="text-xs text-teal-800/80 dark:text-zinc-400 mt-2 leading-relaxed">
-            Please log in to view stay reservation information.
-          </p>
-          <Link
-            href="/login"
-            className="mt-6 inline-block w-full rounded-xl bg-teal-500 py-3 text-center text-xs font-bold text-white hover:bg-teal-600 transition-all shadow-md shadow-teal-500/20"
-          >
-            Sign In
-          </Link>
-        </div>
+      <div className="mx-auto w-full max-w-md px-4 py-16">
+        <Empty className="rounded-xl border">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <KeyRoundIcon />
+            </EmptyMedia>
+            <EmptyTitle>Authentication required</EmptyTitle>
+            <EmptyDescription>
+              Please log in to view stay reservation information.
+            </EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <Button
+              className="w-full"
+              nativeButton={false}
+              render={<Link href={`/login?redirect=/bookings/${id}`} />}
+            >
+              Sign in
+            </Button>
+          </EmptyContent>
+        </Empty>
       </div>
     );
   }
 
   if (!booking) {
     return (
-      <div className="min-h-screen bg-white dark:bg-zinc-950 text-teal-950 dark:text-white flex items-center justify-center p-4">
-        <div className="max-w-md w-full rounded-3xl border border-teal-100 dark:border-white/10 bg-white/80 dark:bg-zinc-900/70 p-8 text-center backdrop-blur-xl shadow-2xl">
-          <span className="text-4xl">⚠️</span>
-          <h2 className="text-xl font-black text-teal-950 dark:text-white mt-4">Booking Not Found</h2>
-          <p className="text-xs text-teal-800/80 dark:text-zinc-400 mt-2 leading-relaxed">
-            The requested booking details could not be found or have been removed.
-          </p>
-          <Link
-            href="/bookings"
-            className="mt-6 inline-block w-full rounded-xl bg-teal-50 dark:bg-white/5 border border-teal-100 dark:border-white/10 py-3 text-center text-xs font-bold text-teal-950 dark:text-white hover:bg-teal-500 hover:text-white transition-all"
-          >
-            Go to Bookings Dashboard
-          </Link>
-        </div>
+      <div className="mx-auto w-full max-w-md px-4 py-16">
+        <Empty className="rounded-xl border">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <TriangleAlertIcon />
+            </EmptyMedia>
+            <EmptyTitle>Booking not found</EmptyTitle>
+            <EmptyDescription>
+              The requested booking details could not be found or have been removed.
+            </EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <Button
+              variant="outline"
+              className="w-full"
+              nativeButton={false}
+              render={<Link href="/bookings" />}
+            >
+              Go to bookings dashboard
+            </Button>
+          </EmptyContent>
+        </Empty>
       </div>
     );
   }
@@ -178,20 +227,28 @@ function BookingDetailsContent({ id }: { id: string }) {
 
   if (!isUserAuthorized) {
     return (
-      <div className="min-h-screen bg-white dark:bg-zinc-950 text-teal-950 dark:text-white flex items-center justify-center p-4">
-        <div className="max-w-md w-full rounded-3xl border border-teal-100 dark:border-white/10 bg-white/80 dark:bg-zinc-900/70 p-8 text-center backdrop-blur-xl shadow-2xl">
-          <span className="text-4xl">🔐</span>
-          <h2 className="text-xl font-black text-teal-950 dark:text-white mt-4">Access Restricted</h2>
-          <p className="text-xs text-teal-800/80 dark:text-zinc-400 mt-2 leading-relaxed">
-            You do not have authorization to view this stay booking details.
-          </p>
-          <Link
-            href="/bookings"
-            className="mt-6 inline-block w-full rounded-xl bg-teal-50 dark:bg-white/5 border border-teal-100 dark:border-white/10 py-3 text-center text-xs font-bold text-teal-950 dark:text-white hover:bg-teal-500 hover:text-white transition-all"
-          >
-            Go to Bookings Dashboard
-          </Link>
-        </div>
+      <div className="mx-auto w-full max-w-md px-4 py-16">
+        <Empty className="rounded-xl border">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <ShieldXIcon />
+            </EmptyMedia>
+            <EmptyTitle>Access restricted</EmptyTitle>
+            <EmptyDescription>
+              You do not have authorization to view this booking.
+            </EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <Button
+              variant="outline"
+              className="w-full"
+              nativeButton={false}
+              render={<Link href="/bookings" />}
+            >
+              Go to bookings dashboard
+            </Button>
+          </EmptyContent>
+        </Empty>
       </div>
     );
   }
@@ -205,278 +262,247 @@ function BookingDetailsContent({ id }: { id: string }) {
   const propName = property ? property.title : booking.propertyId;
   const isPaid = booking.paymentStatus === "paid" || booking.paymentStatus === "success";
   const addonsList = packages.filter((p) => p.propertyId === booking.propertyId && p.category === "addon");
+  const statusVariant: "default" | "secondary" | "destructive" = isPaid
+    ? "default"
+    : booking.paymentStatus === "failed"
+      ? "destructive"
+      : "secondary";
 
   return (
-    <div className="min-h-screen bg-white dark:bg-zinc-950 text-teal-950 dark:text-white font-sans selection:bg-teal-500/30 selection:text-teal-200 relative overflow-hidden">
-      {/* Dynamic Background Blur Effect */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-25">
-        <div className="absolute -top-[10%] left-[20%] w-[60%] h-[60%] rounded-full bg-teal-500/15 blur-[140px]" />
-        <div className="absolute top-[40%] right-[10%] w-[40%] h-[40%] rounded-full bg-teal-400/10 blur-[120px]" />
-      </div>
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-10 sm:px-6 lg:px-8">
+      <header className="flex flex-col gap-4 border-b pb-6 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Reservation overview
+          </span>
+          <h1 className="font-heading text-3xl font-semibold tracking-tight text-balance">
+            Booking overview
+          </h1>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="self-start sm:self-auto"
+          nativeButton={false}
+          render={<Link href="/bookings" />}
+        >
+          <ArrowLeftIcon data-icon="inline-start" />
+          Back to dashboard
+        </Button>
+      </header>
 
-      <div className="relative max-w-5xl mx-auto px-4 py-12 sm:px-6 lg:px-8 space-y-8">
-        {/* Top Header */}
-        <header className="border-b border-teal-100 dark:border-white/10 pb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <span className="text-[10px] text-teal-600 dark:text-teal-400 font-extrabold uppercase tracking-widest">
-              Reservation Overview
-            </span>
-            <h1 className="text-3xl font-black text-teal-950 dark:text-white tracking-tight mt-1">Booking Overview</h1>
-          </div>
-          <Link
-            href="/bookings"
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-teal-800 dark:text-zinc-400 hover:text-teal-600 dark:hover:text-white transition-colors"
-          >
-            ← Back to Dashboard
-          </Link>
-        </header>
-
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
-          {/* Main Left Column */}
-          <div className="lg:col-span-3 space-y-6">
-
-            {/* Property Summary & Status Card */}
-            <div className="relative overflow-hidden rounded-3xl border border-teal-100 dark:border-white/10 bg-white/80 dark:bg-zinc-900/70 p-6 backdrop-blur-xl shadow-lg space-y-4">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <span className="inline-block rounded-full bg-teal-500/10 px-3 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-teal-700 dark:text-teal-300 border border-teal-500/20">
-                    {booking.propertyId === "shack"
-                      ? "Beach Shack"
-                      : booking.propertyId === "cottage"
-                        ? "Cozy Cottage"
-                        : "Luxury Villa"}
-                  </span>
-                  <h2 className="text-2xl font-black text-teal-950 dark:text-white tracking-tight mt-2 truncate">{propName}</h2>
-                  <p className="text-[10px] font-mono text-teal-800/60 dark:text-zinc-500 mt-0.5">Ref: {booking.id}</p>
-                </div>
-
-                <div className="flex items-center gap-4 shrink-0 w-full sm:w-auto justify-between sm:justify-end">
-                  <span
-                    className={`inline-block rounded-full px-3 py-1 text-[9px] font-black uppercase tracking-wider border shrink-0 ${isPaid
-                        ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/25"
-                        : booking.paymentStatus === "failed"
-                          ? "bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border-red-200 dark:border-red-500/25"
-                          : "bg-orange-50 dark:bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-500/25"
-                      }`}
-                  >
-                    {booking.paymentStatus}
-                  </span>
-                  {property?.images && property.images.length > 0 && (
-                    <div className="relative w-16 h-16 rounded-xl overflow-hidden border border-teal-100/40 dark:border-white/5 bg-zinc-950 shrink-0">
-                      <img
-                        src={property.images[0]}
-                        alt={propName}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  )}
+      <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-5">
+        {/* Main Left Column */}
+        <div className="flex flex-col gap-6 lg:col-span-3">
+          {/* Property Summary & Status Card */}
+          <Card>
+            <CardHeader className="flex-row items-start justify-between gap-4">
+              <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                <CardTitle className="truncate text-2xl">{propName}</CardTitle>
+                <CardDescription className="truncate font-mono text-xs">
+                  Ref: {booking.id}
+                </CardDescription>
+                <div className="pt-1">
+                  <Badge variant={statusVariant}>{booking.paymentStatus}</Badge>
                 </div>
               </div>
 
-              <div className="border-t border-teal-100/60 dark:border-white/5 pt-3 space-y-1.5 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-teal-800/70 dark:text-zinc-400 font-medium">Primary Guest:</span>
-                  <strong className="text-teal-950 dark:text-white font-bold">{booking.customerName}</strong>
+              {property?.images && property.images.length > 0 && (
+                <div className="relative size-16 shrink-0 overflow-hidden rounded-lg border bg-muted">
+                  <img
+                    src={property.images[0] || "/placeholder.svg"}
+                    alt={propName}
+                    className="size-full object-cover"
+                  />
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-teal-800/70 dark:text-zinc-400 font-medium">Contact Email:</span>
-                  <strong className="text-teal-950 dark:text-white font-mono text-[11px]">{booking.customerEmail}</strong>
-                </div>
+              )}
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3">
+              <Separator />
+              <div className="flex items-center justify-between gap-4 text-sm">
+                <span className="text-muted-foreground">Primary guest</span>
+                <span className="font-medium">{booking.customerName}</span>
               </div>
-            </div>
+              <div className="flex items-center justify-between gap-4 text-sm">
+                <span className="text-muted-foreground">Contact email</span>
+                <span className="truncate font-mono text-xs">{booking.customerEmail}</span>
+              </div>
+            </CardContent>
+          </Card>
 
-            {/* FEATURED: Check-in / Check-out Schedule Box */}
-            <div className="rounded-3xl border border-teal-200 dark:border-teal-500/30 bg-teal-500/5 dark:bg-teal-500/10 p-6 backdrop-blur-xl shadow-xl space-y-4">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">🗓️</span>
-                  <h3 className="text-sm font-extrabold text-teal-950 dark:text-white uppercase tracking-wider">
-                    Stay Schedule
-                  </h3>
+          {/* Check-in / Check-out Schedule */}
+          <Card>
+            <CardHeader className="flex-row items-center justify-between gap-4">
+              <CardTitle className="flex items-center gap-2">
+                <CalendarIcon className="size-4 text-muted-foreground" />
+                Stay schedule
+              </CardTitle>
+              <Badge variant="secondary">
+                {stayNights} night{stayNights > 1 ? "s" : ""} total
+              </Badge>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-1 rounded-lg border bg-muted/50 p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Check-in
+                  </span>
+                  <span className="font-mono text-xs text-muted-foreground">From 14:00</span>
                 </div>
-                <span className="rounded-full bg-teal-500/15 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-teal-800 dark:text-teal-300 border border-teal-500/20">
-                  {stayNights} Night{stayNights > 1 ? "s" : ""} Total
+                <span className="font-heading text-base font-medium">{checkIn}</span>
+                <span className="text-xs text-muted-foreground">Standard arrival window</span>
+              </div>
+
+              <div className="flex flex-col gap-1 rounded-lg border bg-muted/50 p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Check-out
+                  </span>
+                  <span className="font-mono text-xs text-muted-foreground">By 10:00</span>
+                </div>
+                <span className="font-heading text-base font-medium">{checkOut}</span>
+                <span className="text-xs text-muted-foreground">Departure cutoff time</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Guest Management & Invitation Portal */}
+          {isPaid && (
+            <Card>
+              <CardHeader className="flex-row items-start justify-between gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <CardTitle className="flex items-center gap-2">
+                    <UsersIcon className="size-4 text-muted-foreground" />
+                    Invited stay guests
+                  </CardTitle>
+                  <CardDescription>
+                    Share your stay access link with companions joining this reservation.
+                  </CardDescription>
+                </div>
+
+                {booking.token && (
+                  <Button onClick={handleCopyInviteLink} className="shrink-0">
+                    {copiedLink ? (
+                      <CheckIcon data-icon="inline-start" />
+                    ) : (
+                      <Share2Icon data-icon="inline-start" />
+                    )}
+                    {copiedLink ? "Invite copied" : "Share invite link"}
+                  </Button>
+                )}
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3">
+                <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Confirmed party ({booking.guests?.length || 0})
                 </span>
-              </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Check In */}
-                <div className="rounded-2xl bg-white dark:bg-black/50 p-4 border border-teal-100 dark:border-white/10 shadow-sm space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-teal-700 dark:text-teal-400 uppercase tracking-widest">
-                      Check-In
-                    </span>
-                    <span className="text-[10px] font-mono text-teal-800/60 dark:text-zinc-400">From 14:00</span>
-                  </div>
-                  <span className="text-base font-extrabold text-teal-950 dark:text-white block">{checkIn}</span>
-                  <span className="text-[10px] text-teal-800/60 dark:text-zinc-500 block">Standard arrival window</span>
-                </div>
-
-                {/* Check Out */}
-                <div className="rounded-2xl bg-white dark:bg-black/50 p-4 border border-teal-100 dark:border-white/10 shadow-sm space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-teal-700 dark:text-teal-400 uppercase tracking-widest">
-                      Check-Out
-                    </span>
-                    <span className="text-[10px] font-mono text-teal-800/60 dark:text-zinc-400">By 10:00 AM</span>
-                  </div>
-                  <span className="text-base font-extrabold text-teal-950 dark:text-white block">{checkOut}</span>
-                  <span className="text-[10px] text-teal-800/60 dark:text-zinc-500 block">Departure cutoff time</span>
-                </div>
-              </div>
-            </div>
-
-            {/* FEATURED: Guest Management & Invitation Portal */}
-            {isPaid && (
-              <div className="rounded-3xl border border-teal-100 dark:border-white/10 bg-white/80 dark:bg-zinc-900/70 p-6 backdrop-blur-xl shadow-lg space-y-5">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-teal-100/60 dark:border-white/5 pb-4">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">👥</span>
-                      <h3 className="text-base font-black text-teal-950 dark:text-white tracking-tight">
-                        Invited Stay Guests
-                      </h3>
-                    </div>
-                    <p className="text-[11px] text-teal-800/60 dark:text-zinc-400 mt-0.5">
-                      Share your stay access link with companions joining this reservation.
+                {booking.guests && booking.guests.length > 0 ? (
+                  <ul className="flex flex-wrap gap-2">
+                    {booking.guests.map((gUid, idx) => (
+                      <li key={idx}>
+                        <span className="inline-flex items-center gap-1.5 rounded-lg border bg-muted/50 px-3 py-1.5 text-sm">
+                          <UserIcon className="size-3.5 text-muted-foreground" />
+                          <span className="font-mono text-xs">
+                            {gUid === user.uid ? "You (owner)" : `${gUid.substring(0, 8)}...`}
+                          </span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="rounded-lg border border-dashed p-5 text-center">
+                    <p className="text-sm leading-relaxed text-muted-foreground">
+                      No companions have accepted this stay invite yet. Share the link above to
+                      invite them.
                     </p>
                   </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </div>
 
-                  {booking.token && (
-                    <button
-                      onClick={handleCopyInviteLink}
-                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-teal-500 hover:bg-teal-600 text-white px-4 py-2.5 text-xs font-bold shadow-md shadow-teal-500/20 active:scale-95 transition-all shrink-0"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        strokeWidth={2}
-                        stroke="currentColor"
-                        className="w-4 h-4"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186l5.57 3.285m-5.57-3.285l5.57-3.285M13.5 18.75a2.25 2.25 0 100-4.5 2.25 2.25 0 000 4.5zM13.5 9.75a2.25 2.25 0 100-4.5 2.25 2.25 0 000 4.5z"
-                        />
-                      </svg>
-                      {copiedLink ? "✓ Invite Copied!" : "Share Invite Link"}
-                    </button>
-                  )}
-                </div>
-
-                {/* Guest List Roster */}
-                <div>
-                  <div className="flex justify-between items-center mb-2.5">
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-teal-700 dark:text-teal-400">
-                      Confirmed Party ({booking.guests?.length || 0})
-                    </span>
-                  </div>
-
-                  {booking.guests && booking.guests.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {booking.guests.map((gUid, idx) => (
-                        <span
-                          key={idx}
-                          className="inline-flex items-center gap-1.5 rounded-xl bg-teal-50/60 dark:bg-white/5 border border-teal-100 dark:border-white/10 px-3 py-1.5 text-xs font-medium text-teal-950 dark:text-zinc-200 shadow-sm"
-                        >
-                          <span>👤</span>
-                          <span className="font-mono">{gUid === user.uid ? "You (Owner)" : gUid.substring(0, 8) + "..."}</span>
-                        </span>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="rounded-2xl border border-dashed border-teal-200 dark:border-white/10 p-5 text-center">
-                      <p className="text-xs text-teal-800/60 dark:text-zinc-400 italic">
-                        No companions have accepted this stay invite yet. Click above to send them a link!
-                      </p>
-                    </div>
-                  )}
-                </div>
+        {/* Right Column: Financial Summary & Add-ons */}
+        <div className="flex flex-col gap-6 lg:col-span-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Financial breakdown</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3">
+              <div className="flex items-center justify-between gap-4 text-sm">
+                <span className="text-muted-foreground">Payment status</span>
+                <Badge variant={statusVariant}>{booking.paymentStatus}</Badge>
               </div>
-            )}
-          </div>
 
-          {/* Right Column: Financial Summary & Add-ons */}
-          <div className="lg:col-span-2 space-y-6">
+              <Separator />
 
-            {/* Cost Breakdown */}
-            <div className="rounded-3xl border border-teal-100 dark:border-white/10 bg-white/80 dark:bg-zinc-900/70 p-6 backdrop-blur-xl shadow-xl space-y-4">
-              <h3 className="text-sm font-extrabold text-teal-950 dark:text-white uppercase tracking-wider border-b border-teal-100 dark:border-white/10 pb-3">
-                Financial Breakdown
-              </h3>
-
-              <div className="space-y-3 text-xs">
-                <div className="flex justify-between items-center">
-                  <span className="text-teal-800/70 dark:text-zinc-400">Payment Status</span>
-                  <span
-                    className={`rounded-full px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider border ${isPaid
-                        ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/25"
-                        : "bg-orange-50 dark:bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-500/25"
-                      }`}
-                  >
-                    {booking.paymentStatus}
-                  </span>
-                </div>
-
-                <div className="flex justify-between items-center pt-2 border-t border-teal-100/60 dark:border-white/5">
-                  <span className="text-teal-800/80 dark:text-zinc-400 font-medium">Total Charge</span>
-                  <span className="text-xl font-black text-teal-600 dark:text-teal-400">
-                    R {booking.total ? booking.total.toLocaleString() : "0"}
-                  </span>
-                </div>
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-sm font-medium">Total charge</span>
+                <span className="font-heading text-xl font-semibold tabular-nums">
+                  R {booking.total ? booking.total.toLocaleString() : "0"}
+                </span>
               </div>
-            </div>
+            </CardContent>
+          </Card>
 
-            {/* In-App Add-ons Purchases */}
-            {isPaid && (
-              <div className="rounded-3xl border border-teal-100 dark:border-white/10 bg-white/80 dark:bg-zinc-900/70 p-6 backdrop-blur-xl shadow-xl space-y-4">
-                <div className="border-b border-teal-100 dark:border-white/10 pb-3">
-                  <h3 className="text-sm font-extrabold text-teal-950 dark:text-white uppercase tracking-wider">
-                    Enhance Stay
-                  </h3>
-                  <p className="text-[11px] text-teal-800/60 dark:text-zinc-400 mt-0.5">
-                    Select optional upgrades for this destination listing.
-                  </p>
-                </div>
+          {/* In-App Add-ons Purchases */}
+          {isPaid && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Enhance stay</CardTitle>
+                <CardDescription>
+                  Select optional upgrades for this destination listing.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3">
+                {addonError && (
+                  <Alert variant="destructive">
+                    <TriangleAlertIcon />
+                    <AlertTitle>Purchase failed</AlertTitle>
+                    <AlertDescription>{addonError}</AlertDescription>
+                  </Alert>
+                )}
 
                 {addonsList.length === 0 ? (
-                  <p className="text-xs text-teal-800/60 dark:text-zinc-500 italic">No add-ons available for this property.</p>
+                  <p className="text-sm text-muted-foreground">
+                    No add-ons available for this property.
+                  </p>
                 ) : (
-                  <div className="space-y-3">
-                    {addonsList.map((addon) => (
-                      <div
-                        key={addon.id}
-                        className="flex flex-col justify-between p-4 rounded-2xl bg-teal-50/50 dark:bg-black/40 border border-teal-100 dark:border-white/5 hover:border-teal-300 dark:hover:border-teal-500/30 transition-all gap-3"
-                      >
-                        <div>
-                          <h4 className="text-xs font-bold text-teal-950 dark:text-white">{addon.name}</h4>
-                          {addon.description && (
-                            <p className="text-[11px] text-teal-800/80 dark:text-zinc-400 mt-1 leading-relaxed">
-                              {addon.description}
-                            </p>
-                          )}
-                        </div>
-                        <div className="flex items-center justify-between pt-2 border-t border-teal-100 dark:border-white/5">
-                          <span className="text-sm font-black text-teal-600 dark:text-teal-400">
-                            R {addon.price.toLocaleString()}
-                          </span>
-                          <button
-                            onClick={() => handlePurchaseAddon(addon)}
-                            disabled={purchasingAddonId === addon.id}
-                            className="rounded-xl bg-teal-500 hover:bg-teal-600 text-white px-3.5 py-1.5 text-[10px] font-bold shadow-md shadow-teal-500/20 active:scale-95 transition-all disabled:opacity-50"
-                          >
-                            {purchasingAddonId === addon.id ? "Connecting..." : "+ Add to Stay"}
-                          </button>
-                        </div>
+                  addonsList.map((addon) => (
+                    <div
+                      key={addon.id}
+                      className="flex flex-col gap-3 rounded-lg border bg-muted/50 p-4 transition-colors hover:border-primary/50"
+                    >
+                      <div className="flex flex-col gap-1">
+                        <h3 className="font-heading text-sm font-medium">{addon.name}</h3>
+                        {addon.description && (
+                          <p className="text-sm leading-relaxed text-muted-foreground">
+                            {addon.description}
+                          </p>
+                        )}
                       </div>
-                    ))}
-                  </div>
+                      <Separator />
+                      <div className="flex items-center justify-between gap-4">
+                        <span className="font-heading text-sm font-semibold tabular-nums">
+                          R {addon.price.toLocaleString()}
+                        </span>
+                        <Button
+                          size="sm"
+                          onClick={() => handlePurchaseAddon(addon)}
+                          disabled={purchasingAddonId === addon.id}
+                        >
+                          {purchasingAddonId === addon.id && (
+                            <Spinner className="size-3.5" data-icon="inline-start" />
+                          )}
+                          {purchasingAddonId === addon.id ? "Connecting..." : "Add to stay"}
+                        </Button>
+                      </div>
+                    </div>
+                  ))
                 )}
-              </div>
-            )}
-          </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>
@@ -489,8 +515,8 @@ export default function BookingDetailsPage({ params }: { params: Promise<{ id: s
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-white dark:bg-zinc-950 text-teal-950 dark:text-white flex items-center justify-center">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-t-teal-500 border-teal-150 dark:border-white/10" />
+        <div className="flex min-h-[400px] items-center justify-center">
+          <Spinner className="size-6 text-primary" />
         </div>
       }
     >
