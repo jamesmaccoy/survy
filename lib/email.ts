@@ -24,7 +24,49 @@ export async function sendBookingConfirmationEmail(booking: {
     const property = await getProperty(booking.propertyId);
     const hostId = property?.hostId || "mock_admin_example_com";
     const hostProfile = await getUserProfile(hostId);
-    const hostEmail = hostProfile?.email || "jamesmac@gmail.com"; // Fallback host email
+    
+    let hostEmail = "";
+    
+    const HOST_MAP: Record<string, string> = {
+      "I8cgAm2UQddZM7cAfT74cmsxunj1": "surfyogacommunity@icloud.com",
+      "cE63u7tstuREl9Kjy9YPhTnEI513": "thankyou.digital@gmail.com",
+      "mock_thankyou_digital_gmail_com": "thankyou.digital@gmail.com",
+      "mock_jmaclachlan_gmail_com": "jmaclachlan@gmail.com",
+      "mock_admin_example_com": "jamesmac@gmail.com"
+    };
+
+    if (HOST_MAP[hostId]) {
+      hostEmail = HOST_MAP[hostId];
+    } else if (hostId.startsWith("mock_")) {
+      const clean = hostId.substring(5);
+      if (clean.endsWith("_gmail_com")) {
+        hostEmail = `${clean.substring(0, clean.length - 10).replace(/_/g, ".")}@gmail.com`;
+      } else if (clean.endsWith("_co_za")) {
+        hostEmail = `${clean.substring(0, clean.length - 6).replace(/_/g, ".")}@co.za`;
+      } else {
+        hostEmail = `${clean.replace(/_/g, ".")}@gmail.com`;
+      }
+    } else {
+      if (hostProfile?.email) {
+        hostEmail = hostProfile.email;
+      } else {
+        try {
+          const { getAuth } = require("firebase-admin/auth");
+          const auth = getAuth();
+          const userRecord = await auth.getUser(hostId);
+          if (userRecord && userRecord.email) {
+            hostEmail = userRecord.email;
+          }
+        } catch (err) {
+          console.warn("[Resend] Auth lookup fallback failed for hostId:", hostId, err);
+        }
+      }
+    }
+
+    if (!hostEmail) {
+      hostEmail = "jamesmac@gmail.com";
+    }
+
     const customerEmail = booking.customerEmail;
 
     const start = new Date(booking.fromDate);
