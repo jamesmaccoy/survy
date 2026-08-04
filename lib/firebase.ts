@@ -957,4 +957,59 @@ export async function getUserProfile(uid: string): Promise<any> {
   return null;
 }
 
+export async function updateUserProfile(uid: string, data: any): Promise<boolean> {
+  const db = getFirestore();
+  if (isMockMode || !db) {
+    const dbData = readMockDb();
+    if (!dbData.userProfiles) {
+      dbData.userProfiles = {};
+    }
+    if (!dbData.userProfiles[uid]) {
+      dbData.userProfiles[uid] = {};
+    }
+    dbData.userProfiles[uid] = {
+      ...dbData.userProfiles[uid],
+      ...data
+    };
+    writeMockDb(dbData);
+    return true;
+  }
+
+  try {
+    await db.collection("users").doc(uid).set(data, { merge: true });
+    return true;
+  } catch (err) {
+    console.error("[Firebase] updateUserProfile error:", err);
+    return false;
+  }
+}
+
+export async function getHostIdBySubdomain(subdomain: string): Promise<string | null> {
+  const db = getFirestore();
+  if (isMockMode || !db) {
+    const dbData = readMockDb();
+    const userProfiles = dbData.userProfiles || {};
+    for (const [uid, profile] of Object.entries(userProfiles)) {
+      if ((profile as any).subdomain === subdomain) {
+        return uid;
+      }
+    }
+    // Fallback/test mapping for localhost testing convenience
+    if (subdomain === "tenant1") {
+      return "mock_admin_test_example_com";
+    }
+    return null;
+  }
+
+  try {
+    const snapshot = await db.collection("users").where("subdomain", "==", subdomain).limit(1).get();
+    if (!snapshot.empty) {
+      return snapshot.docs[0].id;
+    }
+  } catch (err) {
+    console.error("[Firebase] getHostIdBySubdomain error:", err);
+  }
+  return null;
+}
+
 
