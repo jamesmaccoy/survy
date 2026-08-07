@@ -226,14 +226,28 @@ function sanitizeImageUrl(imgUrl: string): string {
 
 function cleanPropertyDoc(docData: any, id: string): any {
   if (!docData) return null;
-  const images = docData.images || [];
-  const cleanImages = images.map((img: string) => sanitizeImageUrl(img));
-  return {
-    hostId: "mock_admin_example_com",
-    ...docData,
-    id: docData.id || id,
-    images: cleanImages
-  };
+  try {
+    const images = docData.images;
+    let imagesList: any[] = [];
+    if (Array.isArray(images)) {
+      imagesList = images;
+    } else if (typeof images === "string" && images.trim() !== "") {
+      imagesList = [images];
+    }
+    const cleanImages = imagesList
+      .map((img: any) => (typeof img === "string" ? sanitizeImageUrl(img) : ""))
+      .filter(Boolean);
+
+    return {
+      hostId: "mock_admin_example_com",
+      ...docData,
+      id: docData.id || id,
+      images: cleanImages
+    };
+  } catch (err) {
+    console.error("[Firebase] Error cleaning property doc:", err);
+    return null;
+  }
 }
 
 export async function listProperties(hostId?: string): Promise<any[]> {
@@ -242,7 +256,7 @@ export async function listProperties(hostId?: string): Promise<any[]> {
   if (isMockMode || !db) {
     const dbData = readMockDb();
     const list = dbData.properties || [];
-    const normalized = list.map((p: any) => cleanPropertyDoc(p, p.id));
+    const normalized = list.map((p: any) => cleanPropertyDoc(p, p.id)).filter((p: any) => p !== null);
     if (hostId) {
       return normalized.filter((p: any) => p.hostId === hostId);
     }
@@ -255,11 +269,13 @@ export async function listProperties(hostId?: string): Promise<any[]> {
       query = query.where("hostId", "==", hostId);
     }
     const snap = await query.get();
-    return snap.docs.map((doc: any) => cleanPropertyDoc(doc.data(), doc.id));
+    return snap.docs
+      .map((doc: any) => cleanPropertyDoc(doc.data(), doc.id))
+      .filter((p: any) => p !== null);
   } catch (err) {
     console.error("[Firebase] listProperties error:", err);
     const list = readMockDb().properties || [];
-    const normalized = list.map((p: any) => cleanPropertyDoc(p, p.id));
+    const normalized = list.map((p: any) => cleanPropertyDoc(p, p.id)).filter((p: any) => p !== null);
     if (hostId) {
       return normalized.filter((p: any) => p.hostId === hostId);
     }
