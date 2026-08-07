@@ -61,25 +61,18 @@ function writeMockDb(data: any) {
 export function getFirestore(): any {
   if (isMockMode) return null;
 
-  if (!app) {
-    const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-    if (!raw) {
-      console.warn("⚠️ FIREBASE_SERVICE_ACCOUNT_JSON is not set. Operating in MOCK MODE (db-mock.json).");
-      isMockMode = true;
-      return null;
-    }
+  try {
+    if (!app) {
+      const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+      if (!raw) {
+        console.warn("⚠️ FIREBASE_SERVICE_ACCOUNT_JSON is not set. Operating in MOCK MODE (db-mock.json).");
+        isMockMode = true;
+        return null;
+      }
 
-    const trimmed = raw.trim();
-    let credentials;
-    try {
-      credentials = JSON.parse(trimmed);
-    } catch (err: any) {
-      console.error("❌ Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON. Falling back to MOCK MODE.", err.message);
-      isMockMode = true;
-      return null;
-    }
+      const trimmed = raw.trim();
+      const credentials = JSON.parse(trimmed);
 
-    try {
       const activeApps = getApps();
       if (activeApps.length > 0) {
         app = activeApps[0];
@@ -90,13 +83,13 @@ export function getFirestore(): any {
         });
       }
       cachedProjectId = credentials.project_id || null;
-    } catch (err: any) {
-      console.error("❌ Failed to initialize Firebase Admin SDK. Falling back to MOCK MODE.", err.message);
-      isMockMode = true;
-      return null;
     }
+    return getFirestoreAdmin();
+  } catch (err: any) {
+    console.error("❌ Failed to initialize/get Firestore. Falling back to MOCK MODE.", err.message);
+    isMockMode = true;
+    return null;
   }
-  return getFirestoreAdmin();
 }
 
 export function getProjectId(): string {
@@ -1030,11 +1023,11 @@ export async function getHostIdBySubdomain(subdomain: string): Promise<string | 
 }
 
 export async function createCustomToken(uid: string): Promise<string> {
+  // Initialize admin app if not already done
+  getFirestore();
   if (isMockMode) {
     return `mock_token_${uid}`;
   }
-  // Initialize admin app if not already done
-  getFirestore();
   try {
     const authAdmin = getAuthAdmin();
     return await authAdmin.createCustomToken(uid);
@@ -1045,6 +1038,8 @@ export async function createCustomToken(uid: string): Promise<string> {
 }
 
 export async function verifyIdToken(idToken: string): Promise<any> {
+  // Initialize admin app if not already done
+  getFirestore();
   if (isMockMode) {
     if (idToken.startsWith("mock_id_token_")) {
       const uid = idToken.replace("mock_id_token_", "");
@@ -1052,8 +1047,6 @@ export async function verifyIdToken(idToken: string): Promise<any> {
     }
     return { uid: idToken, email: `${idToken}@example.com` };
   }
-  // Initialize admin app if not already done
-  getFirestore();
   try {
     const authAdmin = getAuthAdmin();
     return await authAdmin.verifyIdToken(idToken);
