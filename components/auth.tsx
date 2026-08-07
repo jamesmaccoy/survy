@@ -305,7 +305,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         let isSubdomain = false;
         let baseHost = hostname;
 
-        if (hostname.includes("localhost") || hostname.includes("127.0.0.1")) {
+        if (hostname.includes("simpleplek.co.za")) {
+          isSubdomain = hostname !== "simpleplek.co.za" && !hostname.startsWith("www.simpleplek.co.za");
+          baseHost = "simpleplek.co.za";
+        } else if (hostname.includes("localhost") || hostname.includes("127.0.0.1")) {
           if (parts.length > 1 && parts[0] !== "localhost" && parts[0] !== "www") {
             isSubdomain = true;
             baseHost = "localhost:3000";
