@@ -9,7 +9,8 @@ import {
   GoogleAuthProvider,
   signInWithRedirect,
   getRedirectResult,
-  signInWithPopup
+  signInWithPopup,
+  signInWithCustomToken
 } from "firebase/auth";
 import { TriangleAlertIcon } from "lucide-react";
 
@@ -79,7 +80,82 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const clearAuthError = () => setAuthError(null);
 
+  const handleAuthSuccess = async (authUser: any, isFirebaseUser = true) => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const redirectTo = params.get("redirect_to");
+      if (redirectTo) {
+        try {
+          setLoading(true);
+          let token = "";
+          if (isFirebaseUser) {
+            const idToken = await authUser.getIdToken();
+            const exchangeRes = await fetch("/api/auth/custom-token", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ idToken })
+            });
+            const exchangeJson = await exchangeRes.json();
+            if (exchangeJson.success && exchangeJson.customToken) {
+              token = exchangeJson.customToken;
+            }
+          } else {
+            token = `mock_token_${authUser.uid}`;
+          }
+
+          if (token) {
+            const targetUrl = new URL(redirectTo);
+            targetUrl.searchParams.set("token", token);
+            window.location.href = targetUrl.toString();
+            return;
+          }
+        } catch (err) {
+          console.error("Redirection auth exchange failed:", err);
+        } finally {
+          setLoading(false);
+        }
+      }
+    }
+  };
+
   useEffect(() => {
+    // Check custom token login from centralized auth flow
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get("token");
+      if (token) {
+        setLoading(true);
+        const performTokenSignIn = async () => {
+          try {
+            if (token.startsWith("mock_token_")) {
+              const uid = token.replace("mock_token_", "");
+              const mockSession: AuthUser = {
+                uid,
+                email: `${uid}@example.com`,
+                displayName: uid.split("@")[0] || "Google Guest",
+                isAnonymous: false,
+                isAdmin: true
+              };
+              localStorage.setItem("auth:mock_session", JSON.stringify(mockSession));
+              setUser(mockSession);
+              setIsMockUser(true);
+              setLoading(false);
+            } else {
+              await signInWithCustomToken(auth, token);
+            }
+            const cleanUrl = window.location.pathname + window.location.search.replace(/[?&]token=[^&]+/, "").replace(/^&/, "?");
+            window.history.replaceState({}, document.title, cleanUrl);
+          } catch (err: any) {
+            console.error("Failed to sign in with custom token:", err);
+            setAuthError(err.message || "Failed to import session from central domain.");
+            setLoading(false);
+          }
+        };
+        performTokenSignIn();
+        return;
+      }
+    }
+
     // Process redirect result if returning from Google Sign-In
     getRedirectResult(auth)
       .then((result) => {
@@ -105,6 +181,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(initialUser);
           setIsMockUser(false);
           setLoading(false);
+
+          await handleAuthSuccess(firebaseUser, true);
 
           // Fetch actual admin status asynchronously
           try {
@@ -185,6 +263,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem("auth:mock_session", JSON.stringify(mockSession));
       setUser(mockSession);
       setIsMockUser(true);
+      await handleAuthSuccess(mockSession, false);
     } finally {
       setLoading(false);
     }
@@ -211,6 +290,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem("auth:mock_session", JSON.stringify(mockSession));
       setUser(mockSession);
       setIsMockUser(true);
+      await handleAuthSuccess(mockSession, false);
     } finally {
       setLoading(false);
     }
@@ -219,6 +299,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signInWithGoogle = async () => {
     setLoading(true);
     try {
+      if (typeof window !== "undefined") {
+        const hostname = window.location.hostname;
+        const parts = hostname.split(".");
+        let isSubdomain = false;
+        let baseHost = hostname;
+
+        if (hostname.includes("localhost") || hostname.includes("127.0.0.1")) {
+          if (parts.length > 1 && parts[0] !== "localhost" && parts[0] !== "www") {
+            isSubdomain = true;
+            baseHost = "localhost:3000";
+          }
+        } else if (parts.length > 2 && parts[0] !== "www") {
+          isSubdomain = true;
+          baseHost = parts.slice(-2).join(".");
+        }
+
+        if (isSubdomain) {
+          const redirectUrl = `${window.location.protocol}//${baseHost}/login?redirect_to=${encodeURIComponent(window.location.href)}`;
+          window.location.href = redirectUrl;
+          return;
+        }
+      }
+
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
     } catch (err) {
@@ -248,6 +351,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem("auth:mock_session", JSON.stringify(mockSession));
       setUser(mockSession);
       setIsMockUser(true);
+      await handleAuthSuccess(mockSession, false);
     } finally {
       setLoading(false);
     }

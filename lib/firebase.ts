@@ -1,5 +1,6 @@
 import { initializeApp, cert, getApps } from "firebase-admin";
 import { getFirestore as getFirestoreAdmin } from "firebase-admin/firestore";
+import { getAuth as getAuthAdmin } from "firebase-admin/auth";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -1010,6 +1011,40 @@ export async function getHostIdBySubdomain(subdomain: string): Promise<string | 
     console.error("[Firebase] getHostIdBySubdomain error:", err);
   }
   return null;
+}
+
+export async function createCustomToken(uid: string): Promise<string> {
+  if (isMockMode) {
+    return `mock_token_${uid}`;
+  }
+  // Initialize admin app if not already done
+  getFirestore();
+  try {
+    const authAdmin = getAuthAdmin();
+    return await authAdmin.createCustomToken(uid);
+  } catch (err: any) {
+    console.error("[Firebase Admin] Failed to create custom token:", err);
+    throw err;
+  }
+}
+
+export async function verifyIdToken(idToken: string): Promise<any> {
+  if (isMockMode) {
+    if (idToken.startsWith("mock_id_token_")) {
+      const uid = idToken.replace("mock_id_token_", "");
+      return { uid, email: `${uid}@example.com` };
+    }
+    return { uid: idToken, email: `${idToken}@example.com` };
+  }
+  // Initialize admin app if not already done
+  getFirestore();
+  try {
+    const authAdmin = getAuthAdmin();
+    return await authAdmin.verifyIdToken(idToken);
+  } catch (err: any) {
+    console.error("[Firebase Admin] Failed to verify ID token:", err);
+    throw err;
+  }
 }
 
 
