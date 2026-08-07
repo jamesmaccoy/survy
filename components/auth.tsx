@@ -8,7 +8,8 @@ import {
   signOut,
   GoogleAuthProvider,
   signInWithRedirect,
-  getRedirectResult
+  getRedirectResult,
+  signInWithPopup
 } from "firebase/auth";
 import { TriangleAlertIcon } from "lucide-react";
 
@@ -219,7 +220,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
     try {
       const provider = new GoogleAuthProvider();
-      await signInWithRedirect(auth, provider);
+      await signInWithPopup(auth, provider);
     } catch (err) {
       console.warn(`[Firebase Auth] Google login failed: ${err instanceof Error ? err.message : String(err)}`);
       if (!isMockAllowed()) {
