@@ -1,6 +1,4 @@
 import { initializeApp, cert, getApps } from "firebase-admin";
-import { getFirestore as getFirestoreAdmin } from "firebase-admin/firestore";
-import { getAuth as getAuthAdmin } from "firebase-admin/auth";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -84,7 +82,7 @@ export function getFirestore(): any {
       }
       cachedProjectId = credentials.project_id || null;
     }
-    return getFirestoreAdmin();
+    return app.firestore();
   } catch (err: any) {
     console.error("❌ Failed to initialize/get Firestore. Falling back to MOCK MODE.", err.message);
     isMockMode = true;
@@ -1029,7 +1027,7 @@ export async function createCustomToken(uid: string): Promise<string> {
     return `mock_token_${uid}`;
   }
   try {
-    const authAdmin = getAuthAdmin();
+    const authAdmin = app.auth();
     return await authAdmin.createCustomToken(uid);
   } catch (err: any) {
     console.error("[Firebase Admin] Failed to create custom token:", err);
@@ -1048,7 +1046,7 @@ export async function verifyIdToken(idToken: string): Promise<any> {
     return { uid: idToken, email: `${idToken}@example.com` };
   }
   try {
-    const authAdmin = getAuthAdmin();
+    const authAdmin = app.auth();
     return await authAdmin.verifyIdToken(idToken);
   } catch (err: any) {
     console.error("[Firebase Admin] Failed to verify ID token:", err);
