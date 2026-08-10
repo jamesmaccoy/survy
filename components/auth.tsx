@@ -145,12 +145,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               localStorage.setItem("auth:mock_session", JSON.stringify(mockSession));
               setUser(mockSession);
               setIsMockUser(true);
-              setLoading(false);
             } else {
               await signInWithCustomToken(auth, token);
             }
-            const cleanUrl = window.location.pathname + window.location.search.replace(/[?&]token=[^&]+/, "").replace(/^&/, "?");
-            window.history.replaceState({}, document.title, cleanUrl);
+            const redirectPath = params.get("redirect") || "/";
+            window.location.href = redirectPath;
           } catch (err: any) {
             console.error("Failed to sign in with custom token:", err);
             setAuthError(err.message || "Failed to import session from central domain.");
