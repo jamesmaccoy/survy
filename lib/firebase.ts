@@ -1068,55 +1068,38 @@ export async function verifyIdToken(idToken: string): Promise<any> {
     return { uid: idToken, email: `${idToken}@example.com` };
   }
 
-  const credentials = getServiceAccountCredentials();
-  const projectId = credentials?.project_id || "shack-30405";
+  const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+  if (!apiKey) {
+    throw new Error("Missing NEXT_PUBLIC_FIREBASE_API_KEY environment variable for token verification.");
+  }
 
   try {
-    const crypto = require("crypto");
-    const { header, payload, signature, dataToSign } = decodeJwt(idToken);
+    const url = `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idToken })
+    });
 
-    if (header.alg !== "RS256") {
-      throw new Error("Invalid algorithm: expected RS256");
-    }
-
-    const now = Math.floor(Date.now() / 1000);
-    if (payload.exp < now) {
-      throw new Error("Token expired");
-    }
-    if (payload.iat > now + 300) {
-      throw new Error("Token issued in the future");
-    }
-    if (payload.aud !== projectId) {
-      throw new Error(`Invalid audience: expected ${projectId}, got ${payload.aud}`);
-    }
-    const expectedIssuer = `https://securetoken.google.com/${projectId}`;
-    if (payload.iss !== expectedIssuer) {
-      throw new Error(`Invalid issuer: expected ${expectedIssuer}, got ${payload.iss}`);
-    }
-    if (!payload.sub) {
-      throw new Error("Missing subject claim");
+    if (!res.ok) {
+      const errBody = await res.json().catch(() => ({}));
+      const errMsg = errBody?.error?.message || `Google API error status ${res.status}`;
+      throw new Error(`Token verification failed: ${errMsg}`);
     }
 
-    const publicKeys = await fetchGooglePublicKeys();
-    const certPem = publicKeys[header.kid];
-    if (!certPem) {
-      throw new Error(`Public key not found for kid: ${header.kid}`);
-    }
-
-    const verifier = crypto.createVerify("RSA-SHA256");
-    verifier.update(dataToSign);
-    const isValid = verifier.verify(certPem, signature);
-    if (!isValid) {
-      throw new Error("Invalid signature");
+    const data = await res.json();
+    const user = data?.users?.[0];
+    if (!user || !user.localId) {
+      throw new Error("No user profile found for the provided token.");
     }
 
     return {
-      uid: payload.sub,
-      email: payload.email || null,
-      email_verified: payload.email_verified || false
+      uid: user.localId,
+      email: user.email || null,
+      email_verified: user.emailVerified || false
     };
   } catch (err: any) {
-    console.error("[Crypto Verify Token] Failed to verify token:", err);
+    console.error("[Google Identity Lookup] Failed to verify ID token:", err);
     throw err;
   }
 }
@@ -1127,31 +1110,6 @@ function base64UrlEncode(str: string | Buffer): string {
     .replace(/=/g, "")
     .replace(/\+/g, "-")
     .replace(/\//g, "_");
-}
-
-async function fetchGooglePublicKeys(): Promise<Record<string, string>> {
-  const res = await fetch("https://www.googleapis.com/robot/v1/metadata/x509/securetoken-system@system.gserviceaccount.com");
-  if (!res.ok) {
-    throw new Error("Failed to fetch Google public keys");
-  }
-  return await res.json();
-}
-
-function decodeJwt(token: string): { header: any; payload: any; signature: Buffer; dataToSign: string } {
-  const parts = token.split(".");
-  if (parts.length !== 3) {
-    throw new Error("Invalid JWT format");
-  }
-  const decodeBase64 = (str: string) => {
-    const base64 = str.replace(/-/g, "+").replace(/_/g, "/");
-    return Buffer.from(base64, "base64").toString("utf8");
-  };
-  const header = JSON.parse(decodeBase64(parts[0]));
-  const payload = JSON.parse(decodeBase64(parts[1]));
-  const signatureBase64 = parts[2].replace(/-/g, "+").replace(/_/g, "/");
-  const signature = Buffer.from(signatureBase64, "base64");
-  const dataToSign = `${parts[0]}.${parts[1]}`;
-  return { header, payload, signature, dataToSign };
 }
 
 function getServiceAccountCredentials(): any {
