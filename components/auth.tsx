@@ -94,9 +94,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ idToken })
             });
+            if (!exchangeRes.ok) {
+              const errBody = await exchangeRes.json().catch(() => ({}));
+              throw new Error(errBody.error || `Server responded with status ${exchangeRes.status}`);
+            }
             const exchangeJson = await exchangeRes.json();
             if (exchangeJson.success && exchangeJson.customToken) {
               token = exchangeJson.customToken;
+            } else {
+              throw new Error(exchangeJson.error || "Token exchange succeeded but returned no token.");
             }
           } else {
             token = `mock_token_${authUser.uid}`;
@@ -108,8 +114,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             window.location.href = targetUrl.toString();
             return;
           }
-        } catch (err) {
+        } catch (err: any) {
           console.error("Redirection auth exchange failed:", err);
+          setAuthError(`Authentication redirection failed: ${err.message}`);
         } finally {
           setLoading(false);
         }
