@@ -1018,7 +1018,7 @@ export async function createCustomToken(uid: string): Promise<string> {
     return `mock_token_${uid}`;
   }
   try {
-    const { getAuth } = require("firebase-admin/auth");
+    const { getAuth } = await import("firebase-admin/auth");
     const authAdmin = getAuth();
     return await authAdmin.createCustomToken(uid);
   } catch (err: any) {
@@ -1037,7 +1037,7 @@ export async function verifyIdToken(idToken: string): Promise<any> {
     return { uid: idToken, email: `${idToken}@example.com` };
   }
   try {
-    const { getAuth } = require("firebase-admin/auth");
+    const { getAuth } = await import("firebase-admin/auth");
     const authAdmin = getAuth();
     return await authAdmin.verifyIdToken(idToken);
   } catch (err: any) {
