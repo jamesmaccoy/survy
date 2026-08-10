@@ -1047,7 +1047,8 @@ export async function createCustomToken(uid: string): Promise<string> {
 
     const signer = crypto.createSign("RSA-SHA256");
     signer.update(dataToSign);
-    const signature = signer.sign(credentials.private_key);
+    const privateKey = credentials.private_key.replace(/\\n/g, "\n");
+    const signature = signer.sign(privateKey);
     const signatureB64 = base64UrlEncode(signature);
 
     return `${dataToSign}.${signatureB64}`;
@@ -1141,9 +1142,14 @@ function decodeJwt(token: string): { header: any; payload: any; signature: Buffe
   if (parts.length !== 3) {
     throw new Error("Invalid JWT format");
   }
-  const header = JSON.parse(Buffer.from(parts[0], "base64").toString("utf8"));
-  const payload = JSON.parse(Buffer.from(parts[1], "base64").toString("utf8"));
-  const signature = Buffer.from(parts[2], "base64url");
+  const decodeBase64 = (str: string) => {
+    const base64 = str.replace(/-/g, "+").replace(/_/g, "/");
+    return Buffer.from(base64, "base64").toString("utf8");
+  };
+  const header = JSON.parse(decodeBase64(parts[0]));
+  const payload = JSON.parse(decodeBase64(parts[1]));
+  const signatureBase64 = parts[2].replace(/-/g, "+").replace(/_/g, "/");
+  const signature = Buffer.from(signatureBase64, "base64");
   const dataToSign = `${parts[0]}.${parts[1]}`;
   return { header, payload, signature, dataToSign };
 }
