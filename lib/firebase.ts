@@ -1017,12 +1017,42 @@ export async function createCustomToken(uid: string): Promise<string> {
   if (isMockMode) {
     return `mock_token_${uid}`;
   }
+
+  const credentials = getServiceAccountCredentials();
+  if (!credentials || !credentials.private_key || !credentials.client_email) {
+    console.warn("⚠️ Missing Firebase Service Account credentials for custom token. Falling back to mock token.");
+    return `mock_token_${uid}`;
+  }
+
   try {
-    const { getAuth } = await import("firebase-admin/auth");
-    const authAdmin = getAuth();
-    return await authAdmin.createCustomToken(uid);
+    const crypto = require("crypto");
+    const header = {
+      alg: "RS256",
+      typ: "JWT"
+    };
+
+    const now = Math.floor(Date.now() / 1000);
+    const payload = {
+      iss: credentials.client_email,
+      sub: credentials.client_email,
+      aud: "https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit",
+      iat: now,
+      exp: now + 3600,
+      uid: uid
+    };
+
+    const headerB64 = base64UrlEncode(JSON.stringify(header));
+    const payloadB64 = base64UrlEncode(JSON.stringify(payload));
+    const dataToSign = `${headerB64}.${payloadB64}`;
+
+    const signer = crypto.createSign("RSA-SHA256");
+    signer.update(dataToSign);
+    const signature = signer.sign(credentials.private_key);
+    const signatureB64 = base64UrlEncode(signature);
+
+    return `${dataToSign}.${signatureB64}`;
   } catch (err: any) {
-    console.error("[Firebase Admin] Failed to create custom token:", err);
+    console.error("[Crypto Custom Token] Failed to sign token:", err);
     throw err;
   }
 }
@@ -1036,13 +1066,95 @@ export async function verifyIdToken(idToken: string): Promise<any> {
     }
     return { uid: idToken, email: `${idToken}@example.com` };
   }
+
+  const credentials = getServiceAccountCredentials();
+  const projectId = credentials?.project_id || "shack-30405";
+
   try {
-    const { getAuth } = await import("firebase-admin/auth");
-    const authAdmin = getAuth();
-    return await authAdmin.verifyIdToken(idToken);
+    const crypto = require("crypto");
+    const { header, payload, signature, dataToSign } = decodeJwt(idToken);
+
+    if (header.alg !== "RS256") {
+      throw new Error("Invalid algorithm: expected RS256");
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+    if (payload.exp < now) {
+      throw new Error("Token expired");
+    }
+    if (payload.iat > now + 300) {
+      throw new Error("Token issued in the future");
+    }
+    if (payload.aud !== projectId) {
+      throw new Error(`Invalid audience: expected ${projectId}, got ${payload.aud}`);
+    }
+    const expectedIssuer = `https://securetoken.google.com/${projectId}`;
+    if (payload.iss !== expectedIssuer) {
+      throw new Error(`Invalid issuer: expected ${expectedIssuer}, got ${payload.iss}`);
+    }
+    if (!payload.sub) {
+      throw new Error("Missing subject claim");
+    }
+
+    const publicKeys = await fetchGooglePublicKeys();
+    const certPem = publicKeys[header.kid];
+    if (!certPem) {
+      throw new Error(`Public key not found for kid: ${header.kid}`);
+    }
+
+    const verifier = crypto.createVerify("RSA-SHA256");
+    verifier.update(dataToSign);
+    const isValid = verifier.verify(certPem, signature);
+    if (!isValid) {
+      throw new Error("Invalid signature");
+    }
+
+    return {
+      uid: payload.sub,
+      email: payload.email || null,
+      email_verified: payload.email_verified || false
+    };
   } catch (err: any) {
-    console.error("[Firebase Admin] Failed to verify ID token:", err);
+    console.error("[Crypto Verify Token] Failed to verify token:", err);
     throw err;
+  }
+}
+
+function base64UrlEncode(str: string | Buffer): string {
+  const buf = Buffer.isBuffer(str) ? str : Buffer.from(str);
+  return buf.toString("base64")
+    .replace(/=/g, "")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_");
+}
+
+async function fetchGooglePublicKeys(): Promise<Record<string, string>> {
+  const res = await fetch("https://www.googleapis.com/robot/v1/metadata/x509/securetoken-system@system.gserviceaccount.com");
+  if (!res.ok) {
+    throw new Error("Failed to fetch Google public keys");
+  }
+  return await res.json();
+}
+
+function decodeJwt(token: string): { header: any; payload: any; signature: Buffer; dataToSign: string } {
+  const parts = token.split(".");
+  if (parts.length !== 3) {
+    throw new Error("Invalid JWT format");
+  }
+  const header = JSON.parse(Buffer.from(parts[0], "base64").toString("utf8"));
+  const payload = JSON.parse(Buffer.from(parts[1], "base64").toString("utf8"));
+  const signature = Buffer.from(parts[2], "base64url");
+  const dataToSign = `${parts[0]}.${parts[1]}`;
+  return { header, payload, signature, dataToSign };
+}
+
+function getServiceAccountCredentials(): any {
+  const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw.trim());
+  } catch {
+    return null;
   }
 }
 
