@@ -1,4 +1,5 @@
 import { initializeApp, cert, getApps } from "firebase-admin";
+import { getFirestore as getFirestoreAdmin } from "firebase-admin/firestore";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -59,18 +60,25 @@ function writeMockDb(data: any) {
 export function getFirestore(): any {
   if (isMockMode) return null;
 
-  try {
-    if (!app) {
-      const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-      if (!raw) {
-        console.warn("⚠️ FIREBASE_SERVICE_ACCOUNT_JSON is not set. Operating in MOCK MODE (db-mock.json).");
-        isMockMode = true;
-        return null;
-      }
+  if (!app) {
+    const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+    if (!raw) {
+      console.warn("⚠️ FIREBASE_SERVICE_ACCOUNT_JSON is not set. Operating in MOCK MODE (db-mock.json).");
+      isMockMode = true;
+      return null;
+    }
 
-      const trimmed = raw.trim();
-      const credentials = JSON.parse(trimmed);
+    const trimmed = raw.trim();
+    let credentials;
+    try {
+      credentials = JSON.parse(trimmed);
+    } catch (err: any) {
+      console.error("❌ Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON. Falling back to MOCK MODE.", err.message);
+      isMockMode = true;
+      return null;
+    }
 
+    try {
       const activeApps = getApps();
       if (activeApps.length > 0) {
         app = activeApps[0];
@@ -81,13 +89,13 @@ export function getFirestore(): any {
         });
       }
       cachedProjectId = credentials.project_id || null;
+    } catch (err: any) {
+      console.error("❌ Failed to initialize Firebase Admin SDK. Falling back to MOCK MODE.", err.message);
+      isMockMode = true;
+      return null;
     }
-    return app.firestore();
-  } catch (err: any) {
-    console.error("❌ Failed to initialize/get Firestore. Falling back to MOCK MODE.", err.message);
-    isMockMode = true;
-    return null;
   }
+  return getFirestoreAdmin();
 }
 
 export function getProjectId(): string {
@@ -217,28 +225,14 @@ function sanitizeImageUrl(imgUrl: string): string {
 
 function cleanPropertyDoc(docData: any, id: string): any {
   if (!docData) return null;
-  try {
-    const images = docData.images;
-    let imagesList: any[] = [];
-    if (Array.isArray(images)) {
-      imagesList = images;
-    } else if (typeof images === "string" && images.trim() !== "") {
-      imagesList = [images];
-    }
-    const cleanImages = imagesList
-      .map((img: any) => (typeof img === "string" ? sanitizeImageUrl(img) : ""))
-      .filter(Boolean);
-
-    return {
-      hostId: "mock_admin_example_com",
-      ...docData,
-      id: docData.id || id,
-      images: cleanImages
-    };
-  } catch (err) {
-    console.error("[Firebase] Error cleaning property doc:", err);
-    return null;
-  }
+  const images = docData.images || [];
+  const cleanImages = images.map((img: string) => sanitizeImageUrl(img));
+  return {
+    hostId: "mock_admin_example_com",
+    ...docData,
+    id: docData.id || id,
+    images: cleanImages
+  };
 }
 
 export async function listProperties(hostId?: string): Promise<any[]> {
@@ -247,7 +241,7 @@ export async function listProperties(hostId?: string): Promise<any[]> {
   if (isMockMode || !db) {
     const dbData = readMockDb();
     const list = dbData.properties || [];
-    const normalized = list.map((p: any) => cleanPropertyDoc(p, p.id)).filter((p: any) => p !== null);
+    const normalized = list.map((p: any) => cleanPropertyDoc(p, p.id));
     if (hostId) {
       return normalized.filter((p: any) => p.hostId === hostId);
     }
@@ -260,13 +254,11 @@ export async function listProperties(hostId?: string): Promise<any[]> {
       query = query.where("hostId", "==", hostId);
     }
     const snap = await query.get();
-    return snap.docs
-      .map((doc: any) => cleanPropertyDoc(doc.data(), doc.id))
-      .filter((p: any) => p !== null);
+    return snap.docs.map((doc: any) => cleanPropertyDoc(doc.data(), doc.id));
   } catch (err) {
     console.error("[Firebase] listProperties error:", err);
     const list = readMockDb().properties || [];
-    const normalized = list.map((p: any) => cleanPropertyDoc(p, p.id)).filter((p: any) => p !== null);
+    const normalized = list.map((p: any) => cleanPropertyDoc(p, p.id));
     if (hostId) {
       return normalized.filter((p: any) => p.hostId === hostId);
     }
@@ -1018,40 +1010,6 @@ export async function getHostIdBySubdomain(subdomain: string): Promise<string | 
     console.error("[Firebase] getHostIdBySubdomain error:", err);
   }
   return null;
-}
-
-export async function createCustomToken(uid: string): Promise<string> {
-  // Initialize admin app if not already done
-  getFirestore();
-  if (isMockMode) {
-    return `mock_token_${uid}`;
-  }
-  try {
-    const authAdmin = app.auth();
-    return await authAdmin.createCustomToken(uid);
-  } catch (err: any) {
-    console.error("[Firebase Admin] Failed to create custom token:", err);
-    throw err;
-  }
-}
-
-export async function verifyIdToken(idToken: string): Promise<any> {
-  // Initialize admin app if not already done
-  getFirestore();
-  if (isMockMode) {
-    if (idToken.startsWith("mock_id_token_")) {
-      const uid = idToken.replace("mock_id_token_", "");
-      return { uid, email: `${uid}@example.com` };
-    }
-    return { uid: idToken, email: `${idToken}@example.com` };
-  }
-  try {
-    const authAdmin = app.auth();
-    return await authAdmin.verifyIdToken(idToken);
-  } catch (err: any) {
-    console.error("[Firebase Admin] Failed to verify ID token:", err);
-    throw err;
-  }
 }
 
 
