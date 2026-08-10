@@ -1012,4 +1012,38 @@ export async function getHostIdBySubdomain(subdomain: string): Promise<string | 
   return null;
 }
 
+export async function createCustomToken(uid: string): Promise<string> {
+  getFirestore();
+  if (isMockMode) {
+    return `mock_token_${uid}`;
+  }
+  try {
+    const { getAuth } = require("firebase-admin/auth");
+    const authAdmin = getAuth();
+    return await authAdmin.createCustomToken(uid);
+  } catch (err: any) {
+    console.error("[Firebase Admin] Failed to create custom token:", err);
+    throw err;
+  }
+}
+
+export async function verifyIdToken(idToken: string): Promise<any> {
+  getFirestore();
+  if (isMockMode) {
+    if (idToken.startsWith("mock_id_token_")) {
+      const uid = idToken.replace("mock_id_token_", "");
+      return { uid, email: `${uid}@example.com` };
+    }
+    return { uid: idToken, email: `${idToken}@example.com` };
+  }
+  try {
+    const { getAuth } = require("firebase-admin/auth");
+    const authAdmin = getAuth();
+    return await authAdmin.verifyIdToken(idToken);
+  } catch (err: any) {
+    console.error("[Firebase Admin] Failed to verify ID token:", err);
+    throw err;
+  }
+}
+
 

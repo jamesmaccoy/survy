@@ -16,6 +16,9 @@ export default function LoginPage() {
   useEffect(() => {
     if (!loading && user) {
       const searchParams = new URLSearchParams(window.location.search);
+      if (searchParams.has("redirect_to")) {
+        return; // Let AuthProvider redirection handle it
+      }
       const redirectPath = searchParams.get("redirect") || "/";
       router.push(redirectPath);
     }
