@@ -32,9 +32,43 @@ export default function AdminPropertiesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [actionError, setActionError] = useState<string | null>(null);
 
+  // Subdomain settings states
+  const [subdomain, setSubdomain] = useState<string>("");
+  const [subdomainInput, setSubdomainInput] = useState<string>("");
+  const [isSavingSubdomain, setIsSavingSubdomain] = useState(false);
+  const [subdomainStatus, setSubdomainStatus] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
   // Side sheet state
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
+
+  const handleSaveSubdomain = async () => {
+    if (!user) return;
+    setIsSavingSubdomain(true);
+    setSubdomainStatus(null);
+    try {
+      const response = await fetch("/api/user/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user.uid,
+          subdomain: subdomainInput
+        })
+      });
+      const result = await response.json();
+      if (result.success) {
+        setSubdomain(result.data.subdomain);
+        setSubdomainInput(result.data.subdomain);
+        setSubdomainStatus({ type: "success", text: "Subdomain updated successfully!" });
+      } else {
+        throw new Error(result.error || "Failed to update subdomain.");
+      }
+    } catch (err: any) {
+      setSubdomainStatus({ type: "error", text: err.message || "Failed to save subdomain." });
+    } finally {
+      setIsSavingSubdomain(false);
+    }
+  };
 
   const fetchPropertiesAndPackages = useCallback(async () => {
     if (!user) return;
@@ -57,6 +91,9 @@ export default function AdminPropertiesPage() {
       }
       if (profileResult.success && profileResult.data) {
         setUserPlan(profileResult.data.plan || "standard");
+        const sub = profileResult.data.subdomain || "";
+        setSubdomain(sub);
+        setSubdomainInput(sub);
       }
     } catch (err: unknown) {
       console.error("Failed to load properties and packages:", err);
@@ -113,6 +150,13 @@ export default function AdminPropertiesPage() {
     setSelectedPropertyId(propertyId);
     setIsSheetOpen(true);
   };
+
+  const publicUrl = useMemo(() => {
+    if (typeof window === "undefined" || !subdomain) return "";
+    const host = window.location.host;
+    const baseHost = host.replace(/^[a-z0-9-]+\.(localhost:3000|127\.0\.0\.1:3000|simpleplek\.co\.za)/i, "$1");
+    return `${window.location.protocol}//${subdomain}.${baseHost}`;
+  }, [subdomain]);
 
   const handleCreatePackage = async (propertyId: string, draft: PackageDraft) => {
     setActionError(null);
@@ -404,6 +448,65 @@ export default function AdminPropertiesPage() {
             </Button>
           </div>
         </header>
+
+        {/* Subdomain Management Widget */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-muted/20 border rounded-xl p-5">
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold flex items-center gap-1.5 text-slate-900 dark:text-white">
+              <span>🌐</span> Multi-Tenant Portal Setup
+            </h3>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Configure your unique portal subdomain to list all your properties in one place.
+            </p>
+            {subdomain ? (
+              <div className="pt-2">
+                <span className="text-[10px] text-teal-600 dark:text-teal-400 font-bold uppercase tracking-wider block">Your Public Portal URL</span>
+                <a
+                  href={publicUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-mono text-teal-600 dark:text-teal-400 hover:underline break-all inline-flex items-center gap-1 font-bold mt-1"
+                >
+                  {publicUrl} <span className="text-[9px]">↗</span>
+                </a>
+              </div>
+            ) : (
+              <p className="text-xs text-amber-600 dark:text-amber-400 italic pt-2">
+                No subdomain configured. Set one on the right to activate your portal.
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-3">
+            <label className="text-xs text-slate-500 dark:text-zinc-400 font-semibold uppercase tracking-wider block">
+              Subdomain Slug
+            </label>
+            <div className="flex gap-2">
+              <div className="relative flex-grow">
+                <input
+                  type="text"
+                  placeholder="e.g. tenant1"
+                  value={subdomainInput}
+                  onChange={(e) => setSubdomainInput(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-slate-900 dark:text-white"
+                />
+              </div>
+              <Button
+                onClick={handleSaveSubdomain}
+                disabled={isSavingSubdomain}
+                size="sm"
+                className="shrink-0"
+              >
+                {isSavingSubdomain ? "Saving..." : "Save Subdomain"}
+              </Button>
+            </div>
+            {subdomainStatus && (
+              <p className={`text-[10px] font-bold ${subdomainStatus.type === "success" ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"}`}>
+                {subdomainStatus.text}
+              </p>
+            )}
+          </div>
+        </div>
 
         {actionError && (
           <Alert variant="destructive">

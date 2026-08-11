@@ -1,12 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createProperty, listProperties, isUserAdmin, getUserProfile } from "@/lib/firebase";
+import { createProperty, listProperties, isUserAdmin, getUserProfile, getHostIdBySubdomain } from "@/lib/firebase";
 
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const hostId = searchParams.get("hostId") || undefined;
+    const subdomain = searchParams.get("subdomain") || undefined;
 
-    const list = await listProperties(hostId || undefined);
+    let resolvedHostId = hostId;
+
+    if (subdomain) {
+      const hostFromSub = await getHostIdBySubdomain(subdomain);
+      if (hostFromSub) {
+        resolvedHostId = hostFromSub;
+      } else {
+        return NextResponse.json({ success: true, data: [], properties: [] });
+      }
+    }
+
+    const list = await listProperties(resolvedHostId || undefined);
     return NextResponse.json({ success: true, data: list, properties: list });
   } catch (err: any) {
     console.error("GET /api/posts error:", err);

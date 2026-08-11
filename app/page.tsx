@@ -66,6 +66,37 @@ function HomePageContent() {
 
   const { user, loading: authLoading } = useAuth();
 
+  // Subdomain & Host Profile States
+  const [subdomain, setSubdomain] = useState<string | null>(null);
+  const [hostProfile, setHostProfile] = useState<any | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const hostname = window.location.hostname;
+    const parts = hostname.split(".");
+    
+    let sub: string | null = null;
+    if (hostname.includes("localhost") || hostname.includes("127.0.0.1")) {
+      if (parts.length > 1 && parts[0] !== "localhost" && parts[0] !== "www") {
+        sub = parts[0];
+      }
+    } else if (parts.length > 2 && parts[0] !== "www") {
+      sub = parts[0];
+    }
+    
+    if (sub) {
+      setSubdomain(sub);
+      fetch(`/api/host/profile?subdomain=${sub}`)
+        .then(res => res.json())
+        .then(resJson => {
+          if (resJson.success) {
+            setHostProfile(resJson.data);
+          }
+        })
+        .catch(err => console.error("Failed to fetch host profile:", err));
+    }
+  }, []);
+
   // Portal States
   const [properties, setProperties] = useState<Property[]>([]);
   const [isLoadingProps, setIsLoadingProps] = useState(true);
@@ -167,7 +198,13 @@ function HomePageContent() {
         const params = new URLSearchParams(window.location.search);
         const queryHostId = params.get("hostId");
 
-        const url = queryHostId ? `/api/posts?hostId=${queryHostId}` : "/api/posts";
+        let url = "/api/posts";
+        if (subdomain) {
+          url = `/api/posts?subdomain=${subdomain}`;
+        } else if (queryHostId) {
+          url = `/api/posts?hostId=${queryHostId}`;
+        }
+
         const res = await fetch(url);
         const result = await res.json();
         if (result.success && result.data) {
@@ -182,7 +219,7 @@ function HomePageContent() {
     if (!authLoading) {
       fetchProperties();
     }
-  }, [user, authLoading]);
+  }, [user, authLoading, subdomain]);
 
   // Load saved user dates
   useEffect(() => {
@@ -327,13 +364,35 @@ function HomePageContent() {
     <div className="min-h-screen bg-background pb-20 font-sans text-foreground">
       <div className="mx-auto flex max-w-5xl flex-col gap-8 px-4 py-10 sm:px-6 lg:px-8">
         <header className="flex flex-col items-center gap-3 text-center">
-          <Badge variant="secondary">Surf Yoga Community</Badge>
-          <h1 className="font-heading text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
-            Find Your Retreat
-          </h1>
-          <p className="max-w-md text-sm leading-relaxed text-muted-foreground text-pretty">
-            Sync your travel dates once, then browse every listing with live pricing for your stay.
-          </p>
+          {hostProfile ? (
+            <>
+              <Badge variant="secondary" className="bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20">
+                PRO PORTAL • {hostProfile.subdomain}
+              </Badge>
+              <h1 className="font-heading text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
+                {hostProfile.displayName ? `${hostProfile.displayName}'s Listings` : "Your Cozy Stay"}
+              </h1>
+              <p className="max-w-md text-sm leading-relaxed text-muted-foreground text-pretty">
+                Explore custom stays and packages curated directly by {hostProfile.displayName || "our premium host"}.
+              </p>
+              <a
+                href={typeof window !== "undefined" ? `${window.location.protocol}//${window.location.host.replace(`${subdomain}.`, "")}` : "/"}
+                className="text-xs text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1 font-bold mt-2"
+              >
+                ← View all Simpleplek locations
+              </a>
+            </>
+          ) : (
+            <>
+              <Badge variant="secondary">Surf Yoga Community</Badge>
+              <h1 className="font-heading text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
+                Find Your Retreat
+              </h1>
+              <p className="max-w-md text-sm leading-relaxed text-muted-foreground text-pretty">
+                Sync your travel dates once, then browse every listing with live pricing for your stay.
+              </p>
+            </>
+          )}
         </header>
 
         {paymentStatus === "success" && (

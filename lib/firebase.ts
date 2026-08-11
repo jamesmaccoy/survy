@@ -957,4 +957,169 @@ export async function getUserProfile(uid: string): Promise<any> {
   return null;
 }
 
+export async function updateUserProfile(uid: string, data: any): Promise<boolean> {
+  const db = getFirestore();
+  if (isMockMode || !db) {
+    const dbData = readMockDb();
+    if (!dbData.userProfiles) {
+      dbData.userProfiles = {};
+    }
+    if (!dbData.userProfiles[uid]) {
+      dbData.userProfiles[uid] = {};
+    }
+    dbData.userProfiles[uid] = {
+      ...dbData.userProfiles[uid],
+      ...data
+    };
+    writeMockDb(dbData);
+    return true;
+  }
+
+  try {
+    await db.collection("users").doc(uid).set(data, { merge: true });
+    return true;
+  } catch (err) {
+    console.error("[Firebase] updateUserProfile error:", err);
+    return false;
+  }
+}
+
+export async function getHostIdBySubdomain(subdomain: string): Promise<string | null> {
+  const db = getFirestore();
+  if (isMockMode || !db) {
+    const dbData = readMockDb();
+    const userProfiles = dbData.userProfiles || {};
+    for (const [uid, profile] of Object.entries(userProfiles)) {
+      if ((profile as any).subdomain === subdomain) {
+        return uid;
+      }
+    }
+    // Fallback/test mapping for localhost testing convenience
+    if (subdomain === "tenant1") {
+      return "mock_admin_test_example_com";
+    }
+    return null;
+  }
+
+  try {
+    const snapshot = await db.collection("users").where("subdomain", "==", subdomain).limit(1).get();
+    if (!snapshot.empty) {
+      return snapshot.docs[0].id;
+    }
+  } catch (err) {
+    console.error("[Firebase] getHostIdBySubdomain error:", err);
+  }
+  return null;
+}
+
+export async function createCustomToken(uid: string): Promise<string> {
+  getFirestore();
+  if (isMockMode) {
+    return `mock_token_${uid}`;
+  }
+
+  const credentials = getServiceAccountCredentials();
+  if (!credentials || !credentials.private_key || !credentials.client_email) {
+    console.warn("⚠️ Missing Firebase Service Account credentials for custom token. Falling back to mock token.");
+    return `mock_token_${uid}`;
+  }
+
+  try {
+    const crypto = require("crypto");
+    const header = {
+      alg: "RS256",
+      typ: "JWT"
+    };
+
+    const now = Math.floor(Date.now() / 1000);
+    const payload = {
+      iss: credentials.client_email,
+      sub: credentials.client_email,
+      aud: "https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit",
+      iat: now,
+      exp: now + 3600,
+      uid: uid
+    };
+
+    const headerB64 = base64UrlEncode(JSON.stringify(header));
+    const payloadB64 = base64UrlEncode(JSON.stringify(payload));
+    const dataToSign = `${headerB64}.${payloadB64}`;
+
+    const signer = crypto.createSign("RSA-SHA256");
+    signer.update(dataToSign);
+    const privateKey = credentials.private_key.replace(/\\n/g, "\n");
+    const signature = signer.sign(privateKey);
+    const signatureB64 = base64UrlEncode(signature);
+
+    return `${dataToSign}.${signatureB64}`;
+  } catch (err: any) {
+    console.error("[Crypto Custom Token] Failed to sign token:", err);
+    throw err;
+  }
+}
+
+export async function verifyIdToken(idToken: string): Promise<any> {
+  getFirestore();
+  if (isMockMode) {
+    if (idToken.startsWith("mock_id_token_")) {
+      const uid = idToken.replace("mock_id_token_", "");
+      return { uid, email: `${uid}@example.com` };
+    }
+    return { uid: idToken, email: `${idToken}@example.com` };
+  }
+
+  const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+  if (!apiKey) {
+    throw new Error("Missing NEXT_PUBLIC_FIREBASE_API_KEY environment variable for token verification.");
+  }
+
+  try {
+    const url = `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idToken })
+    });
+
+    if (!res.ok) {
+      const errBody = await res.json().catch(() => ({}));
+      const errMsg = errBody?.error?.message || `Google API error status ${res.status}`;
+      throw new Error(`Token verification failed: ${errMsg}`);
+    }
+
+    const data = await res.json();
+    const user = data?.users?.[0];
+    if (!user || !user.localId) {
+      throw new Error("No user profile found for the provided token.");
+    }
+
+    return {
+      uid: user.localId,
+      email: user.email || null,
+      email_verified: user.emailVerified || false
+    };
+  } catch (err: any) {
+    console.error("[Google Identity Lookup] Failed to verify ID token:", err);
+    throw err;
+  }
+}
+
+function base64UrlEncode(str: string | Buffer): string {
+  const buf = Buffer.isBuffer(str) ? str : Buffer.from(str);
+  return buf.toString("base64")
+    .replace(/=/g, "")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_");
+}
+
+function getServiceAccountCredentials(): any {
+  const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw.trim());
+  } catch {
+    return null;
+  }
+}
+
 
