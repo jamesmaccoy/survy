@@ -29,8 +29,6 @@
       "description": "A full week of peace and relaxation at Llandudno Cottage."
     },
     {
-      "multiplier": 1.1,
-      "baseRate": 100,
       "category": "standard",
       "isEnabled": true,
       "id": "pkg_2vshh3ioj",
@@ -40,9 +38,6 @@
       "description": "Includes standard stay features."
     },
     {
-      "multiplier": 1,
-      "baseRate": 0,
-      "yocoId": "fdsfdsf",
       "category": "standard",
       "isEnabled": true,
       "id": "fdsfdsf",
@@ -123,19 +118,25 @@
       "slug": "the-shack",
       "basePricePerNight": 1650,
       "airbnbCalendarUrl": "https://www.airbnb.co.za/calendar/ical/1667386340564933279.ics?t=test",
-      "googleCalendarUrl": ""
+      "googleCalendarUrl": "",
+      "weeklyDiscount": 10,
+      "monthlyDiscount": 20
     },
     {
       "id": "cottage",
       "title": "The Cottage",
       "slug": "the-cottage",
-      "basePricePerNight": 1200
+      "basePricePerNight": 1200,
+      "weeklyDiscount": 5,
+      "monthlyDiscount": 15
     },
     {
       "title": "Ocean View Villa",
       "slug": "ocean-view-villa",
       "basePricePerNight": 2200,
-      "id": "ocean-view-villa"
+      "id": "ocean-view-villa",
+      "weeklyDiscount": 12,
+      "monthlyDiscount": 25
     },
     {
       "title": "Camps Bay Sea View Loft",

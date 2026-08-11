@@ -19,9 +19,6 @@ interface Package {
   name: string;
   price: number;
   description: string;
-  multiplier: number;
-  baseRate: number;
-  yocoId: string;
   category: string;
   isEnabled: boolean;
 }
@@ -46,9 +43,6 @@ function PackageEditorContent({ id }: { id: string }) {
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [description, setDescription] = useState("");
-  const [multiplier, setMultiplier] = useState("1.0");
-  const [baseRate, setBaseRate] = useState("0");
-  const [yocoId, setYocoId] = useState("");
   const [category, setCategory] = useState("standard");
   const [isEnabled, setIsEnabled] = useState(true);
 
@@ -92,9 +86,6 @@ function PackageEditorContent({ id }: { id: string }) {
             setName(pkg.name);
             setPrice(String(pkg.price));
             setDescription(pkg.description || "");
-            setMultiplier(String(pkg.multiplier));
-            setBaseRate(String(pkg.baseRate));
-            setYocoId(pkg.yocoId || "");
             setCategory(pkg.category || "standard");
             setIsEnabled(pkg.isEnabled !== false);
           } else {
@@ -159,9 +150,6 @@ function PackageEditorContent({ id }: { id: string }) {
           name,
           price: Number(price),
           description,
-          multiplier: Number(multiplier),
-          baseRate: Number(baseRate),
-          yocoId: yocoId || pkgId,
           category,
           isEnabled,
         }),
@@ -351,10 +339,10 @@ function PackageEditorContent({ id }: { id: string }) {
               </div>
             </div>
 
-            {/* Price, Category, Yoco ID */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Price & Category */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="mb-1.5 block text-xs text-slate-500 dark:text-zinc-400 font-semibold uppercase tracking-wider">
+                <label className="mb-1.5 block text-xs text-slate-555 dark:text-zinc-400 font-semibold uppercase tracking-wider">
                   Price (ZAR) *
                 </label>
                 <input
@@ -368,7 +356,7 @@ function PackageEditorContent({ id }: { id: string }) {
               </div>
 
               <div>
-                <label className="mb-1.5 block text-xs text-slate-500 dark:text-zinc-400 font-semibold uppercase tracking-wider">
+                <label className="mb-1.5 block text-xs text-slate-555 dark:text-zinc-400 font-semibold uppercase tracking-wider">
                   Category
                 </label>
                 <select
@@ -399,47 +387,6 @@ function PackageEditorContent({ id }: { id: string }) {
                     Special {userPlan === "standard" ? "🔒 (Pro)" : ""}
                   </option>
                 </select>
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-xs text-slate-500 dark:text-zinc-400 font-semibold uppercase tracking-wider">
-                  Yoco Product ID
-                </label>
-                <input
-                  type="text"
-                  placeholder="Defaults to Key"
-                  value={yocoId}
-                  onChange={(e) => setYocoId(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 dark:border-white/10 bg-slate-100 dark:bg-black/40 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:border-teal-500 focus:outline-none placeholder:text-slate-400 dark:placeholder:text-zinc-600"
-                />
-              </div>
-            </div>
-
-            {/* Rate Multiplier & Base Rate */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="mb-1.5 block text-xs text-slate-500 dark:text-zinc-400 font-semibold tracking-wide">
-                  Rate Multiplier (0.1 - 3.0)
-                </label>
-                <input
-                  type="number"
-                  step="0.1"
-                  value={multiplier}
-                  onChange={(e) => setMultiplier(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 dark:border-white/10 bg-slate-100 dark:bg-black/40 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:border-teal-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-xs text-slate-550 dark:text-zinc-400 font-semibold tracking-wide">
-                  Flat Base Rate (ZAR)
-                </label>
-                <input
-                  type="number"
-                  value={baseRate}
-                  onChange={(e) => setBaseRate(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 dark:border-white/10 bg-slate-100 dark:bg-black/40 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:border-teal-500 focus:outline-none"
-                />
               </div>
             </div>
 

@@ -18,9 +18,6 @@ interface PackageData {
   name: string;
   price: number;
   description: string;
-  multiplier: number;
-  baseRate: number;
-  yocoId: string;
   category: string;
   isEnabled: boolean;
 }
@@ -29,24 +26,29 @@ interface CalculateEstimateProps {
   basePricePerNight: number;
   fromDate: Date;
   toDate: Date;
-  packageMultiplier: number;
-  packageBaseRate: number;
+  weeklyDiscount?: number;
+  monthlyDiscount?: number;
 }
 
 export function calculateBookingTotal({
   basePricePerNight,
   fromDate,
   toDate,
-  packageMultiplier,
-  packageBaseRate,
+  weeklyDiscount = 0,
+  monthlyDiscount = 0,
 }: CalculateEstimateProps): number {
   const diffTime = Math.abs(toDate.getTime() - fromDate.getTime());
   const nights = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
 
-  const baseCost = basePricePerNight * nights;
-  const total = (baseCost + packageBaseRate) * packageMultiplier;
+  let baseCost = basePricePerNight * nights;
 
-  return total;
+  if (nights >= 28 && monthlyDiscount > 0) {
+    baseCost = baseCost * (1 - monthlyDiscount / 100);
+  } else if (nights >= 7 && weeklyDiscount > 0) {
+    baseCost = baseCost * (1 - weeklyDiscount / 100);
+  }
+
+  return baseCost;
 }
 
 interface SmartEstimateBlockProps {
@@ -176,13 +178,9 @@ export default function SmartEstimateBlock({
 
   const basePricePerNight = selectedProperty ? selectedProperty.basePricePerNight : 1500;
   
-  let packageMultiplier = 1.0;
-  let packageBaseRate = 0;
   let calculatedTotal = basePricePerNight * nights;
 
   if (bookingMode === "predefined" && selectedPackage) {
-    packageMultiplier = selectedPackage.multiplier ?? 1.0;
-    packageBaseRate = selectedPackage.baseRate ?? 0;
     calculatedTotal = selectedPackage.price;
   } else if (bookingMode === "custom") {
     // Custom stay calculation formula
@@ -190,8 +188,8 @@ export default function SmartEstimateBlock({
       basePricePerNight,
       fromDate: new Date(customFromDate),
       toDate: new Date(customToDate),
-      packageMultiplier,
-      packageBaseRate,
+      weeklyDiscount: selectedProperty?.weeklyDiscount,
+      monthlyDiscount: selectedProperty?.monthlyDiscount,
     });
   }
 
@@ -236,8 +234,8 @@ export default function SmartEstimateBlock({
         "4. Contacting Yoco gateway for package link creation..."
       ]);
 
-      // Call generate checkout link API using the package's yocoId
-      const targetType = bookingMode === "predefined" && selectedPackage ? selectedPackage.yocoId : "shack_stack";
+      // Call generate checkout link API using the package's id
+      const targetType = bookingMode === "predefined" && selectedPackage ? selectedPackage.id : "shack_stack";
       
       const linkResponse = await fetch("/api/v1/generate_checkout_link", {
         method: "POST",
@@ -434,10 +432,17 @@ export default function SmartEstimateBlock({
               <span>{isHourly ? `Base Rate (R ${basePricePerNight} × ${nights} hours):` : `Base Rate (R ${basePricePerNight} × ${nights} nights):`}</span>
               <span className="font-bold text-white">R {(basePricePerNight * nights).toLocaleString()}</span>
             </div>
-            <div className="flex justify-between text-xs text-white/60">
-              <span>Package Multiplier:</span>
-              <span className="font-bold text-white">1.0x</span>
-            </div>
+            {!isHourly && nights >= 28 && selectedProperty?.monthlyDiscount ? (
+              <div className="flex justify-between text-xs text-emerald-400 font-semibold">
+                <span>Monthly Stay Discount ({selectedProperty.monthlyDiscount}% off):</span>
+                <span>-R {Math.round(basePricePerNight * nights * (selectedProperty.monthlyDiscount / 100)).toLocaleString()}</span>
+              </div>
+            ) : !isHourly && nights >= 7 && selectedProperty?.weeklyDiscount ? (
+              <div className="flex justify-between text-xs text-emerald-400 font-semibold">
+                <span>Weekly Stay Discount ({selectedProperty.weeklyDiscount}% off):</span>
+                <span>-R {Math.round(basePricePerNight * nights * (selectedProperty.weeklyDiscount / 100)).toLocaleString()}</span>
+              </div>
+            ) : null}
             <div className="border-t border-white/5 pt-2 flex justify-between items-center mt-2">
               <span className="text-sm font-bold text-white">Calculated Custom Cost:</span>
               <span className="text-xl font-black text-teal-400">R {calculatedTotal.toLocaleString()}</span>

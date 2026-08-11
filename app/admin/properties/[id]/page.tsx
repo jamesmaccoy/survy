@@ -170,6 +170,8 @@ function EditPropertyContent({ id }: { id: string }) {
   const [slugTouched, setSlugTouched] = useState(false);
   const [location, setLocation] = useState("");
   const [basePrice, setBasePrice] = useState("");
+  const [weeklyDiscount, setWeeklyDiscount] = useState("");
+  const [monthlyDiscount, setMonthlyDiscount] = useState("");
   const [airbnbCalendarUrl, setAirbnbCalendarUrl] = useState("");
   const [googleCalendarUrl, setGoogleCalendarUrl] = useState("");
   const [description, setDescription] = useState("");
@@ -216,6 +218,16 @@ function EditPropertyContent({ id }: { id: string }) {
           setBasePrice(
             result.data.basePricePerNight
               ? String(result.data.basePricePerNight)
+              : ""
+          );
+          setWeeklyDiscount(
+            result.data.weeklyDiscount !== undefined
+              ? String(result.data.weeklyDiscount)
+              : ""
+          );
+          setMonthlyDiscount(
+            result.data.monthlyDiscount !== undefined
+              ? String(result.data.monthlyDiscount)
               : ""
           );
           setAirbnbCalendarUrl(result.data.airbnbCalendarUrl || "");
@@ -413,6 +425,8 @@ function EditPropertyContent({ id }: { id: string }) {
           name: cleanTitle,
           slug: slug.trim().toLowerCase(),
           basePricePerNight: Number(basePrice),
+          weeklyDiscount: weeklyDiscount ? Number(weeklyDiscount) : 0,
+          monthlyDiscount: monthlyDiscount ? Number(monthlyDiscount) : 0,
           airbnbCalendarUrl: airbnbCalendarUrl.trim(),
           googleCalendarUrl: googleCalendarUrl.trim(),
           description: description.trim(),
@@ -700,6 +714,54 @@ function EditPropertyContent({ id }: { id: string }) {
                       </ToggleGroup>
                     </Field>
                   </div>
+
+                  {bookingType === "nightly" && (
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 border-t border-border/10 pt-4">
+                      <Field>
+                        <FieldLabel htmlFor="property-weekly-discount">
+                          Weekly stay discount (%)
+                        </FieldLabel>
+                        <InputGroup>
+                          <InputGroupInput
+                            id="property-weekly-discount"
+                            type="number"
+                            min={0}
+                            max={100}
+                            step={1}
+                            className="font-mono"
+                            placeholder="10"
+                            value={weeklyDiscount}
+                            onChange={(e) => setWeeklyDiscount(e.target.value)}
+                          />
+                          <InputGroupAddon align="inline-end">
+                            <InputGroupText>% off</InputGroupText>
+                          </InputGroupAddon>
+                        </InputGroup>
+                      </Field>
+
+                      <Field>
+                        <FieldLabel htmlFor="property-monthly-discount">
+                          Monthly stay discount (%)
+                        </FieldLabel>
+                        <InputGroup>
+                          <InputGroupInput
+                            id="property-monthly-discount"
+                            type="number"
+                            min={0}
+                            max={100}
+                            step={1}
+                            className="font-mono"
+                            placeholder="20"
+                            value={monthlyDiscount}
+                            onChange={(e) => setMonthlyDiscount(e.target.value)}
+                          />
+                          <InputGroupAddon align="inline-end">
+                            <InputGroupText>% off</InputGroupText>
+                          </InputGroupAddon>
+                        </InputGroup>
+                      </Field>
+                    </div>
+                  )}
 
                   {bookingType === "hourly" && (
                     <FieldSet data-invalid={fieldErrors.slots ? true : undefined}>

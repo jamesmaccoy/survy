@@ -32,15 +32,10 @@ export function PackageForm({ initial, existingIds, onCancel, onSave, userPlan }
     const [description, setDescription] = useState(initial?.description ?? "")
     const [price, setPrice] = useState(String(initial?.price ?? ""))
     const [category, setCategory] = useState<PackageCategory>((initial?.category as PackageCategory) ?? "standard")
-    const [multiplier, setMultiplier] = useState(String(initial?.multiplier ?? 1))
-    const [baseRate, setBaseRate] = useState(String(initial?.baseRate ?? 0))
-    const [yocoId, setYocoId] = useState(initial?.yocoId ?? "")
 
     const derivedId = initial?.id ?? slugify(name)
     const numericPrice = Number(price) || 0
-    const numericMultiplier = Number(multiplier) || 0
-    const numericBase = Number(baseRate) || 0
-    const effective = numericBase + numericPrice * numericMultiplier
+    const effective = numericPrice
 
     const idCollision = !isEdit && derivedId.length > 0 && existingIds.includes(derivedId)
     const nameError = name.trim().length === 0
@@ -56,10 +51,7 @@ export function PackageForm({ initial, existingIds, onCancel, onSave, userPlan }
             description: description.trim(),
             price: numericPrice,
             category,
-            multiplier: numericMultiplier,
-            baseRate: numericBase,
             isEnabled: initial?.isEnabled ?? true,
-            yocoId: yocoId.trim() || derivedId,
         })
     }
 
@@ -133,58 +125,18 @@ export function PackageForm({ initial, existingIds, onCancel, onSave, userPlan }
                 </p>
             </fieldset>
 
-            <div className="grid grid-cols-3 gap-3">
-                <div className="flex flex-col gap-1.5">
-                    <Label htmlFor="pkg-price" className="text-xs font-semibold">
-                        Price (R)
-                    </Label>
-                    <Input
-                        id="pkg-price"
-                        type="number"
-                        inputMode="numeric"
-                        min={0}
-                        value={price}
-                        onChange={(e) => setPrice(e.target.value)}
-                        aria-invalid={priceError}
-                    />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                    <Label htmlFor="pkg-mult" className="text-xs font-semibold">
-                        Multiplier
-                    </Label>
-                    <Input
-                        id="pkg-mult"
-                        type="number"
-                        step="0.1"
-                        min={0}
-                        value={multiplier}
-                        onChange={(e) => setMultiplier(e.target.value)}
-                    />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                    <Label htmlFor="pkg-base" className="text-xs font-semibold">
-                        Base (R)
-                    </Label>
-                    <Input
-                        id="pkg-base"
-                        type="number"
-                        min={0}
-                        value={baseRate}
-                        onChange={(e) => setBaseRate(e.target.value)}
-                    />
-                </div>
-            </div>
-
             <div className="flex flex-col gap-1.5">
-                <Label htmlFor="pkg-yoco" className="text-xs font-semibold">
-                    Yoco ID <span className="font-normal text-muted-foreground">(optional)</span>
+                <Label htmlFor="pkg-price" className="text-xs font-semibold">
+                    Price (R)
                 </Label>
                 <Input
-                    id="pkg-yoco"
-                    value={yocoId}
-                    onChange={(e) => setYocoId(e.target.value)}
-                    placeholder={derivedId || "auto-generated from name"}
-                    className="font-mono text-xs"
+                    id="pkg-price"
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                    aria-invalid={priceError}
                 />
             </div>
 

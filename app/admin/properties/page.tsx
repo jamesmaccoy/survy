@@ -309,9 +309,6 @@ export default function AdminPropertiesPage() {
           name: pkg.name,
           price: pkg.price,
           description: pkg.description,
-          multiplier: pkg.multiplier,
-          baseRate: pkg.baseRate,
-          yocoId: pkg.yocoId ? `${pkg.yocoId.split('_')[0]}_${propertyId}` : newId,
           category: pkg.category,
           isEnabled: true,
         }),
@@ -453,14 +450,14 @@ export default function AdminPropertiesPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-muted/20 border rounded-xl p-5">
           <div className="space-y-2">
             <h3 className="text-sm font-semibold flex items-center gap-1.5 text-slate-900 dark:text-white">
-              <span>🌐</span> Multi-Tenant Portal Setup
+              <span>🌐</span> Create your own space
             </h3>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Configure your unique portal subdomain to list all your properties in one place.
+              This is how people find you here. Your name  + our address
             </p>
             {subdomain ? (
               <div className="pt-2">
-                <span className="text-[10px] text-teal-600 dark:text-teal-400 font-bold uppercase tracking-wider block">Your Public Portal URL</span>
+                <span className="text-[10px] text-teal-600 dark:text-teal-400 font-bold uppercase tracking-wider block">Your username in the URL</span>
                 <a
                   href={publicUrl}
                   target="_blank"
@@ -479,7 +476,7 @@ export default function AdminPropertiesPage() {
 
           <div className="space-y-3">
             <label className="text-xs text-slate-500 dark:text-zinc-400 font-semibold uppercase tracking-wider block">
-              Subdomain Slug
+              what is your username?
             </label>
             <div className="flex gap-2">
               <div className="relative flex-grow">

@@ -84,11 +84,6 @@ export function SuggestedPackages({ suggested, properties, onCopy }: SuggestedPa
                         >
                           {pkg.category === "standard" ? "Standard" : "Add-on"}
                         </Badge>
-                        {pkg.multiplier !== 1 && (
-                          <Badge variant="outline" className="text-[9px]">
-                            {pkg.multiplier}x multiplier
-                          </Badge>
-                        )}
                       </div>
                       <span className="text-sm font-bold text-primary">{formatZar(pkg.price)}</span>
                     </div>

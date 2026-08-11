@@ -29,9 +29,6 @@ export async function POST(request: NextRequest) {
       name,
       price,
       description,
-      multiplier,
-      baseRate,
-      yocoId,
       category,
       isEnabled
     } = body;
@@ -73,9 +70,6 @@ export async function POST(request: NextRequest) {
       name,
       price: priceNum,
       description: description || "",
-      multiplier: multiplier !== undefined ? Number(multiplier) : undefined,
-      baseRate: baseRate !== undefined ? Number(baseRate) : undefined,
-      yocoId: yocoId || id,
       category: category || "standard",
       isEnabled: isEnabled !== undefined ? Boolean(isEnabled) : true
     });

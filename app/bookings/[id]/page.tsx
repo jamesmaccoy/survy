@@ -51,9 +51,6 @@ interface PackageData {
   name: string;
   price: number;
   description: string;
-  multiplier: number;
-  baseRate: number;
-  yocoId: string;
   category: string;
   isEnabled: boolean;
 }
@@ -136,7 +133,7 @@ function BookingDetailsContent({ id }: { id: string }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          type: addon.yocoId || addon.id,
+          type: addon.id,
           bookingId: booking.id,
           amountInCentsOverride: Math.round(addon.price * 100),
           descriptionOverride: `Add-on: ${addon.name} for Booking ${booking.id}`,

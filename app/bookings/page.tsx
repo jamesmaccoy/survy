@@ -57,9 +57,6 @@ interface PackageData {
   name: string;
   price: number;
   description: string;
-  multiplier: number;
-  baseRate: number;
-  yocoId: string;
   category: string;
   isEnabled: boolean;
 }
@@ -294,11 +291,23 @@ function BookingsCheckoutContent() {
   const basePricePerNight = property ? property.basePricePerNight : 1500;
   const selectedPackage = packages.find((p) => p.id === selectedPackageId);
 
-  const baseCost = basePricePerNight * nights;
-  const packagePrice = selectedPackage ? selectedPackage.price || selectedPackage.baseRate || 0 : 0;
-  const packageMultiplier = selectedPackage ? selectedPackage.multiplier || 1.0 : 1.0;
+  let baseCost = basePricePerNight * nights;
+  const weeklyDiscount = property?.weeklyDiscount ?? 0;
+  const monthlyDiscount = property?.monthlyDiscount ?? 0;
+  let discountAmount = 0;
 
-  const finalTotal = (baseCost + packagePrice) * packageMultiplier;
+  if (!isHourly) {
+    if (nights >= 28 && monthlyDiscount > 0) {
+      discountAmount = baseCost * (monthlyDiscount / 100);
+      baseCost = baseCost - discountAmount;
+    } else if (nights >= 7 && weeklyDiscount > 0) {
+      discountAmount = baseCost * (weeklyDiscount / 100);
+      baseCost = baseCost - discountAmount;
+    }
+  }
+
+  const packagePrice = selectedPackage ? selectedPackage.price || 0 : 0;
+  const finalTotal = baseCost + packagePrice;
 
   const handleUpdateDates = async (start: string, end: string) => {
     if (!user) return;
@@ -370,7 +379,7 @@ function BookingsCheckoutContent() {
       ]);
 
       const targetType = selectedPackage
-        ? (selectedPackage.id || selectedPackage.yocoId)
+        ? selectedPackage.id
         : (packages.length > 0
           ? packages[0].id
           : (propertyId === "cottage" ? "long_weekend_at_the_Cottage" : "shack_stack")
@@ -831,7 +840,7 @@ function BookingsCheckoutContent() {
                   .filter((p) => p.category !== "addon")
                   .map((pkg) => {
                     const isSelected = selectedPackageId === pkg.id;
-                    const price = pkg.price || pkg.baseRate || 0;
+                    const price = pkg.price || 0;
 
                     return (
                       <button
@@ -861,9 +870,6 @@ function BookingsCheckoutContent() {
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="font-heading text-sm font-medium">{pkg.name}</span>
                             {pkg.category && <Badge variant="secondary">{pkg.category}</Badge>}
-                            {pkg.multiplier && pkg.multiplier !== 1 && (
-                              <Badge variant="outline">{pkg.multiplier}x multiplier</Badge>
-                            )}
                           </div>
                           {pkg.description && (
                             <p className="text-sm leading-relaxed text-muted-foreground">
@@ -905,8 +911,17 @@ function BookingsCheckoutContent() {
                     ? `Slot cost (R ${basePricePerNight} x 1)`
                     : `Nightly cost (R ${basePricePerNight} x ${nights})`}
                 </span>
-                <span className="font-medium tabular-nums">R {baseCost.toLocaleString()}</span>
+                <span className="font-medium tabular-nums">R {(basePricePerNight * nights).toLocaleString()}</span>
               </div>
+
+              {discountAmount > 0 && (
+                <div className="flex items-center justify-between gap-4 text-sm text-emerald-600 dark:text-emerald-400 font-medium">
+                  <span>
+                    {nights >= 28 ? "Monthly discount" : "Weekly discount"} ({nights >= 28 ? monthlyDiscount : weeklyDiscount}% off)
+                  </span>
+                  <span className="tabular-nums">-R {Math.round(discountAmount).toLocaleString()}</span>
+                </div>
+              )}
 
               {selectedPackage && (
                 <>
@@ -918,12 +933,6 @@ function BookingsCheckoutContent() {
                       R {packagePrice.toLocaleString()}
                     </span>
                   </div>
-                  {packageMultiplier > 1 && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Package multiplier</span>
-                      <span className="font-medium tabular-nums">x {packageMultiplier}</span>
-                    </div>
-                  )}
                 </>
               )}
 

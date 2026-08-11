@@ -129,8 +129,6 @@ async function processGenerateRequest(
           id: type,
           name: descriptionOverride || "Standard Stay",
           price: amountInCentsOverride / 100,
-          multiplier: 1.0,
-          baseRate: 0,
           category: "standard"
         };
       } else {

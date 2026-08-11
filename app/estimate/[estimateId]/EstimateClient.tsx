@@ -69,12 +69,12 @@ interface Property {
 
 interface Package {
   id: string;
+  propertyId: string;
   name: string;
   price: number;
   description: string;
-  multiplier: number;
-  baseRate: number;
   category: string;
+  isEnabled: boolean;
 }
 
 interface EstimateClientProps {
@@ -272,12 +272,25 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
     : (estimate.paymentStatus === "paid" || estimate.paymentStatus === "success" || hasUserPaid);
 
   const basePricePerNight = property ? property.basePricePerNight : 1500;
-  const baseCost = basePricePerNight * nights;
+  let baseCost = basePricePerNight * nights;
+
+  const weeklyDiscount = property?.weeklyDiscount ?? 0;
+  const monthlyDiscount = property?.monthlyDiscount ?? 0;
+  let discountAmount = 0;
+
+  if (!isHourly) {
+    if (nights >= 28 && monthlyDiscount > 0) {
+      discountAmount = baseCost * (monthlyDiscount / 100);
+      baseCost = baseCost - discountAmount;
+    } else if (nights >= 7 && weeklyDiscount > 0) {
+      discountAmount = baseCost * (weeklyDiscount / 100);
+      baseCost = baseCost - discountAmount;
+    }
+  }
 
   const currentSelectedPackage = packages.find(p => p.id === selectedPackageId) || (selectedPackageId === estimate.packageId ? selectedPackage : null);
-  const packagePrice = currentSelectedPackage ? (currentSelectedPackage.price || currentSelectedPackage.baseRate || 0) : 0;
-  const packageMultiplier = currentSelectedPackage ? (currentSelectedPackage.multiplier || 1.0) : 1.0;
-  const finalTotal = (baseCost + packagePrice) * packageMultiplier;
+  const packagePrice = currentSelectedPackage ? (currentSelectedPackage.price || 0) : 0;
+  const finalTotal = baseCost + packagePrice;
 
   const handlePackageChange = async (packageId: string) => {
     setSelectedPackageId(packageId);
@@ -286,10 +299,9 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
 
     try {
       const activePkg = packages.find(p => p.id === packageId);
-      const activePrice = activePkg ? (activePkg.price || activePkg.baseRate || 0) : 0;
-      const activeMultiplier = activePkg ? (activePkg.multiplier || 1.0) : 1.0;
+      const activePrice = activePkg ? (activePkg.price || 0) : 0;
       
-      const newTotal = (baseCost + activePrice) * activeMultiplier;
+      const newTotal = baseCost + activePrice;
 
       const res = await fetch("/api/estimates", {
         method: "PATCH",
@@ -505,12 +517,11 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
                 <span className="mt-0.5 shrink-0 font-heading text-sm font-semibold">R 0</span>
               </button>
 
-              {/* Dynamic Package Tiles */}
               {packages
                 .filter((p) => p.category !== "addon")
                 .map((pkg) => {
                   const isSelected = selectedPackageId === pkg.id;
-                  const price = pkg.price || pkg.baseRate || 0;
+                  const price = pkg.price || 0;
 
                   return (
                     <button
@@ -541,9 +552,6 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-heading text-sm font-medium">{pkg.name}</span>
                           {pkg.category && <Badge variant="outline">{pkg.category}</Badge>}
-                          {pkg.multiplier && pkg.multiplier !== 1 && (
-                            <Badge variant="secondary">{pkg.multiplier}× multiplier</Badge>
-                          )}
                         </div>
                         {pkg.description && (
                           <p className="text-sm leading-relaxed text-muted-foreground">
@@ -655,21 +663,23 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
               </div>
               <div className="flex items-center justify-between gap-3 text-sm">
                 <span className="text-muted-foreground">Accommodation cost</span>
-                <span className="font-medium">R {baseCost.toLocaleString()}</span>
+                <span className="font-medium">R {(basePricePerNight * nights).toLocaleString()}</span>
               </div>
+              {discountAmount > 0 && (
+                <div className="flex items-center justify-between gap-3 text-sm text-emerald-600 dark:text-emerald-400 font-medium">
+                  <span>
+                    {nights >= 28 ? "Monthly discount" : "Weekly discount"} ({nights >= 28 ? monthlyDiscount : weeklyDiscount}% off)
+                  </span>
+                  <span>-R {Math.round(discountAmount).toLocaleString()}</span>
+                </div>
+              )}
               {currentSelectedPackage && (
-                <>
-                  <div className="flex items-center justify-between gap-3 text-sm">
-                    <span className="text-muted-foreground">
-                      Package cost ({currentSelectedPackage.name})
-                    </span>
-                    <span className="font-medium">R {packagePrice.toLocaleString()}</span>
-                  </div>
-                  <div className="flex items-center justify-between gap-3 text-sm">
-                    <span className="text-muted-foreground">Package multiplier</span>
-                    <span className="font-medium">× {packageMultiplier}</span>
-                  </div>
-                </>
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <span className="text-muted-foreground">
+                    Package cost ({currentSelectedPackage.name})
+                  </span>
+                  <span className="font-medium">R {packagePrice.toLocaleString()}</span>
+                </div>
               )}
 
               <Separator />

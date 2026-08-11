@@ -23,10 +23,6 @@ interface PackageSheetProps {
     userPlan?: string
 }
 
-function effectivePrice(pkg: PropertyPackage) {
-    return Math.round(pkg.baseRate + pkg.price * pkg.multiplier)
-}
-
 function PackageRow({
     pkg,
     propertyId,
@@ -54,7 +50,6 @@ function PackageRow({
 }) {
     const [confirmDelete, setConfirmDelete] = useState(false)
     const mismatched = pkg.propertyId !== propertyId
-    const adjusted = pkg.multiplier !== 1 || pkg.baseRate !== 0
 
     if (isEditing) {
         return <PackageForm initial={pkg} existingIds={existingIds} onCancel={onCancelEdit} onSave={onSave} userPlan={userPlan} />
@@ -81,11 +76,6 @@ function PackageRow({
                                 Hidden
                             </Badge>
                         )}
-                        {!pkg.yocoId && (
-                            <Badge variant="destructive" className="text-[10px] font-bold tracking-wider uppercase">
-                                No Yoco ID
-                            </Badge>
-                        )}
                     </div>
                     <h4 className="text-pretty text-sm leading-snug font-bold text-foreground">{pkg.name}</h4>
                     <code className="font-mono text-[11px] text-muted-foreground">id: {pkg.id}</code>
@@ -94,9 +84,6 @@ function PackageRow({
                 <div className="shrink-0 text-right">
                     <p className="text-[10px] font-bold tracking-wider uppercase text-muted-foreground">Rate</p>
                     <p className="text-base leading-tight font-bold text-foreground">{formatZar(pkg.price)}</p>
-                    {adjusted && (
-                        <p className="mt-0.5 font-mono text-[11px] text-primary">→ {formatZar(effectivePrice(pkg))}</p>
-                    )}
                 </div>
             </div>
 
@@ -132,9 +119,6 @@ function PackageRow({
                             {pkg.isEnabled ? "Live" : "Hidden"}
                         </span>
                     </label>
-                    <p className="font-mono text-[11px] text-muted-foreground">
-                        ×{pkg.multiplier} · base {formatZar(pkg.baseRate)}
-                    </p>
                 </div>
 
                 <div className="flex items-center gap-1.5">
@@ -197,7 +181,7 @@ export function PackageSheet({
     const existingIds = useMemo(() => packages.map((p) => p.id), [packages])
     const standard = packages.filter((p) => p.category === "standard")
     const addons = packages.filter((p) => p.category === "addon" || p.category === "hosted" || p.category === "special")
-    const liveValue = packages.filter((p) => p.isEnabled).reduce((sum, p) => sum + effectivePrice(p), 0)
+    const liveValue = packages.filter((p) => p.isEnabled).reduce((sum, p) => sum + p.price, 0)
 
     function close(next: boolean) {
         if (!next) {

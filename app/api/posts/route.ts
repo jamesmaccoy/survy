@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const { hostId, name, title, slug, basePricePerNight, description, images, airbnbCalendarUrl, googleCalendarUrl, bookingType, slots, location } = body;
+    const { hostId, name, title, slug, basePricePerNight, description, images, airbnbCalendarUrl, googleCalendarUrl, bookingType, slots, location, weeklyDiscount, monthlyDiscount } = body;
 
     // Use passed hostId or fallback to headers
     const activeHostId = hostId || userId;
@@ -81,7 +81,9 @@ export async function POST(request: NextRequest) {
       images: images || [],
       bookingType: bookingType || "nightly",
       slots: slots || [],
-      location: location || ""
+      location: location || "",
+      weeklyDiscount: weeklyDiscount !== undefined ? Number(weeklyDiscount) : undefined,
+      monthlyDiscount: monthlyDiscount !== undefined ? Number(monthlyDiscount) : undefined
     });
 
     return NextResponse.json({ success: true, data: property, id: property.id }, { status: 201 });

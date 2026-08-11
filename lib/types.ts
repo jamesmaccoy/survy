@@ -11,6 +11,8 @@ export interface Property {
   bookingType?: string;
   slots?: string[];
   location?: string;
+  weeklyDiscount?: number;
+  monthlyDiscount?: number;
 }
 
 export interface PropertyPackage {
@@ -19,9 +21,6 @@ export interface PropertyPackage {
   name: string;
   price: number;
   description: string;
-  multiplier: number;
-  baseRate: number;
-  yocoId: string;
   category: string;
   isEnabled: boolean;
 }

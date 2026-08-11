@@ -124,6 +124,8 @@ export async function createProperty(data: {
   bookingType?: string;
   slots?: string[];
   location?: string;
+  weeklyDiscount?: number;
+  monthlyDiscount?: number;
 }): Promise<any> {
   const db = getFirestore();
   const id = data.id || data.slug.trim().toLowerCase();
@@ -336,15 +338,12 @@ export async function deleteProperty(id: string): Promise<boolean> {
 // PACKAGES CRUD
 // ==========================================
 
-export async function createPackage(data: { id?: string; propertyId: string; name: string; price: number; description: string; multiplier?: number; baseRate?: number; yocoId?: string; category?: string; isEnabled?: boolean }): Promise<any> {
+export async function createPackage(data: { id?: string; propertyId: string; name: string; price: number; description: string; category?: string; isEnabled?: boolean }): Promise<any> {
   const db = getFirestore();
   const id = data.id || `pkg_${Math.random().toString(36).substring(2, 11)}`;
   
   // Format for Yoco & Firebase compatibility
   const packageRecord = {
-    multiplier: 1.0,
-    baseRate: 0,
-    yocoId: id,
     category: "standard",
     isEnabled: true,
     ...data,
