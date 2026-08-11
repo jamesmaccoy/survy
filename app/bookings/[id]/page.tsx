@@ -43,6 +43,8 @@ interface Property {
   slug: string;
   basePricePerNight: number;
   images?: string[];
+  weeklyDiscount?: number;
+  monthlyDiscount?: number;
 }
 
 interface PackageData {

@@ -65,6 +65,8 @@ interface Property {
   imageUrl?: string;
   image?: string;
   coverImage?: string;
+  weeklyDiscount?: number;
+  monthlyDiscount?: number;
 }
 
 interface Package {

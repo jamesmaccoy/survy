@@ -48,6 +48,8 @@ interface Property {
   bookingType?: string;
   slots?: string[];
   location?: string;
+  weeklyDiscount?: number;
+  monthlyDiscount?: number;
 }
 
 interface PackageData {
@@ -232,7 +234,15 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
         estimatedTotal = property.basePricePerNight;
       } else {
         const stayNights = Math.max(1, Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
-        estimatedTotal = property.basePricePerNight * stayNights;
+        let baseCost = property.basePricePerNight * stayNights;
+        const weeklyDiscount = property.weeklyDiscount ?? 0;
+        const monthlyDiscount = property.monthlyDiscount ?? 0;
+        if (stayNights >= 28 && monthlyDiscount > 0) {
+          baseCost = baseCost * (1 - monthlyDiscount / 100);
+        } else if (stayNights >= 7 && weeklyDiscount > 0) {
+          baseCost = baseCost * (1 - weeklyDiscount / 100);
+        }
+        estimatedTotal = baseCost;
       }
 
       const estRes = await fetch("/api/estimates", {
@@ -295,6 +305,7 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
   let nights = 0;
   let hours = 0;
   let baseStayCost = 0;
+  let discountAmount = 0;
 
   if (datesLocked && savedDates) {
     const start = new Date(savedDates.fromDate);
@@ -304,7 +315,17 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
       baseStayCost = property.basePricePerNight;
     } else {
       nights = Math.max(1, Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
-      baseStayCost = property.basePricePerNight * nights;
+      let cost = property.basePricePerNight * nights;
+      const weeklyDiscount = property.weeklyDiscount ?? 0;
+      const monthlyDiscount = property.monthlyDiscount ?? 0;
+      if (nights >= 28 && monthlyDiscount > 0) {
+        discountAmount = cost * (monthlyDiscount / 100);
+        cost = cost - discountAmount;
+      } else if (nights >= 7 && weeklyDiscount > 0) {
+        discountAmount = cost * (weeklyDiscount / 100);
+        cost = cost - discountAmount;
+      }
+      baseStayCost = cost;
     }
   }
 
@@ -540,6 +561,24 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
                           : `${nights} night${nights === 1 ? "" : "s"}`}
                       </span>
                     </div>
+
+                    <Separator />
+
+                    <div className="flex items-center justify-between gap-3 text-sm">
+                      <span className="text-muted-foreground">Base accommodation</span>
+                      <span className="font-medium">
+                        R {(property.basePricePerNight * (property.bookingType === "hourly" ? 1 : nights)).toLocaleString()}
+                      </span>
+                    </div>
+
+                    {discountAmount > 0 && (
+                      <div className="flex items-center justify-between gap-3 text-sm text-emerald-600 dark:text-emerald-400 font-medium">
+                        <span>
+                          {nights >= 28 ? "Monthly discount" : "Weekly discount"} ({nights >= 28 ? property.monthlyDiscount : property.weeklyDiscount}% off)
+                        </span>
+                        <span>-R {Math.round(discountAmount).toLocaleString()}</span>
+                      </div>
+                    )}
 
                     <Separator />
 

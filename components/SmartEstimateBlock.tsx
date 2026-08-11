@@ -9,6 +9,8 @@ interface Property {
   slug: string;
   basePricePerNight: number;
   bookingType?: string;
+  weeklyDiscount?: number;
+  monthlyDiscount?: number;
 }
 
 

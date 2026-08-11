@@ -11,6 +11,8 @@ interface Property {
   location?: string;
   images?: string[];
   basePricePerNight: number;
+  weeklyDiscount?: number;
+  monthlyDiscount?: number;
 }
 
 interface Package {

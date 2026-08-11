@@ -49,6 +49,8 @@ interface Property {
   basePricePerNight: number;
   bookingType?: string;
   images?: string[];
+  weeklyDiscount?: number;
+  monthlyDiscount?: number;
 }
 
 interface PackageData {

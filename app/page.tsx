@@ -45,6 +45,8 @@ interface Property {
   description?: string;
   bookingType?: string;
   slots?: string[];
+  weeklyDiscount?: number;
+  monthlyDiscount?: number;
 }
 
 /** Renders a saved date/time in the compact 24h form used across the schedule UI. */
