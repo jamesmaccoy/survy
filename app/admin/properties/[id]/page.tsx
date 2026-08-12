@@ -185,7 +185,7 @@ function EditPropertyContent({ id }: { id: string }) {
   const [bookingType, setBookingType] = useState<"nightly" | "hourly">("nightly");
   const [slots, setSlots] = useState<string[]>(["10:00", "14:00"]);
 
-  const [activeTab, setActiveTab] = useState<"details" | "rules">("details");
+  const [activeTab, setActiveTab] = useState<"details" | "pricing">("details");
   const [mandatoryRules, setMandatoryRules] = useState<MandatoryRule[]>([]);
   const [packages, setPackages] = useState<PropertyPackage[]>([]);
 
@@ -620,14 +620,14 @@ function EditPropertyContent({ id }: { id: string }) {
             <Card>
               <CardHeader>
                 <CardTitle>
-                  {activeTab === "details" ? "Listing details" : "Mandatory package rules"}
+                  {activeTab === "details" ? "Listing details" : "Pricing & Rules"}
                 </CardTitle>
                 <CardDescription>
                   {activeTab === "details"
                     ? (isNew
-                      ? "Describe the property, set pricing, and add photos to publish a new listing."
-                      : "Update the property information, pricing, and imagery for this listing.")
-                    : "Configure rules to automatically make specific packages mandatory based on stay duration."}
+                      ? "Describe the property and add photos to publish a new listing."
+                      : "Update the property descriptive information, location, and imagery.")
+                    : "Configure base pricing, stay discounts, and mandatory package rules."}
                 </CardDescription>
 
                 {!isNew && (
@@ -646,15 +646,15 @@ function EditPropertyContent({ id }: { id: string }) {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setActiveTab("rules")}
+                      onClick={() => setActiveTab("pricing")}
                       className={cn(
                         "px-4 py-2 text-sm font-semibold border-b-2 -mb-[2px] transition-all",
-                        activeTab === "rules"
+                        activeTab === "pricing"
                           ? "border-primary text-primary"
                           : "border-transparent text-muted-foreground hover:text-foreground"
                       )}
                     >
-                      Mandatory Rules
+                      Pricing
                     </button>
                   </div>
                 )}
@@ -714,138 +714,7 @@ function EditPropertyContent({ id }: { id: string }) {
                     </Field>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <Field data-invalid={fieldErrors.basePrice ? true : undefined}>
-                      <FieldLabel htmlFor="property-price">
-                        {bookingType === "hourly"
-                          ? "Base price per hour"
-                          : "Base price per night"}
-                      </FieldLabel>
-                      <InputGroup>
-                        <InputGroupAddon>
-                          <InputGroupText>R</InputGroupText>
-                        </InputGroupAddon>
-                        <InputGroupInput
-                          id="property-price"
-                          type="number"
-                          min={1}
-                          step={1}
-                          className="font-mono"
-                          placeholder={bookingType === "hourly" ? "250" : "1500"}
-                          value={basePrice}
-                          onChange={(e) => {
-                            setBasePrice(e.target.value);
-                            clearFieldError("basePrice");
-                          }}
-                          aria-invalid={fieldErrors.basePrice ? true : undefined}
-                        />
-                        <InputGroupAddon align="inline-end">
-                          <InputGroupText>ZAR</InputGroupText>
-                        </InputGroupAddon>
-                      </InputGroup>
-                      <FieldError errors={fieldErrors.basePrice ? [{ message: fieldErrors.basePrice }] : undefined} />
-                    </Field>
 
-                    <Field>
-                      <FieldLabel htmlFor="booking-type">Booking type</FieldLabel>
-                      <ToggleGroup
-                        id="booking-type"
-                        variant="outline"
-                        className="w-full"
-                        value={[bookingType]}
-                        onValueChange={(value) => {
-                          const next = value[0] as "nightly" | "hourly" | undefined;
-                          if (next) setBookingType(next);
-                        }}
-                      >
-                        <ToggleGroupItem value="nightly" className="flex-1">
-                          <Moon />
-                          Nightly stay
-                        </ToggleGroupItem>
-                        <ToggleGroupItem value="hourly" className="flex-1">
-                          <Clock />
-                          Hourly slots
-                        </ToggleGroupItem>
-                      </ToggleGroup>
-                    </Field>
-                  </div>
-
-                  {bookingType === "nightly" && (
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 border-t border-border/10 pt-4">
-                      <Field>
-                        <FieldLabel htmlFor="property-weekly-discount">
-                          Weekly stay discount (%)
-                        </FieldLabel>
-                        <InputGroup>
-                          <InputGroupInput
-                            id="property-weekly-discount"
-                            type="number"
-                            min={0}
-                            max={100}
-                            step={1}
-                            className="font-mono"
-                            placeholder="10"
-                            value={weeklyDiscount}
-                            onChange={(e) => setWeeklyDiscount(e.target.value)}
-                          />
-                          <InputGroupAddon align="inline-end">
-                            <InputGroupText>% off</InputGroupText>
-                          </InputGroupAddon>
-                        </InputGroup>
-                      </Field>
-
-                      <Field>
-                        <FieldLabel htmlFor="property-monthly-discount">
-                          Monthly stay discount (%)
-                        </FieldLabel>
-                        <InputGroup>
-                          <InputGroupInput
-                            id="property-monthly-discount"
-                            type="number"
-                            min={0}
-                            max={100}
-                            step={1}
-                            className="font-mono"
-                            placeholder="20"
-                            value={monthlyDiscount}
-                            onChange={(e) => setMonthlyDiscount(e.target.value)}
-                          />
-                          <InputGroupAddon align="inline-end">
-                            <InputGroupText>% off</InputGroupText>
-                          </InputGroupAddon>
-                        </InputGroup>
-                      </Field>
-                    </div>
-                  )}
-
-                  {bookingType === "hourly" && (
-                    <FieldSet data-invalid={fieldErrors.slots ? true : undefined}>
-                      <FieldLegend variant="label">Available time slots</FieldLegend>
-                      <ToggleGroup
-                        multiple
-                        variant="outline"
-                        className="flex-wrap"
-                        value={slots}
-                        onValueChange={(value) => {
-                          setSlots([...value].sort());
-                          if (value.length > 0) clearFieldError("slots");
-                        }}
-                      >
-                        {TIME_SLOTS.map((slotTime) => (
-                          <ToggleGroupItem key={slotTime} value={slotTime}>
-                            {formatSlotLabel(slotTime)}
-                          </ToggleGroupItem>
-                        ))}
-                      </ToggleGroup>
-                      {fieldErrors.slots ? (
-                        <FieldError errors={[{ message: fieldErrors.slots }]} />
-                      ) : (
-                        <FieldDescription>
-                          Guests can book any of the slots you select.
-                        </FieldDescription>
-                      )}
-                    </FieldSet>
-                  )}
 
                   <Field>
                     <FieldLabel htmlFor="property-description">
@@ -996,15 +865,153 @@ function EditPropertyContent({ id }: { id: string }) {
                   </div>
                 </FieldGroup>
                 ) : (
-                  <div className="space-y-6">
-                    <div>
-                      <h3 className="text-sm font-semibold text-foreground mb-1">
-                        Conditional Mandatory Packages
-                      </h3>
-                      <p className="text-xs text-muted-foreground">
-                        Enforce selecting specific package deals when guest duration matches a stay length criteria.
-                      </p>
-                    </div>
+                  <div className="space-y-8">
+                    <FieldGroup>
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <Field data-invalid={fieldErrors.basePrice ? true : undefined}>
+                          <FieldLabel htmlFor="property-price">
+                            {bookingType === "hourly"
+                              ? "Base price per hour"
+                              : "Base price per night"}
+                          </FieldLabel>
+                          <InputGroup>
+                            <InputGroupAddon>
+                              <InputGroupText>R</InputGroupText>
+                            </InputGroupAddon>
+                            <InputGroupInput
+                              id="property-price"
+                              type="number"
+                              min={1}
+                              step={1}
+                              className="font-mono"
+                              placeholder={bookingType === "hourly" ? "250" : "1500"}
+                              value={basePrice}
+                              onChange={(e) => {
+                                setBasePrice(e.target.value);
+                                clearFieldError("basePrice");
+                              }}
+                              aria-invalid={fieldErrors.basePrice ? true : undefined}
+                            />
+                            <InputGroupAddon align="inline-end">
+                              <InputGroupText>ZAR</InputGroupText>
+                            </InputGroupAddon>
+                          </InputGroup>
+                          <FieldError errors={fieldErrors.basePrice ? [{ message: fieldErrors.basePrice }] : undefined} />
+                        </Field>
+
+                        <Field>
+                          <FieldLabel htmlFor="booking-type">Booking type</FieldLabel>
+                          <ToggleGroup
+                            id="booking-type"
+                            variant="outline"
+                            className="w-full"
+                            value={[bookingType]}
+                            onValueChange={(value) => {
+                              const next = value[0] as "nightly" | "hourly" | undefined;
+                              if (next) setBookingType(next);
+                            }}
+                          >
+                            <ToggleGroupItem value="nightly" className="flex-1">
+                              <Moon />
+                              Nightly stay
+                            </ToggleGroupItem>
+                            <ToggleGroupItem value="hourly" className="flex-1">
+                              <Clock />
+                              Hourly slots
+                            </ToggleGroupItem>
+                          </ToggleGroup>
+                        </Field>
+                      </div>
+
+                      {bookingType === "nightly" && (
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 border-t border-border/10 pt-4">
+                          <Field>
+                            <FieldLabel htmlFor="property-weekly-discount">
+                              Weekly stay discount (%)
+                            </FieldLabel>
+                            <InputGroup>
+                              <InputGroupInput
+                                id="property-weekly-discount"
+                                type="number"
+                                min={0}
+                                max={100}
+                                step={1}
+                                className="font-mono"
+                                placeholder="10"
+                                value={weeklyDiscount}
+                                onChange={(e) => setWeeklyDiscount(e.target.value)}
+                              />
+                              <InputGroupAddon align="inline-end">
+                                <InputGroupText>% off</InputGroupText>
+                              </InputGroupAddon>
+                            </InputGroup>
+                          </Field>
+
+                          <Field>
+                            <FieldLabel htmlFor="property-monthly-discount">
+                              Monthly stay discount (%)
+                            </FieldLabel>
+                            <InputGroup>
+                              <InputGroupInput
+                                id="property-monthly-discount"
+                                type="number"
+                                min={0}
+                                max={100}
+                                step={1}
+                                className="font-mono"
+                                placeholder="20"
+                                value={monthlyDiscount}
+                                onChange={(e) => setMonthlyDiscount(e.target.value)}
+                              />
+                              <InputGroupAddon align="inline-end">
+                                <InputGroupText>% off</InputGroupText>
+                              </InputGroupAddon>
+                            </InputGroup>
+                          </Field>
+                        </div>
+                      )}
+
+                      {bookingType === "hourly" && (
+                        <FieldSet data-invalid={fieldErrors.slots ? true : undefined}>
+                          <FieldLegend variant="label">Available time slots</FieldLegend>
+                          <ToggleGroup
+                            multiple
+                            variant="outline"
+                            className="flex-wrap"
+                            value={slots}
+                            onValueChange={(value) => {
+                              setSlots([...value].sort());
+                              if (value.length > 0) clearFieldError("slots");
+                            }}
+                          >
+                            {TIME_SLOTS.map((slotTime) => (
+                              <ToggleGroupItem key={slotTime} value={slotTime}>
+                                {formatSlotLabel(slotTime)}
+                              </ToggleGroupItem>
+                            ))}
+                          </ToggleGroup>
+                          {fieldErrors.slots ? (
+                            <FieldError errors={[{ message: fieldErrors.slots }]} />
+                          ) : (
+                            <FieldDescription>
+                              Guests can book any of the slots you select.
+                            </FieldDescription>
+                          )}
+                        </FieldSet>
+                      )}
+                    </FieldGroup>
+
+                    <Separator />
+
+                    <div className="space-y-6">
+                      <div>
+                        <h3 className="text-sm font-semibold text-foreground mb-1">
+                          Conditional Mandatory Packages
+                        </h3>
+                        <p className="text-xs text-muted-foreground">
+                          Enforce selecting specific package deals when guest duration matches a stay length criteria.
+                        </p>
+                      </div>
 
                     {packages.length === 0 ? (
                       <Alert>
@@ -1126,8 +1133,9 @@ function EditPropertyContent({ id }: { id: string }) {
                       </div>
                     )}
                   </div>
-                )}
-              </CardContent>
+                </div>
+              )}
+            </CardContent>
 
               <CardFooter className="flex-col gap-3 border-t sm:flex-row">
                 <Button
