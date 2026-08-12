@@ -42,6 +42,8 @@ import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
+import { MandatoryRule } from "@/lib/types";
+
 interface Property {
   id: string;
   title: string;
@@ -51,6 +53,7 @@ interface Property {
   images?: string[];
   weeklyDiscount?: number;
   monthlyDiscount?: number;
+  mandatoryRules?: MandatoryRule[];
 }
 
 interface PackageData {
@@ -310,6 +313,27 @@ function BookingsCheckoutContent() {
 
   const packagePrice = selectedPackage ? selectedPackage.price || 0 : 0;
   const finalTotal = baseCost + packagePrice;
+
+  const mandatoryPackageId = React.useMemo(() => {
+    if (!property || isHourly) return null;
+    const rule = property.mandatoryRules?.find(r => {
+      switch (r.operator) {
+        case "equals": return nights === r.nights;
+        case "greater": return nights > r.nights;
+        case "less": return nights < r.nights;
+        case "greater_or_equal": return nights >= r.nights;
+        case "less_or_equal": return nights <= r.nights;
+        default: return false;
+      }
+    });
+    return rule?.packageId || null;
+  }, [property, nights, isHourly]);
+
+  useEffect(() => {
+    if (mandatoryPackageId && selectedPackageId !== mandatoryPackageId) {
+      setSelectedPackageId(mandatoryPackageId);
+    }
+  }, [mandatoryPackageId, selectedPackageId]);
 
   const handleUpdateDates = async (start: string, end: string) => {
     if (!user) return;
@@ -806,8 +830,9 @@ function BookingsCheckoutContent() {
                   type="button"
                   role="radio"
                   aria-checked={selectedPackageId === ""}
-                  onClick={() => setSelectedPackageId("")}
-                  className={`flex w-full items-start gap-4 rounded-lg border p-4 text-left transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none ${
+                  disabled={!!mandatoryPackageId}
+                  onClick={() => !mandatoryPackageId && setSelectedPackageId("")}
+                  className={`flex w-full items-start gap-4 rounded-lg border p-4 text-left transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-70 disabled:cursor-not-allowed ${
                     selectedPackageId === ""
                       ? "border-primary bg-accent/50"
                       : "bg-card hover:border-primary/50"
@@ -850,8 +875,9 @@ function BookingsCheckoutContent() {
                         type="button"
                         role="radio"
                         aria-checked={isSelected}
-                        onClick={() => setSelectedPackageId(pkg.id)}
-                        className={`flex w-full items-start gap-4 rounded-lg border p-4 text-left transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none ${
+                        disabled={mandatoryPackageId ? pkg.id !== mandatoryPackageId : false}
+                        onClick={() => !mandatoryPackageId && setSelectedPackageId(pkg.id)}
+                        className={`flex w-full items-start gap-4 rounded-lg border p-4 text-left transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-70 disabled:cursor-not-allowed ${
                           isSelected
                             ? "border-primary bg-accent/50"
                             : "bg-card hover:border-primary/50"
@@ -872,6 +898,11 @@ function BookingsCheckoutContent() {
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="font-heading text-sm font-medium">{pkg.name}</span>
                             {pkg.category && <Badge variant="secondary">{pkg.category}</Badge>}
+                            {mandatoryPackageId === pkg.id && (
+                              <Badge variant="destructive" className="bg-amber-500 hover:bg-amber-600 text-black border-none font-semibold">
+                                Required for stay length
+                              </Badge>
+                            )}
                           </div>
                           {pkg.description && (
                             <p className="text-sm leading-relaxed text-muted-foreground">

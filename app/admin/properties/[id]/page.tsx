@@ -50,6 +50,7 @@ import {
   InputGroupInput,
   InputGroupText,
 } from "@/components/ui/input-group";
+import { MandatoryRule, PropertyPackage } from "@/lib/types";
 import {
   Empty,
   EmptyContent,
@@ -83,6 +84,9 @@ interface Property {
   bookingType?: string;
   slots?: string[];
   location?: string;
+  weeklyDiscount?: number;
+  monthlyDiscount?: number;
+  mandatoryRules?: MandatoryRule[];
 }
 
 interface UploadingFile {
@@ -181,6 +185,10 @@ function EditPropertyContent({ id }: { id: string }) {
   const [bookingType, setBookingType] = useState<"nightly" | "hourly">("nightly");
   const [slots, setSlots] = useState<string[]>(["10:00", "14:00"]);
 
+  const [activeTab, setActiveTab] = useState<"details" | "rules">("details");
+  const [mandatoryRules, setMandatoryRules] = useState<MandatoryRule[]>([]);
+  const [packages, setPackages] = useState<PropertyPackage[]>([]);
+
   const isUploading = uploadingFiles.length > 0;
 
   const notify = useCallback((type: "success" | "error", text: string) => {
@@ -239,6 +247,18 @@ function EditPropertyContent({ id }: { id: string }) {
             result.data.slots?.length ? result.data.slots : ["10:00", "14:00"]
           );
           setLocation(result.data.location || "");
+          setMandatoryRules(result.data.mandatoryRules || []);
+
+          // Fetch packages for this property
+          try {
+            const pkgsRes = await fetch(`/api/packages?propertyId=${id}`);
+            const pkgsResult = await pkgsRes.json();
+            if (pkgsResult.success && pkgsResult.data) {
+              setPackages(pkgsResult.data);
+            }
+          } catch (pkgErr) {
+            console.error("Failed to load packages for property rules:", pkgErr);
+          }
         } else {
           notify("error", result.error || "Property not found.");
         }
@@ -435,6 +455,7 @@ function EditPropertyContent({ id }: { id: string }) {
           slots: bookingType === "hourly" ? slots : [],
           location: location.trim(),
           hostId: user?.uid,
+          mandatoryRules,
         }),
       });
 
@@ -598,16 +619,50 @@ function EditPropertyContent({ id }: { id: string }) {
           <form onSubmit={handleSubmit} noValidate>
             <Card>
               <CardHeader>
-                <CardTitle>Listing details</CardTitle>
+                <CardTitle>
+                  {activeTab === "details" ? "Listing details" : "Mandatory package rules"}
+                </CardTitle>
                 <CardDescription>
-                  {isNew
-                    ? "Describe the property, set pricing, and add photos to publish a new listing."
-                    : "Update the property information, pricing, and imagery for this listing."}
+                  {activeTab === "details"
+                    ? (isNew
+                      ? "Describe the property, set pricing, and add photos to publish a new listing."
+                      : "Update the property information, pricing, and imagery for this listing.")
+                    : "Configure rules to automatically make specific packages mandatory based on stay duration."}
                 </CardDescription>
+
+                {!isNew && (
+                  <div className="flex border-b border-border mt-4">
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("details")}
+                      className={cn(
+                        "px-4 py-2 text-sm font-semibold border-b-2 -mb-[2px] transition-all",
+                        activeTab === "details"
+                          ? "border-primary text-primary"
+                          : "border-transparent text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      Listing Details
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("rules")}
+                      className={cn(
+                        "px-4 py-2 text-sm font-semibold border-b-2 -mb-[2px] transition-all",
+                        activeTab === "rules"
+                          ? "border-primary text-primary"
+                          : "border-transparent text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      Mandatory Rules
+                    </button>
+                  </div>
+                )}
               </CardHeader>
 
               <CardContent>
-                <FieldGroup>
+                {activeTab === "details" ? (
+                  <FieldGroup>
                   <Field data-invalid={fieldErrors.title ? true : undefined}>
                     <FieldLabel htmlFor="property-title">Property title</FieldLabel>
                     <Input
@@ -940,6 +995,138 @@ function EditPropertyContent({ id }: { id: string }) {
                     </Field>
                   </div>
                 </FieldGroup>
+                ) : (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-sm font-semibold text-foreground mb-1">
+                        Conditional Mandatory Packages
+                      </h3>
+                      <p className="text-xs text-muted-foreground">
+                        Enforce selecting specific package deals when guest duration matches a stay length criteria.
+                      </p>
+                    </div>
+
+                    {packages.length === 0 ? (
+                      <Alert>
+                        <AlertTriangle className="h-4 w-4" />
+                        <AlertTitle>No packages configured</AlertTitle>
+                        <AlertDescription className="text-xs">
+                          You must configure packages for this property first before setting up mandatory rules. Head to the Packages page to add some deals.
+                        </AlertDescription>
+                      </Alert>
+                    ) : (
+                      <div className="space-y-4">
+                        {mandatoryRules.length === 0 ? (
+                          <div className="text-center py-6 border border-dashed rounded-xl bg-muted/20">
+                            <p className="text-xs text-muted-foreground mb-2">No mandatory rules configured yet.</p>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setMandatoryRules([{
+                                packageId: packages[0].id,
+                                operator: "equals",
+                                nights: 1
+                              }])}
+                            >
+                              Add First Rule
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            {mandatoryRules.map((rule, idx) => (
+                              <div
+                                key={idx}
+                                className="flex flex-col gap-3 p-4 border rounded-xl bg-card sm:flex-row sm:items-center"
+                              >
+                                <div className="flex-1">
+                                  <FieldLabel className="text-xs mb-1">If stay duration is</FieldLabel>
+                                  <select
+                                    value={rule.operator}
+                                    onChange={(e) => {
+                                      const next = [...mandatoryRules];
+                                      next[idx].operator = e.target.value as any;
+                                      setMandatoryRules(next);
+                                    }}
+                                    className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+                                  >
+                                    <option value="equals">exactly (==)</option>
+                                    <option value="greater">greater than (&gt;)</option>
+                                    <option value="less">less than (&lt;)</option>
+                                    <option value="greater_or_equal">greater or equal (&gt;=)</option>
+                                    <option value="less_or_equal">less or equal (&lt;=)</option>
+                                  </select>
+                                </div>
+
+                                <div className="w-24">
+                                  <FieldLabel className="text-xs mb-1">Nights</FieldLabel>
+                                  <Input
+                                    type="number"
+                                    min={1}
+                                    value={rule.nights}
+                                    onChange={(e) => {
+                                      const next = [...mandatoryRules];
+                                      next[idx].nights = Math.max(1, parseInt(e.target.value) || 1);
+                                      setMandatoryRules(next);
+                                    }}
+                                    className="w-full"
+                                  />
+                                </div>
+
+                                <div className="flex-1">
+                                  <FieldLabel className="text-xs mb-1">Then package is mandatory</FieldLabel>
+                                  <select
+                                    value={rule.packageId}
+                                    onChange={(e) => {
+                                      const next = [...mandatoryRules];
+                                      next[idx].packageId = e.target.value;
+                                      setMandatoryRules(next);
+                                    }}
+                                    className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+                                  >
+                                    {packages.map((p) => (
+                                      <option key={p.id} value={p.id}>
+                                        {p.name} (R {p.price})
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+
+                                <Button
+                                  type="button"
+                                  variant="destructive"
+                                  size="sm"
+                                  className="sm:mt-5 self-end sm:self-auto"
+                                  onClick={() => setMandatoryRules(mandatoryRules.filter((_, i) => i !== idx))}
+                                >
+                                  Remove
+                                </Button>
+                              </div>
+                            ))}
+
+                            <div className="flex justify-end pt-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setMandatoryRules([
+                                  ...mandatoryRules,
+                                  {
+                                    packageId: packages[0].id,
+                                    operator: "equals",
+                                    nights: 1
+                                  }
+                                ])}
+                              >
+                                Add Rule
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </CardContent>
 
               <CardFooter className="flex-col gap-3 border-t sm:flex-row">

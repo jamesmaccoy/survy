@@ -45,7 +45,7 @@ export async function PUT(
     }
 
     const body = await request.json().catch(() => ({}));
-    const { title, name, slug, basePricePerNight, airbnbCalendarUrl, googleCalendarUrl, description, images, bookingType, slots, location, weeklyDiscount, monthlyDiscount } = body;
+    const { title, name, slug, basePricePerNight, airbnbCalendarUrl, googleCalendarUrl, description, images, bookingType, slots, location, weeklyDiscount, monthlyDiscount, mandatoryRules } = body;
 
     const resolvedTitle = title || name;
     if (!resolvedTitle || !slug || basePricePerNight === undefined) {
@@ -73,7 +73,8 @@ export async function PUT(
       slots: slots !== undefined ? slots : (existing.slots || []),
       location: location !== undefined ? location : (existing.location || ""),
       weeklyDiscount: weeklyDiscount !== undefined ? Number(weeklyDiscount) : (existing.weeklyDiscount || 0),
-      monthlyDiscount: monthlyDiscount !== undefined ? Number(monthlyDiscount) : (existing.monthlyDiscount || 0)
+      monthlyDiscount: monthlyDiscount !== undefined ? Number(monthlyDiscount) : (existing.monthlyDiscount || 0),
+      mandatoryRules: mandatoryRules !== undefined ? mandatoryRules : (existing.mandatoryRules || [])
     });
 
     return NextResponse.json({ success: true, data: property });

@@ -55,6 +55,8 @@ interface Estimate {
   guestsDetails?: Record<string, { name: string; email: string }>;
 }
 
+import { MandatoryRule } from "@/lib/types";
+
 interface Property {
   id: string;
   title: string;
@@ -67,6 +69,7 @@ interface Property {
   coverImage?: string;
   weeklyDiscount?: number;
   monthlyDiscount?: number;
+  mandatoryRules?: MandatoryRule[];
 }
 
 interface Package {
@@ -329,6 +332,27 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
     }
   };
 
+  const mandatoryPackageId = React.useMemo(() => {
+    if (!property || isHourly) return null;
+    const rule = property.mandatoryRules?.find(r => {
+      switch (r.operator) {
+        case "equals": return nights === r.nights;
+        case "greater": return nights > r.nights;
+        case "less": return nights < r.nights;
+        case "greater_or_equal": return nights >= r.nights;
+        case "less_or_equal": return nights <= r.nights;
+        default: return false;
+      }
+    });
+    return rule?.packageId || null;
+  }, [property, nights, isHourly]);
+
+  useEffect(() => {
+    if (mandatoryPackageId && selectedPackageId !== mandatoryPackageId) {
+      handlePackageChange(mandatoryPackageId);
+    }
+  }, [mandatoryPackageId, selectedPackageId]);
+
   const propThumbnail =
     property?.images?.[0] || property?.imageUrl || property?.image || property?.coverImage;
 
@@ -487,7 +511,7 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
                 type="button"
                 role="radio"
                 aria-checked={selectedPackageId === ""}
-                disabled={isUpdatingPackage || isPaid}
+                disabled={isUpdatingPackage || isPaid || !!mandatoryPackageId}
                 onClick={() => handlePackageChange("")}
                 className={`flex w-full items-start justify-between gap-4 rounded-lg border p-4 text-left transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-70 ${
                   selectedPackageId === ""
@@ -531,7 +555,7 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
                       type="button"
                       role="radio"
                       aria-checked={isSelected}
-                      disabled={isUpdatingPackage || isPaid}
+                      disabled={isUpdatingPackage || isPaid || (mandatoryPackageId ? pkg.id !== mandatoryPackageId : false)}
                       onClick={() => handlePackageChange(pkg.id)}
                       className={`flex w-full items-start justify-between gap-4 rounded-lg border p-4 text-left transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-70 ${
                         isSelected
@@ -554,6 +578,11 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-heading text-sm font-medium">{pkg.name}</span>
                           {pkg.category && <Badge variant="outline">{pkg.category}</Badge>}
+                          {mandatoryPackageId === pkg.id && (
+                            <Badge variant="destructive" className="bg-amber-500 hover:bg-amber-600 text-black border-none font-semibold">
+                              Required for stay length
+                            </Badge>
+                          )}
                         </div>
                         {pkg.description && (
                           <p className="text-sm leading-relaxed text-muted-foreground">

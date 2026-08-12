@@ -1,3 +1,9 @@
+export interface MandatoryRule {
+  packageId: string;
+  operator: "equals" | "greater" | "less" | "greater_or_equal" | "less_or_equal";
+  nights: number;
+}
+
 export interface Property {
   id: string;
   title: string;
@@ -13,6 +19,7 @@ export interface Property {
   location?: string;
   weeklyDiscount?: number;
   monthlyDiscount?: number;
+  mandatoryRules?: MandatoryRule[];
 }
 
 export interface PropertyPackage {
