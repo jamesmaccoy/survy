@@ -99,168 +99,8 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
   const [isUpdatingPackage, setIsUpdatingPackage] = useState(false);
   const [packageError, setPackageError] = useState<string | null>(null);
 
-  // Fetch packages for the property
-  useEffect(() => {
-    const loadPackages = async () => {
-      try {
-        const res = await fetch(`/api/packages?propertyId=${estimate.propertyId}`);
-        const result = await res.json();
-        if (result.success && result.data) {
-          setPackages(result.data.filter((p: any) => p.category !== "addon"));
-        }
-      } catch (err) {
-        console.error("Failed to load packages on estimate page:", err);
-      }
-    };
-    loadPackages();
-  }, [estimate.propertyId]);
-
   const [hasUserPaid, setHasUserPaid] = useState(false);
   const [isLoadingPaymentStatus, setIsLoadingPaymentStatus] = useState(true);
-
-  // Check if current user has already paid for this estimate (to support multiple hourly payments)
-  useEffect(() => {
-    if (authLoading) return;
-    if (!user) {
-      setIsLoadingPaymentStatus(false);
-      return;
-    }
-    const checkUserPaid = async () => {
-      try {
-        const res = await fetch(`/api/bookings?propertyId=${estimate.propertyId}`);
-        const result = await res.json();
-        if (result.success && result.data) {
-          const userBooking = result.data.find(
-            (b: any) => b.estimateId === estimate.id && (b.customerId === user.uid || b.customerEmail === user.email) && (b.paymentStatus === "paid" || b.paymentStatus === "success")
-          );
-          if (userBooking) {
-            setHasUserPaid(true);
-          }
-        }
-      } catch (err) {
-        console.error("Failed to check user payment status:", err);
-      } finally {
-        setIsLoadingPaymentStatus(false);
-      }
-    };
-    checkUserPaid();
-  }, [estimate.propertyId, estimate.id, user, authLoading]);
-
-  // Copy share url helper
-  const inviteUrl =
-    typeof window !== "undefined" ? `${window.location.origin}/i/${estimate.token}` : "";
-
-  const handleCopy = () => {
-    if (inviteUrl) {
-      navigator.clipboard.writeText(inviteUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
-    }
-  };
-
-  const handlePay = async () => {
-    setIsPaying(true);
-    setPayError(null);
-
-    try {
-      const targetType = currentSelectedPackage 
-        ? currentSelectedPackage.id 
-        : (packages.length > 0 
-            ? packages[0].id 
-            : (estimate.propertyId === "cottage" ? "long_weekend_at_the_Cottage" : "shack_stack")
-          );
-
-      const linkRes = await fetch("/api/v1/generate_checkout_link", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: targetType,
-          estimateId: estimate.id,
-          amountInCentsOverride: Math.round(finalTotal * 100),
-          descriptionOverride: currentSelectedPackage ? currentSelectedPackage.name : "Stay Booking",
-          userId: user?.uid,
-          email: user?.email,
-          name: user?.displayName || user?.email?.split("@")[0] || "Guest"
-        }),
-      });
-
-      const linkResult = await linkRes.json();
-      if (!linkRes.ok || !linkResult.status) {
-        throw new Error(linkResult.data || "Redirect link generation failed.");
-      }
-
-      window.location.href = linkResult.data.redirectUrl;
-    } catch (err: any) {
-      setPayError(err.message || "An error occurred generating checkout link.");
-      setIsPaying(false);
-    }
-  };
-
-  if (authLoading) {
-    return (
-      <div className="flex min-h-[400px] flex-col items-center justify-center gap-3">
-        <Spinner className="size-6 text-muted-foreground" />
-        <span className="text-sm text-muted-foreground">Securing session context</span>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <Empty className="mx-auto my-20 max-w-md">
-        <EmptyHeader>
-          <EmptyMedia variant="icon">
-            <KeyRoundIcon />
-          </EmptyMedia>
-          <EmptyTitle>Authentication required</EmptyTitle>
-          <EmptyDescription>
-            Please sign in to view and interact with these estimate details.
-          </EmptyDescription>
-        </EmptyHeader>
-        <Button
-          nativeButton={false}
-          render={<Link href={`/login?redirect=/estimate/${estimate.id}`} />}
-        >
-          Sign in
-        </Button>
-      </Empty>
-    );
-  }
-
-  // Authorization Check
-  const isOwner =
-    user.uid === estimate.customerId ||
-    user.email?.toLowerCase() === estimate.customerEmail.toLowerCase();
-  const isGuest = estimate.guests && estimate.guests.includes(user.uid);
-  const isAdmin =
-    user.email &&
-    [
-      "thankyou.digital@gmail.com",
-      "admin@llandudnostays.co.za",
-      "jmaclachlan@gmail.com",
-      "admin@example.com",
-    ].includes(user.email.toLowerCase());
-
-  if (!isOwner && !isGuest && !isAdmin) {
-    return (
-      <Empty className="mx-auto my-20 max-w-md">
-        <EmptyHeader>
-          <EmptyMedia variant="icon" className="text-destructive">
-            <ShieldXIcon />
-          </EmptyMedia>
-          <EmptyTitle>Access denied</EmptyTitle>
-          <EmptyDescription>
-            You do not have permission to view this estimate. You must be invited as a guest or be
-            the customer who generated the estimate.
-          </EmptyDescription>
-        </EmptyHeader>
-        <Button variant="outline" nativeButton={false} render={<Link href="/" />}>
-          <ArrowLeftIcon data-icon="inline-start" />
-          Go home
-        </Button>
-      </Empty>
-    );
-  }
 
   const from = new Date(estimate.fromDate);
   const to = new Date(estimate.toDate);
@@ -352,6 +192,166 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
       handlePackageChange(mandatoryPackageId);
     }
   }, [mandatoryPackageId, selectedPackageId]);
+
+  // Fetch packages for the property
+  useEffect(() => {
+    const loadPackages = async () => {
+      try {
+        const res = await fetch(`/api/packages?propertyId=${estimate.propertyId}`);
+        const result = await res.json();
+        if (result.success && result.data) {
+          setPackages(result.data.filter((p: any) => p.category !== "addon"));
+        }
+      } catch (err) {
+        console.error("Failed to load packages on estimate page:", err);
+      }
+    };
+    loadPackages();
+  }, [estimate.propertyId]);
+
+  // Check if current user has already paid for this estimate (to support multiple hourly payments)
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      setIsLoadingPaymentStatus(false);
+      return;
+    }
+    const checkUserPaid = async () => {
+      try {
+        const res = await fetch(`/api/bookings?propertyId=${estimate.propertyId}`);
+        const result = await res.json();
+        if (result.success && result.data) {
+          const userBooking = result.data.find(
+            (b: any) => b.estimateId === estimate.id && (b.customerId === user.uid || b.customerEmail === user.email) && (b.paymentStatus === "paid" || b.paymentStatus === "success")
+          );
+          if (userBooking) {
+            setHasUserPaid(true);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to check user payment status:", err);
+      } finally {
+        setIsLoadingPaymentStatus(false);
+      }
+    };
+    checkUserPaid();
+  }, [estimate.propertyId, estimate.id, user, authLoading]);
+
+  // Copy share url helper
+  const inviteUrl =
+    typeof window !== "undefined" ? `${window.location.origin}/i/${estimate.token}` : "";
+
+  const handleCopy = () => {
+    if (inviteUrl) {
+      navigator.clipboard.writeText(inviteUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    }
+  };
+
+  const handlePay = async () => {
+    setIsPaying(true);
+    setPayError(null);
+
+    try {
+      const targetType = currentSelectedPackage 
+        ? currentSelectedPackage.id 
+        : (packages.length > 0 
+            ? packages[0].id 
+            : (estimate.propertyId === "cottage" ? "long_weekend_at_the_Cottage" : "shack_stack")
+          );
+
+      const linkRes = await fetch("/api/v1/generate_checkout_link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: targetType,
+          estimateId: estimate.id,
+          amountInCentsOverride: Math.round(finalTotal * 100),
+          descriptionOverride: currentSelectedPackage ? currentSelectedPackage.name : "Stay Booking",
+          userId: user?.uid,
+          email: user?.email,
+          name: user?.displayName || user?.email?.split("@")[0] || "Guest"
+        }),
+      });
+
+      const linkResult = await linkRes.json();
+      if (!linkRes.ok || !linkResult.status) {
+        throw new Error(linkResult.data || "Redirect link generation failed.");
+      }
+
+      window.location.href = linkResult.data.redirectUrl;
+    } catch (err: any) {
+      setPayError(err.message || "An error occurred generating checkout link.");
+      setIsPaying(false);
+    }
+  };
+
+  if (authLoading || isLoadingPaymentStatus) {
+    return (
+      <div className="flex min-h-[400px] flex-col items-center justify-center gap-3">
+        <Spinner className="size-6 text-muted-foreground" />
+        <span className="text-sm text-muted-foreground">Securing session context</span>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <Empty className="mx-auto my-20 max-w-md">
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <KeyRoundIcon />
+          </EmptyMedia>
+          <EmptyTitle>Authentication required</EmptyTitle>
+          <EmptyDescription>
+            Please sign in to view and interact with these estimate details.
+          </EmptyDescription>
+        </EmptyHeader>
+        <Button
+          nativeButton={false}
+          render={<Link href={`/login?redirect=/estimate/${estimate.id}`} />}
+        >
+          Sign in
+        </Button>
+      </Empty>
+    );
+  }
+
+  // Authorization Check
+  const isOwner =
+    user.uid === estimate.customerId ||
+    user.email?.toLowerCase() === estimate.customerEmail.toLowerCase();
+  const isGuest = estimate.guests && estimate.guests.includes(user.uid);
+  const isAdmin =
+    user.email &&
+    [
+      "thankyou.digital@gmail.com",
+      "admin@llandudnostays.co.za",
+      "jmaclachlan@gmail.com",
+      "admin@example.com",
+    ].includes(user.email.toLowerCase());
+
+  if (!isOwner && !isGuest && !isAdmin) {
+    return (
+      <Empty className="mx-auto my-20 max-w-md">
+        <EmptyHeader>
+          <EmptyMedia variant="icon" className="text-destructive">
+            <ShieldXIcon />
+          </EmptyMedia>
+          <EmptyTitle>Access denied</EmptyTitle>
+          <EmptyDescription>
+            You do not have permission to view this estimate. You must be invited as a guest or be
+            the customer who generated the estimate.
+          </EmptyDescription>
+        </EmptyHeader>
+        <Button variant="outline" nativeButton={false} render={<Link href="/" />}>
+          <ArrowLeftIcon data-icon="inline-start" />
+          Go home
+        </Button>
+      </Empty>
+    );
+  }
 
   const propThumbnail =
     property?.images?.[0] || property?.imageUrl || property?.image || property?.coverImage;
