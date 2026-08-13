@@ -69,14 +69,33 @@ export async function sendBookingConfirmationEmail(booking: {
 
     const customerEmail = booking.customerEmail;
 
-    const start = new Date(booking.fromDate);
-    const end = new Date(booking.toDate);
+    let start = new Date(booking.fromDate);
+    let end = new Date(booking.toDate);
     const isHourly = property?.bookingType === "hourly";
 
+    // Helper to construct a Date at a specific hour/minute in SAST (UTC+2) timezone
+    const setTimeInSast = (date: Date, hours: number, minutes: number): Date => {
+      const year = date.getUTCFullYear();
+      const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+      const day = String(date.getUTCDate()).padStart(2, "0");
+      const hh = String(hours).padStart(2, "0");
+      const mm = String(minutes).padStart(2, "0");
+      const isoStr = `${year}-${month}-${day}T${hh}:${mm}:00+02:00`;
+      return new Date(isoStr);
+    };
+
     if (!isHourly) {
-      start.setHours(14, 0, 0, 0);
-      end.setHours(10, 0, 0, 0);
+      start = setTimeInSast(start, 14, 0); // Check-in at 14:00 SAST
+      end = setTimeInSast(end, 10, 0); // Check-out at 10:00 SAST
     }
+
+    const formatSastDateTime = (date: Date): string => {
+      return date.toLocaleString("en-ZA", {
+        timeZone: "Africa/Johannesburg",
+        dateStyle: "medium",
+        timeStyle: "short"
+      });
+    };
 
     const icsContent = [
       "BEGIN:VCALENDAR",
@@ -118,11 +137,11 @@ export async function sendBookingConfirmationEmail(booking: {
             </tr>
             <tr>
               <td style="padding: 6px 0; color: #64748b;">From:</td>
-              <td style="padding: 6px 0; font-weight: bold; text-align: right;">${start.toLocaleString()}</td>
+              <td style="padding: 6px 0; font-weight: bold; text-align: right;">${formatSastDateTime(start)}</td>
             </tr>
             <tr>
               <td style="padding: 6px 0; color: #64748b;">To:</td>
-              <td style="padding: 6px 0; font-weight: bold; text-align: right;">${end.toLocaleString()}</td>
+              <td style="padding: 6px 0; font-weight: bold; text-align: right;">${formatSastDateTime(end)}</td>
             </tr>
             <tr>
               <td style="padding: 6px 0; color: #64748b;">Package:</td>

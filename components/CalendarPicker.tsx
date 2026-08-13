@@ -74,6 +74,7 @@ export default function CalendarPicker({
   };
 
   const getBookingForDate = (year: number, month: number, day: number): Booking | null => {
+    if (bookingType === "hourly") return null;
     const date = new Date(year, month, day);
     const time = date.getTime();
 
