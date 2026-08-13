@@ -55,6 +55,8 @@ interface Estimate {
   guestsDetails?: Record<string, { name: string; email: string }>;
 }
 
+import { MandatoryRule } from "@/lib/types";
+
 interface Property {
   id: string;
   title: string;
@@ -67,6 +69,7 @@ interface Property {
   coverImage?: string;
   weeklyDiscount?: number;
   monthlyDiscount?: number;
+  mandatoryRules?: MandatoryRule[];
 }
 
 interface Package {
@@ -96,6 +99,100 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
   const [isUpdatingPackage, setIsUpdatingPackage] = useState(false);
   const [packageError, setPackageError] = useState<string | null>(null);
 
+  const [hasUserPaid, setHasUserPaid] = useState(false);
+  const [isLoadingPaymentStatus, setIsLoadingPaymentStatus] = useState(true);
+
+  const from = new Date(estimate.fromDate);
+  const to = new Date(estimate.toDate);
+
+  const isHourly = property?.bookingType === "hourly";
+  const stayNights = Math.max(
+    1,
+    Math.ceil(Math.abs(to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24))
+  );
+
+  const nights = isHourly ? 1 : stayNights;
+  const isPaid = isHourly 
+    ? hasUserPaid 
+    : (estimate.paymentStatus === "paid" || estimate.paymentStatus === "success" || hasUserPaid);
+
+  const basePricePerNight = property ? property.basePricePerNight : 1500;
+  let baseCost = basePricePerNight * nights;
+
+  const weeklyDiscount = property?.weeklyDiscount ?? 0;
+  const monthlyDiscount = property?.monthlyDiscount ?? 0;
+  let discountAmount = 0;
+
+  if (!isHourly) {
+    if (nights >= 28 && monthlyDiscount > 0) {
+      discountAmount = baseCost * (monthlyDiscount / 100);
+      baseCost = baseCost - discountAmount;
+    } else if (nights >= 7 && weeklyDiscount > 0) {
+      discountAmount = baseCost * (weeklyDiscount / 100);
+      baseCost = baseCost - discountAmount;
+    }
+  }
+
+  const currentSelectedPackage = packages.find(p => p.id === selectedPackageId) || (selectedPackageId === estimate.packageId ? selectedPackage : null);
+  const packagePrice = currentSelectedPackage ? (currentSelectedPackage.price || 0) : 0;
+  const finalTotal = baseCost + packagePrice;
+
+  const handlePackageChange = async (packageId: string) => {
+    setSelectedPackageId(packageId);
+    setIsUpdatingPackage(true);
+    setPackageError(null);
+
+    try {
+      const activePkg = packages.find(p => p.id === packageId);
+      const activePrice = activePkg ? (activePkg.price || 0) : 0;
+      
+      const newTotal = baseCost + activePrice;
+
+      const res = await fetch("/api/estimates", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          estimateId: estimate.id,
+          packageId: packageId || null,
+          total: newTotal
+        })
+      });
+
+      const result = await res.json();
+      if (!res.ok || !result.success) {
+        throw new Error(result.error || "Failed to update package option in database.");
+      }
+      
+      estimate.total = newTotal;
+      estimate.packageId = packageId || null;
+    } catch (err: any) {
+      setPackageError(err?.message || "Failed to update the selected package.");
+    } finally {
+      setIsUpdatingPackage(false);
+    }
+  };
+
+  const mandatoryPackageId = React.useMemo(() => {
+    if (!property || isHourly) return null;
+    const rule = property.mandatoryRules?.find(r => {
+      switch (r.operator) {
+        case "equals": return nights === r.nights;
+        case "greater": return nights > r.nights;
+        case "less": return nights < r.nights;
+        case "greater_or_equal": return nights >= r.nights;
+        case "less_or_equal": return nights <= r.nights;
+        default: return false;
+      }
+    });
+    return rule?.packageId || null;
+  }, [property, nights, isHourly]);
+
+  useEffect(() => {
+    if (mandatoryPackageId && selectedPackageId !== mandatoryPackageId) {
+      handlePackageChange(mandatoryPackageId);
+    }
+  }, [mandatoryPackageId, selectedPackageId]);
+
   // Fetch packages for the property
   useEffect(() => {
     const loadPackages = async () => {
@@ -111,9 +208,6 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
     };
     loadPackages();
   }, [estimate.propertyId]);
-
-  const [hasUserPaid, setHasUserPaid] = useState(false);
-  const [isLoadingPaymentStatus, setIsLoadingPaymentStatus] = useState(true);
 
   // Check if current user has already paid for this estimate (to support multiple hourly payments)
   useEffect(() => {
@@ -193,7 +287,7 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
     }
   };
 
-  if (authLoading) {
+  if (authLoading || isLoadingPaymentStatus) {
     return (
       <div className="flex min-h-[400px] flex-col items-center justify-center gap-3">
         <Spinner className="size-6 text-muted-foreground" />
@@ -258,76 +352,6 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
       </Empty>
     );
   }
-
-  const from = new Date(estimate.fromDate);
-  const to = new Date(estimate.toDate);
-
-  const isHourly = property?.bookingType === "hourly";
-  const stayNights = Math.max(
-    1,
-    Math.ceil(Math.abs(to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24))
-  );
-
-  const nights = isHourly ? 1 : stayNights;
-  const isPaid = isHourly 
-    ? hasUserPaid 
-    : (estimate.paymentStatus === "paid" || estimate.paymentStatus === "success" || hasUserPaid);
-
-  const basePricePerNight = property ? property.basePricePerNight : 1500;
-  let baseCost = basePricePerNight * nights;
-
-  const weeklyDiscount = property?.weeklyDiscount ?? 0;
-  const monthlyDiscount = property?.monthlyDiscount ?? 0;
-  let discountAmount = 0;
-
-  if (!isHourly) {
-    if (nights >= 28 && monthlyDiscount > 0) {
-      discountAmount = baseCost * (monthlyDiscount / 100);
-      baseCost = baseCost - discountAmount;
-    } else if (nights >= 7 && weeklyDiscount > 0) {
-      discountAmount = baseCost * (weeklyDiscount / 100);
-      baseCost = baseCost - discountAmount;
-    }
-  }
-
-  const currentSelectedPackage = packages.find(p => p.id === selectedPackageId) || (selectedPackageId === estimate.packageId ? selectedPackage : null);
-  const packagePrice = currentSelectedPackage ? (currentSelectedPackage.price || 0) : 0;
-  const finalTotal = baseCost + packagePrice;
-
-  const handlePackageChange = async (packageId: string) => {
-    setSelectedPackageId(packageId);
-    setIsUpdatingPackage(true);
-    setPackageError(null);
-
-    try {
-      const activePkg = packages.find(p => p.id === packageId);
-      const activePrice = activePkg ? (activePkg.price || 0) : 0;
-      
-      const newTotal = baseCost + activePrice;
-
-      const res = await fetch("/api/estimates", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          estimateId: estimate.id,
-          packageId: packageId || null,
-          total: newTotal
-        })
-      });
-
-      const result = await res.json();
-      if (!res.ok || !result.success) {
-        throw new Error(result.error || "Failed to update package option in database.");
-      }
-      
-      estimate.total = newTotal;
-      estimate.packageId = packageId || null;
-    } catch (err: any) {
-      setPackageError(err?.message || "Failed to update the selected package.");
-    } finally {
-      setIsUpdatingPackage(false);
-    }
-  };
 
   const propThumbnail =
     property?.images?.[0] || property?.imageUrl || property?.image || property?.coverImage;
@@ -487,7 +511,7 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
                 type="button"
                 role="radio"
                 aria-checked={selectedPackageId === ""}
-                disabled={isUpdatingPackage || isPaid}
+                disabled={isUpdatingPackage || isPaid || !!mandatoryPackageId}
                 onClick={() => handlePackageChange("")}
                 className={`flex w-full items-start justify-between gap-4 rounded-lg border p-4 text-left transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-70 ${
                   selectedPackageId === ""
@@ -531,7 +555,7 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
                       type="button"
                       role="radio"
                       aria-checked={isSelected}
-                      disabled={isUpdatingPackage || isPaid}
+                      disabled={isUpdatingPackage || isPaid || (mandatoryPackageId ? pkg.id !== mandatoryPackageId : false)}
                       onClick={() => handlePackageChange(pkg.id)}
                       className={`flex w-full items-start justify-between gap-4 rounded-lg border p-4 text-left transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-70 ${
                         isSelected
@@ -554,6 +578,11 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-heading text-sm font-medium">{pkg.name}</span>
                           {pkg.category && <Badge variant="outline">{pkg.category}</Badge>}
+                          {mandatoryPackageId === pkg.id && (
+                            <Badge variant="destructive" className="bg-amber-500 hover:bg-amber-600 text-black border-none font-semibold">
+                              Required for stay length
+                            </Badge>
+                          )}
                         </div>
                         {pkg.description && (
                           <p className="text-sm leading-relaxed text-muted-foreground">

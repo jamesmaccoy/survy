@@ -38,6 +38,8 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
 
+import { MandatoryRule } from "@/lib/types";
+
 interface Property {
   id: string;
   title: string;
@@ -50,6 +52,7 @@ interface Property {
   location?: string;
   weeklyDiscount?: number;
   monthlyDiscount?: number;
+  mandatoryRules?: MandatoryRule[];
 }
 
 interface PackageData {
@@ -230,19 +233,44 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
       setSavedDates(result.data);
 
       let estimatedTotal = 0;
+      let matchedMandatoryPackageId: string | null = null;
+
       if (property.bookingType === "hourly") {
         estimatedTotal = property.basePricePerNight;
       } else {
         const stayNights = Math.max(1, Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
-        let baseCost = property.basePricePerNight * stayNights;
-        const weeklyDiscount = property.weeklyDiscount ?? 0;
-        const monthlyDiscount = property.monthlyDiscount ?? 0;
-        if (stayNights >= 28 && monthlyDiscount > 0) {
-          baseCost = baseCost * (1 - monthlyDiscount / 100);
-        } else if (stayNights >= 7 && weeklyDiscount > 0) {
-          baseCost = baseCost * (1 - weeklyDiscount / 100);
+        
+        // Find matching rule
+        if (property.mandatoryRules) {
+          const rule = property.mandatoryRules.find(r => {
+            switch (r.operator) {
+              case "equals": return stayNights === r.nights;
+              case "greater": return stayNights > r.nights;
+              case "less": return stayNights < r.nights;
+              case "greater_or_equal": return stayNights >= r.nights;
+              case "less_or_equal": return stayNights <= r.nights;
+              default: return false;
+            }
+          });
+          if (rule) {
+            matchedMandatoryPackageId = rule.packageId;
+          }
         }
-        estimatedTotal = baseCost;
+
+        const mandatoryPackage = matchedMandatoryPackageId ? packages.find(p => p.id === matchedMandatoryPackageId) : null;
+        if (mandatoryPackage) {
+          estimatedTotal = mandatoryPackage.price;
+        } else {
+          let baseCost = property.basePricePerNight * stayNights;
+          const weeklyDiscount = property.weeklyDiscount ?? 0;
+          const monthlyDiscount = property.monthlyDiscount ?? 0;
+          if (stayNights >= 28 && monthlyDiscount > 0) {
+            baseCost = baseCost * (1 - monthlyDiscount / 100);
+          } else if (stayNights >= 7 && weeklyDiscount > 0) {
+            baseCost = baseCost * (1 - weeklyDiscount / 100);
+          }
+          estimatedTotal = baseCost;
+        }
       }
 
       const estRes = await fetch("/api/estimates", {
@@ -250,7 +278,7 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           propertyId: property.id,
-          packageId: null,
+          packageId: matchedMandatoryPackageId,
           customerName: user.displayName || user.email?.split("@")[0] || "Authenticated Guest",
           customerEmail: user.email || "",
           customerId: user.uid,

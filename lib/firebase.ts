@@ -2,6 +2,7 @@ import { initializeApp, cert, getApps } from "firebase-admin";
 import { getFirestore as getFirestoreAdmin } from "firebase-admin/firestore";
 import * as fs from "fs";
 import * as path from "path";
+import { MandatoryRule } from "./types";
 
 let app: any;
 let cachedProjectId: string | null = null;
@@ -126,6 +127,7 @@ export async function createProperty(data: {
   location?: string;
   weeklyDiscount?: number;
   monthlyDiscount?: number;
+  mandatoryRules?: MandatoryRule[];
 }): Promise<any> {
   const db = getFirestore();
   const id = data.id || data.slug.trim().toLowerCase();

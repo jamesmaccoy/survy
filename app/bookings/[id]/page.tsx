@@ -45,6 +45,7 @@ interface Property {
   images?: string[];
   weeklyDiscount?: number;
   monthlyDiscount?: number;
+  bookingType?: string;
 }
 
 interface PackageData {
@@ -252,12 +253,34 @@ function BookingDetailsContent({ id }: { id: string }) {
     );
   }
 
+  const isHourly = property?.bookingType === "hourly";
   const checkIn = formatDisplayDate(booking.fromDate);
   const checkOut = formatDisplayDate(booking.toDate);
   const stayNights = Math.max(
     1,
     Math.ceil(Math.abs(new Date(booking.toDate).getTime() - new Date(booking.fromDate).getTime()) / (1000 * 60 * 60 * 24))
   );
+
+  let checkInTimeStr = "From 14:00";
+  let checkOutTimeStr = "By 10:00";
+  let checkInLabel = "Standard arrival window";
+  let checkOutLabel = "Departure cutoff time";
+
+  if (isHourly) {
+    const fromDateObj = new Date(booking.fromDate);
+    const toDateObj = new Date(booking.toDate);
+    const formatTime = (date: Date) => {
+      return date.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false
+      });
+    };
+    checkInTimeStr = `At ${formatTime(fromDateObj)}`;
+    checkOutTimeStr = `Until ${formatTime(toDateObj)}`;
+    checkInLabel = "Scheduled start time";
+    checkOutLabel = "Scheduled end time";
+  }
   const propName = property ? property.title : booking.propertyId;
   const isPaid = booking.paymentStatus === "paid" || booking.paymentStatus === "success";
   const addonsList = packages.filter((p) => p.propertyId === booking.propertyId && p.category === "addon");
@@ -337,7 +360,7 @@ function BookingDetailsContent({ id }: { id: string }) {
                 Stay schedule
               </CardTitle>
               <Badge variant="secondary">
-                {stayNights} night{stayNights > 1 ? "s" : ""} total
+                {isHourly ? "Hourly stay" : `${stayNights} night${stayNights > 1 ? "s" : ""} total`}
               </Badge>
             </CardHeader>
             <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -346,10 +369,10 @@ function BookingDetailsContent({ id }: { id: string }) {
                   <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                     Check-in
                   </span>
-                  <span className="font-mono text-xs text-muted-foreground">From 14:00</span>
+                  <span className="font-mono text-xs text-muted-foreground">{checkInTimeStr}</span>
                 </div>
                 <span className="font-heading text-base font-medium">{checkIn}</span>
-                <span className="text-xs text-muted-foreground">Standard arrival window</span>
+                <span className="text-xs text-muted-foreground">{checkInLabel}</span>
               </div>
 
               <div className="flex flex-col gap-1 rounded-lg border bg-muted/50 p-4">
@@ -357,10 +380,10 @@ function BookingDetailsContent({ id }: { id: string }) {
                   <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                     Check-out
                   </span>
-                  <span className="font-mono text-xs text-muted-foreground">By 10:00</span>
+                  <span className="font-mono text-xs text-muted-foreground">{checkOutTimeStr}</span>
                 </div>
                 <span className="font-heading text-base font-medium">{checkOut}</span>
-                <span className="text-xs text-muted-foreground">Departure cutoff time</span>
+                <span className="text-xs text-muted-foreground">{checkOutLabel}</span>
               </div>
             </CardContent>
           </Card>

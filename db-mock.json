@@ -1,6 +1,15 @@
 {
   "packages": [
     {
+      "id": "host_stay",
+      "propertyId": "shack",
+      "price": 2500,
+      "name": "Host Stay",
+      "description": "Hosted stay package required for single-night bookings.",
+      "category": "standard",
+      "isEnabled": true
+    },
+    {
       "id": "shack_stack",
       "propertyId": "shack",
       "price": 8500,
@@ -120,7 +129,14 @@
       "airbnbCalendarUrl": "https://www.airbnb.co.za/calendar/ical/1667386340564933279.ics?t=test",
       "googleCalendarUrl": "",
       "weeklyDiscount": 10,
-      "monthlyDiscount": 20
+      "monthlyDiscount": 20,
+      "mandatoryRules": [
+        {
+          "packageId": "host_stay",
+          "operator": "equals",
+          "nights": 1
+        }
+      ]
     },
     {
       "id": "cottage",
