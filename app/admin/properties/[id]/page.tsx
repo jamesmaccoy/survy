@@ -630,34 +630,32 @@ function EditPropertyContent({ id }: { id: string }) {
                     : "Configure base pricing, stay discounts, and mandatory package rules."}
                 </CardDescription>
 
-                {!isNew && (
-                  <div className="flex border-b border-border mt-4">
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab("details")}
-                      className={cn(
-                        "px-4 py-2 text-sm font-semibold border-b-2 -mb-[2px] transition-all",
-                        activeTab === "details"
-                          ? "border-primary text-primary"
-                          : "border-transparent text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      Listing Details
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab("pricing")}
-                      className={cn(
-                        "px-4 py-2 text-sm font-semibold border-b-2 -mb-[2px] transition-all",
-                        activeTab === "pricing"
-                          ? "border-primary text-primary"
-                          : "border-transparent text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      Pricing
-                    </button>
-                  </div>
-                )}
+                <div className="flex border-b border-border mt-4">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("details")}
+                    className={cn(
+                      "px-4 py-2 text-sm font-semibold border-b-2 -mb-[2px] transition-all",
+                      activeTab === "details"
+                        ? "border-primary text-primary"
+                        : "border-transparent text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    Listing Details
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("pricing")}
+                    className={cn(
+                      "px-4 py-2 text-sm font-semibold border-b-2 -mb-[2px] transition-all",
+                      activeTab === "pricing"
+                        ? "border-primary text-primary"
+                        : "border-transparent text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    Pricing
+                  </button>
+                </div>
               </CardHeader>
 
               <CardContent>
