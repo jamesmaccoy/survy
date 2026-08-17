@@ -520,7 +520,7 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
 
             <CardContent className="flex flex-col gap-4">
               {/* Active Estimate Sharing Widget */}
-              {latestEstimate && (
+              {latestEstimate && latestEstimate.propertyId === property.id && (
                 <div className="flex flex-col gap-2 rounded-lg border bg-muted/40 p-3">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
@@ -593,7 +593,9 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
                     <Separator />
 
                     <div className="flex items-center justify-between gap-3 text-sm">
-                      <span className="text-muted-foreground">Base accommodation</span>
+                      <span className="text-muted-foreground">
+                        {property.bookingType === "hourly" ? "Booking" : "Base accommodation"}
+                      </span>
                       <span className="font-medium">
                         R {(property.basePricePerNight * (property.bookingType === "hourly" ? 1 : nights)).toLocaleString()}
                       </span>
@@ -624,7 +626,7 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
                     render={
                       <Link
                         href={
-                          latestEstimate
+                          latestEstimate && latestEstimate.propertyId === property.id
                             ? `/estimate/${latestEstimate.id}`
                             : `/bookings?propertyId=${property.id}`
                         }

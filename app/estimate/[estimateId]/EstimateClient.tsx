@@ -6,12 +6,14 @@ import { useAuth, AuthProvider } from "@/components/auth";
 import { formatDisplayDate } from "@/lib/utils";
 import {
   ArrowLeftIcon,
+  ArrowRightIcon,
   CalendarIcon,
   CheckIcon,
   CircleCheckIcon,
   HouseIcon,
   KeyRoundIcon,
   LinkIcon,
+  PinIcon,
   ShieldXIcon,
   TriangleAlertIcon,
   UserIcon,
@@ -101,6 +103,9 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
 
   const [hasUserPaid, setHasUserPaid] = useState(false);
   const [isLoadingPaymentStatus, setIsLoadingPaymentStatus] = useState(true);
+
+  const [latestEstimate, setLatestEstimate] = useState<any | null>(null);
+  const [latestEstimatePropertyTitle, setLatestEstimatePropertyTitle] = useState<string>("");
 
   const from = new Date(estimate.fromDate);
   const to = new Date(estimate.toDate);
@@ -236,6 +241,36 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
     };
     checkUserPaid();
   }, [estimate.propertyId, estimate.id, user, authLoading]);
+
+  // Load latest estimate
+  useEffect(() => {
+    if (!user) {
+      setLatestEstimate(null);
+      return;
+    }
+
+    const fetchLatestEstimate = async () => {
+      try {
+        const res = await fetch(`/api/estimates/latest?userId=${user.uid}`);
+        const result = await res.json();
+        if (result.success && result.data) {
+          setLatestEstimate(result.data);
+          try {
+            const propRes = await fetch(`/api/posts/${result.data.propertyId}`);
+            const propResult = await propRes.json();
+            if (propResult.success && propResult.data) {
+              setLatestEstimatePropertyTitle(propResult.data.title || propResult.data.name || "");
+            }
+          } catch (propErr) {
+            console.error("Failed to fetch latest estimate property details:", propErr);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch latest active estimate:", err);
+      }
+    };
+    fetchLatestEstimate();
+  }, [user]);
 
   // Copy share url helper
   const inviteUrl =
@@ -488,8 +523,9 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
             <CardHeader className="border-b">
               <CardTitle>Select package option</CardTitle>
               <CardDescription>
-                Enhance your stay by choosing a curated package experience, or check out with
-                standard accommodation.
+                {isHourly
+                  ? "Enhance your booking by choosing a curated package experience, or check out with standard options."
+                  : "Enhance your stay by choosing a curated package experience, or check out with standard accommodation."}
               </CardDescription>
             </CardHeader>
 
@@ -682,6 +718,51 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
             </CardHeader>
 
             <CardContent className="flex flex-col gap-3">
+              {/* Active Estimate Sharing Widget */}
+              {latestEstimate && latestEstimate.id === estimate.id && (
+                <div className="flex flex-col gap-2 rounded-lg border bg-muted/40 p-3 mb-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                      Active estimate ready
+                    </span>
+                    <span className="font-mono text-xs text-muted-foreground">
+                      {latestEstimate.token ? `${latestEstimate.token.slice(0, 8)}…` : "Active"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="font-heading text-sm font-semibold">
+                      R {latestEstimate.total ? latestEstimate.total.toLocaleString() : "0"}
+                    </div>
+                    <Button size="sm" variant="outline" onClick={handleCopy}>
+                      {copied ? (
+                        <CheckIcon data-icon="inline-start" />
+                      ) : (
+                        <LinkIcon data-icon="inline-start" />
+                      )}
+                      {copied ? "Copied" : "Share link"}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {latestEstimate && latestEstimate.id !== estimate.id && (
+                <div className="flex flex-col gap-2 rounded-lg border bg-amber-500/10 border-amber-500/20 p-3 mb-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-medium tracking-wide text-amber-600 dark:text-amber-400 uppercase">
+                      Newer active estimate ready
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="font-heading text-sm font-semibold">
+                      R {latestEstimate.total ? latestEstimate.total.toLocaleString() : "0"}
+                    </div>
+                    <Button size="sm" variant="outline" nativeButton={false} render={<Link href={`/estimate/${latestEstimate.id}`} />}>
+                      <ArrowRightIcon data-icon="inline-start" />
+                      View active
+                    </Button>
+                  </div>
+                </div>
+              )}
               <div className="flex items-center justify-between gap-3 text-sm">
                 <span className="text-muted-foreground">Created by</span>
                 <span className="font-medium">{estimate.customerName}</span>
@@ -693,7 +774,9 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
                 </span>
               </div>
               <div className="flex items-center justify-between gap-3 text-sm">
-                <span className="text-muted-foreground">Accommodation cost</span>
+                <span className="text-muted-foreground">
+                  {isHourly ? "Booking cost" : "Accommodation cost"}
+                </span>
                 <span className="font-medium">R {(basePricePerNight * nights).toLocaleString()}</span>
               </div>
               {discountAmount > 0 && (
