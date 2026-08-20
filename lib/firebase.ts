@@ -1,6 +1,5 @@
 import { initializeApp, cert, getApps } from "firebase-admin";
 import { getFirestore as getFirestoreAdmin } from "firebase-admin/firestore";
-import { getAuth as getAuthAdmin } from "firebase-admin/auth";
 import * as fs from "fs";
 import * as path from "path";
 import { MandatoryRule } from "./types";
@@ -1112,7 +1111,7 @@ export async function getOrCreateUserByEmail(email: string): Promise<string> {
     return `mock_${email.replace(/[^\w]/g, "_")}`;
   }
 
-  const authAdmin = getAuthAdmin(app);
+  const authAdmin = app.auth();
   try {
     const userRecord = await authAdmin.getUserByEmail(email);
     return userRecord.uid;
