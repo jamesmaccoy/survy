@@ -1,5 +1,6 @@
 import { initializeApp, cert, getApps } from "firebase-admin";
 import { getFirestore as getFirestoreAdmin } from "firebase-admin/firestore";
+import { getAuth as getAuthAdmin } from "firebase-admin/auth";
 import * as fs from "fs";
 import * as path from "path";
 import { MandatoryRule } from "./types";
@@ -1101,6 +1102,28 @@ export async function verifyIdToken(idToken: string): Promise<any> {
     };
   } catch (err: any) {
     console.error("[Google Identity Lookup] Failed to verify ID token:", err);
+    throw err;
+  }
+}
+
+export async function getOrCreateUserByEmail(email: string): Promise<string> {
+  getFirestore();
+  if (isMockMode) {
+    return `mock_${email.replace(/[^\w]/g, "_")}`;
+  }
+
+  const authAdmin = getAuthAdmin(app);
+  try {
+    const userRecord = await authAdmin.getUserByEmail(email);
+    return userRecord.uid;
+  } catch (err: any) {
+    if (err.code === "auth/user-not-found") {
+      const userRecord = await authAdmin.createUser({
+        email,
+        emailVerified: true
+      });
+      return userRecord.uid;
+    }
     throw err;
   }
 }

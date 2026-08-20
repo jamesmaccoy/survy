@@ -197,3 +197,54 @@ export async function sendBookingConfirmationEmail(booking: {
     return false;
   }
 }
+
+export async function sendMagicLinkEmail(email: string, magicLink: string) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.warn("[Resend] RESEND_API_KEY is not defined. Printing magic link to console:");
+    console.log(`🔑 Magic Link for ${email}: ${magicLink}`);
+    return true;
+  }
+
+  const subject = "Sign in to Simpleplek";
+  const emailHtml = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
+      <h2 style="color: #0d9488; margin-top: 0;">Sign in to Simpleplek</h2>
+      <p>Click the button below to sign in to your account. This link will expire in 1 hour.</p>
+      
+      <div style="margin: 30px 0; text-align: center;">
+        <a href="${magicLink}" style="background-color: #0d9488; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block;">Sign In Now</a>
+      </div>
+      
+      <p style="color: #64748b; font-size: 12px;">If you didn't request this link, you can safely ignore this email.</p>
+    </div>
+  `;
+
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        from: process.env.EMAIL_FROM_ADDRESS || "Simpleplek <noreply@simpleplek.co.za>",
+        to: [email],
+        subject: subject,
+        html: emailHtml
+      })
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      console.log(`[Resend] Magic link email sent successfully to ${email}. ID: ${data.id}`);
+      return true;
+    } else {
+      console.error("[Resend] Failed to send magic link:", data);
+      return false;
+    }
+  } catch (error) {
+    console.error("[Resend] Error in sendMagicLinkEmail:", error);
+    return false;
+  }
+}
