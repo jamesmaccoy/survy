@@ -166,8 +166,8 @@
       "images": [],
       "bookingType": "hourly",
       "slots": [
-        "10:00",
-        "14:00"
+        "09:00",
+        "13:00"
       ],
       "location": "Camps Bay, Cape Town",
       "id": "camps-bay-sea-view-loft",

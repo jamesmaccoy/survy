@@ -100,7 +100,7 @@ type FieldName = "title" | "slug" | "basePrice" | "slots";
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp", "image/avif"];
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const TIME_SLOTS = ["08:00", "10:00", "12:00", "14:00", "16:00", "18:00"];
+const TIME_SLOTS = ["08:00", "09:00", "10:00", "12:00", "13:00", "14:00", "16:00", "18:00"];
 
 function slugify(value: string) {
   return value
@@ -183,7 +183,7 @@ function EditPropertyContent({ id }: { id: string }) {
   const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [bookingType, setBookingType] = useState<"nightly" | "hourly">("nightly");
-  const [slots, setSlots] = useState<string[]>(["10:00", "14:00"]);
+  const [slots, setSlots] = useState<string[]>(["09:00", "13:00"]);
 
   const [activeTab, setActiveTab] = useState<"details" | "pricing">("details");
   const [mandatoryRules, setMandatoryRules] = useState<MandatoryRule[]>([]);
@@ -244,7 +244,7 @@ function EditPropertyContent({ id }: { id: string }) {
           setImages(result.data.images || []);
           setBookingType(result.data.bookingType || "nightly");
           setSlots(
-            result.data.slots?.length ? result.data.slots : ["10:00", "14:00"]
+            result.data.slots?.length ? result.data.slots : ["09:00", "13:00"]
           );
           setLocation(result.data.location || "");
           setMandatoryRules(result.data.mandatoryRules || []);

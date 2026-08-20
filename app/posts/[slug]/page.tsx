@@ -194,7 +194,7 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
     let end: Date;
 
     if (property.bookingType === "hourly") {
-      const slotTime = selectedSlot || (property.slots && property.slots.length > 0 ? property.slots[0] : "10:00");
+      const slotTime = selectedSlot || (property.slots && property.slots.length > 0 ? property.slots[0] : "09:00");
       const [h, m] = slotTime.split(":").map(Number);
       start = new Date(`${fromDate}T00:00:00`);
       start.setHours(h, m, 0, 0);
