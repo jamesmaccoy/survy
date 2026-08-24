@@ -17,6 +17,8 @@ import {
   AlertTriangle,
   CheckCircle2,
   Trash2,
+  Copy,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -185,8 +187,16 @@ function EditPropertyContent({ id }: { id: string }) {
   const [bookingType, setBookingType] = useState<"nightly" | "hourly">("nightly");
   const [slots, setSlots] = useState<string[]>(["09:00", "13:00"]);
 
-  const [activeTab, setActiveTab] = useState<"details" | "pricing">("details");
+  const [activeTab, setActiveTab] = useState<"details" | "pricing" | "availability">("details");
   const [mandatoryRules, setMandatoryRules] = useState<MandatoryRule[]>([]);
+  const [copiedExportUrl, setCopiedExportUrl] = useState(false);
+
+  const handleCopyExportUrl = useCallback(() => {
+    const url = `${window.location.origin}/api/posts/${id}/export`;
+    navigator.clipboard.writeText(url);
+    setCopiedExportUrl(true);
+    setTimeout(() => setCopiedExportUrl(false), 2000);
+  }, [id]);
   const [packages, setPackages] = useState<PropertyPackage[]>([]);
 
   const isUploading = uploadingFiles.length > 0;
@@ -620,14 +630,14 @@ function EditPropertyContent({ id }: { id: string }) {
             <Card>
               <CardHeader>
                 <CardTitle>
-                  {activeTab === "details" ? "Listing details" : "Pricing & Rules"}
+                  {activeTab === "details" ? "Listing details" : activeTab === "pricing" ? "Pricing & Rules" : "Availability"}
                 </CardTitle>
                 <CardDescription>
                   {activeTab === "details"
-                    ? (isNew
-                      ? "Describe the property and add photos to publish a new listing."
-                      : "Update the property descriptive information, location, and imagery.")
-                    : "Configure base pricing, stay discounts, and mandatory package rules."}
+                    ? "Provide basic details about the listing including images and location."
+                    : activeTab === "pricing"
+                      ? "Configure base pricing, stay discounts, and mandatory package rules."
+                      : "Sync external calendars and export listing's bookings."}
                 </CardDescription>
 
                 <div className="flex border-b border-border mt-4">
@@ -655,11 +665,23 @@ function EditPropertyContent({ id }: { id: string }) {
                   >
                     Pricing
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("availability")}
+                    className={cn(
+                      "px-4 py-2 text-sm font-semibold border-b-2 -mb-[2px] transition-all",
+                      activeTab === "availability"
+                        ? "border-primary text-primary"
+                        : "border-transparent text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    Availability
+                  </button>
                 </div>
               </CardHeader>
 
               <CardContent>
-                {activeTab === "details" ? (
+                {activeTab === "details" && (
                   <FieldGroup>
                   <Field data-invalid={fieldErrors.title ? true : undefined}>
                     <FieldLabel htmlFor="property-title">Property title</FieldLabel>
@@ -829,40 +851,10 @@ function EditPropertyContent({ id }: { id: string }) {
                       </div>
                     )}
                   </Field>
-
-                  <Separator />
-
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <Field>
-                      <FieldLabel htmlFor="airbnb-ical">
-                        Airbnb iCal URL
-                      </FieldLabel>
-                      <Input
-                        id="airbnb-ical"
-                        type="url"
-                        placeholder="https://www.airbnb.co.za/calendar/ical/..."
-                        value={airbnbCalendarUrl}
-                        onChange={(e) => setAirbnbCalendarUrl(e.target.value)}
-                      />
-                      <FieldDescription>Optional.</FieldDescription>
-                    </Field>
-
-                    <Field>
-                      <FieldLabel htmlFor="google-ical">
-                        Google Calendar iCal URL
-                      </FieldLabel>
-                      <Input
-                        id="google-ical"
-                        type="url"
-                        placeholder="https://calendar.google.com/calendar/ical/..."
-                        value={googleCalendarUrl}
-                        onChange={(e) => setGoogleCalendarUrl(e.target.value)}
-                      />
-                      <FieldDescription>Optional.</FieldDescription>
-                    </Field>
-                  </div>
                 </FieldGroup>
-                ) : (
+                )}
+
+                {activeTab === "pricing" && (
                   <div className="space-y-8">
                     <FieldGroup>
                       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -1132,7 +1124,112 @@ function EditPropertyContent({ id }: { id: string }) {
                     )}
                   </div>
                 </div>
-              )}
+                )}
+
+                {activeTab === "availability" && (
+                  <div className="space-y-8">
+                    <FieldGroup>
+                      <div>
+                        <h3 className="text-sm font-semibold text-foreground mb-1">
+                          Import Calendar
+                        </h3>
+                        <p className="text-xs text-muted-foreground">
+                          Sync reservations from external calendars to block availability on this listing.
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <Field>
+                          <FieldLabel htmlFor="airbnb-ical">
+                            Airbnb iCal URL
+                          </FieldLabel>
+                          <Input
+                            id="airbnb-ical"
+                            type="url"
+                            placeholder="https://www.airbnb.co.za/calendar/ical/..."
+                            value={airbnbCalendarUrl}
+                            onChange={(e) => setAirbnbCalendarUrl(e.target.value)}
+                          />
+                          <FieldDescription>Optional.</FieldDescription>
+                        </Field>
+
+                        <Field>
+                          <FieldLabel htmlFor="google-ical">
+                            Google Calendar iCal URL
+                          </FieldLabel>
+                          <Input
+                            id="google-ical"
+                            type="url"
+                            placeholder="https://calendar.google.com/calendar/ical/..."
+                            value={googleCalendarUrl}
+                            onChange={(e) => setGoogleCalendarUrl(e.target.value)}
+                          />
+                          <FieldDescription>Optional.</FieldDescription>
+                        </Field>
+                      </div>
+                    </FieldGroup>
+
+                    <div className="space-y-6">
+                      <Separator />
+                      <div>
+                        <h3 className="text-sm font-semibold text-foreground mb-1">
+                          Export Calendar
+                        </h3>
+                        <p className="text-xs text-muted-foreground">
+                          Sync this listing's bookings with external calendars (like Airbnb or Google Calendar).
+                        </p>
+                      </div>
+
+                      {isNew ? (
+                        <Alert>
+                          <AlertTriangle className="h-4 w-4" />
+                          <AlertTitle>Export URL not available yet</AlertTitle>
+                          <AlertDescription className="text-xs">
+                            You will get an export link once you save and create this property listing.
+                          </AlertDescription>
+                        </Alert>
+                      ) : (
+                        <Field>
+                          <FieldLabel htmlFor="export-ical">
+                            Calendar Export URL (.ics)
+                          </FieldLabel>
+                          <InputGroup>
+                            <InputGroupInput
+                              id="export-ical"
+                              type="text"
+                              readOnly
+                              value={`${typeof window !== "undefined" ? window.location.origin : ""}/api/posts/${id}/export`}
+                              onClick={(e) => (e.target as HTMLInputElement).select()}
+                              className="font-mono text-xs bg-muted/30 select-all"
+                            />
+                            <InputGroupAddon align="inline-end" className="p-0">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-full px-3 text-xs border-l hover:bg-muted"
+                                onClick={handleCopyExportUrl}
+                              >
+                                {copiedExportUrl ? (
+                                  <span className="flex items-center gap-1 text-success">
+                                    <Check className="h-3 w-3" /> Copied
+                                  </span>
+                                ) : (
+                                  <span className="flex items-center gap-1">
+                                    <Copy className="h-3 w-3" /> Copy Link
+                                  </span>
+                                )}
+                              </Button>
+                            </InputGroupAddon>
+                          </InputGroup>
+                          <FieldDescription>
+                            Copy this URL and import it into other booking channel platforms (e.g. under Airbnb's "Export Calendar" settings).
+                          </FieldDescription>
+                        </Field>
+                      )}
+                    </div>
+                  </div>
+                )}
             </CardContent>
 
               <CardFooter className="flex-col gap-3 border-t sm:flex-row">
