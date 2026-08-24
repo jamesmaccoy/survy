@@ -392,6 +392,35 @@ export function useAuth() {
   return context;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getFriendlyAuthErrorMessage(error: any): string {
+  if (!error) return "Authentication failed.";
+  const code = error.code || (error.message && error.message.includes("auth/") ? error.message.match(/auth\/[a-zA-Z0-9-_]+/)?.[0] : null);
+  
+  switch (code) {
+    case "auth/invalid-login-credentials":
+    case "auth/invalid-credential":
+    case "auth/wrong-password":
+    case "auth/user-not-found":
+      return "Incorrect email or password. Please try again.";
+    case "auth/invalid-email":
+      return "Invalid email address format.";
+    case "auth/user-disabled":
+      return "This account has been disabled.";
+    case "auth/email-already-in-use":
+      return "An account with this email address already exists.";
+    case "auth/weak-password":
+      return "Password should be at least 6 characters long.";
+    case "auth/too-many-requests":
+      return "Too many unsuccessful login attempts. Please try again later.";
+    default:
+      if (error.message && error.message.startsWith("Firebase:")) {
+        return error.message.replace(/^Firebase:\s*(Error\s*)?\(auth\//, "").replace(/\)\.?$/, "").replace(/-/g, " ");
+      }
+      return error.message || "Authentication failed.";
+  }
+}
+
 // Authentication Forms Component
 export function AuthCard() {
   const { user, signIn, signUp, signInWithGoogle, logOut, loading, isMockUser, authError, clearAuthError } = useAuth();
@@ -408,7 +437,7 @@ export function AuthCard() {
     try {
       await signInWithGoogle();
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : "Google authentication failed.");
+      setFormError(getFriendlyAuthErrorMessage(err));
     }
   };
 
@@ -443,7 +472,7 @@ export function AuthCard() {
           throw new Error(data.error || "Failed to send magic link.");
         }
       } catch (err: any) {
-        setFormError(err.message || "An error occurred while sending the magic link.");
+        setFormError(getFriendlyAuthErrorMessage(err));
       } finally {
         setSendingMagicLink(false);
       }
@@ -457,7 +486,7 @@ export function AuthCard() {
         await signIn(email, password);
       }
     } catch (err: any) {
-      setFormError(err.message || "Authentication failed.");
+      setFormError(getFriendlyAuthErrorMessage(err));
     }
   };
 
