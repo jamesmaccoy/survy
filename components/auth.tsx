@@ -448,6 +448,13 @@ export function AuthCard() {
   const [isMagicLinkMode, setIsMagicLinkMode] = useState(true);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
   const [sendingMagicLink, setSendingMagicLink] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false);
+
+  useEffect(() => {
+    if (!loading) {
+      setHasInitialized(true);
+    }
+  }, [loading]);
 
   const handleGoogleSignIn = async () => {
     setFormError(null);
@@ -507,7 +514,7 @@ export function AuthCard() {
     }
   };
 
-  if (loading) {
+  if (loading && !hasInitialized) {
     return (
       <div className="flex h-44 items-center justify-center">
         <Spinner className="size-6 text-muted-foreground" />
@@ -543,6 +550,7 @@ export function AuthCard() {
     <Card>
       <CardHeader className="gap-4">
         <ToggleGroup
+          disabled={loading}
           aria-label="Authentication mode"
           value={[isSignUpMode ? "signup" : "signin"]}
           onValueChange={(value) => {
@@ -602,7 +610,7 @@ export function AuthCard() {
             </div>
           ) : (
             <div className="flex flex-col gap-5">
-              <Button variant="outline" className="w-full" onClick={handleGoogleSignIn}>
+              <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={loading}>
                 <svg className="size-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                   <path
                     d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -638,6 +646,7 @@ export function AuthCard() {
                     type="email"
                     autoComplete="email"
                     required
+                    disabled={loading}
                     placeholder="e.g. guest@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -651,18 +660,21 @@ export function AuthCard() {
                       type="password"
                       autoComplete="current-password"
                       required
+                      disabled={loading}
                       placeholder="••••••••"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                     />
                   </div>
                 )}
-                <Button type="submit" className="w-full" disabled={sendingMagicLink}>
-                  {sendingMagicLink 
+                <Button type="submit" className="w-full" disabled={loading || sendingMagicLink}>
+                  {sendingMagicLink || (loading && isMagicLinkMode)
                     ? "Sending link..." 
-                    : isMagicLinkMode 
-                      ? "Send magic link" 
-                      : "Sign in"}
+                    : loading && !isMagicLinkMode
+                      ? "Signing in..."
+                      : isMagicLinkMode 
+                        ? "Send magic link" 
+                        : "Sign in"}
                 </Button>
               </form>
 
@@ -670,6 +682,7 @@ export function AuthCard() {
                 variant="link" 
                 size="sm" 
                 className="text-muted-foreground hover:text-foreground text-xs self-center font-normal"
+                disabled={loading}
                 onClick={() => {
                   setIsMagicLinkMode(!isMagicLinkMode);
                   setFormError(null);
@@ -691,6 +704,7 @@ export function AuthCard() {
                   type="email"
                   autoComplete="email"
                   required
+                  disabled={loading}
                   placeholder="e.g. guest@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -703,13 +717,14 @@ export function AuthCard() {
                   type="password"
                   autoComplete="new-password"
                   required
+                  disabled={loading}
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
-              <Button type="submit" className="w-full">
-                Register profile
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? "Registering profile..." : "Register profile"}
               </Button>
             </form>
 
@@ -719,7 +734,7 @@ export function AuthCard() {
               <Separator className="flex-1" />
             </div>
 
-            <Button variant="outline" className="w-full" onClick={handleGoogleSignIn}>
+            <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={loading}>
               <svg className="size-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <path
                   d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
