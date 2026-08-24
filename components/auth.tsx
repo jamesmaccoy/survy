@@ -251,7 +251,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await signInWithEmailAndPassword(auth, email, pass);
     } catch (err: any) {
       console.warn(`[Firebase Auth] Failed: ${err.message}`);
-      if (!isMockAllowed()) {
+      const code = err.code || (err.message && err.message.includes("auth/") ? err.message.match(/auth\/[a-zA-Z0-9-_]+/)?.[0] : null);
+      const isCredentialError = [
+        "auth/invalid-login-credentials",
+        "auth/invalid-credential",
+        "auth/wrong-password",
+        "auth/user-not-found",
+        "auth/invalid-email",
+        "auth/user-disabled"
+      ].includes(code);
+
+      if (!isMockAllowed() || isCredentialError) {
         throw err;
       }
       console.warn(`[Firebase Auth] Trying offline mock login fallback.`);
@@ -279,7 +289,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await createUserWithEmailAndPassword(auth, email, pass);
     } catch (err: any) {
       console.warn(`[Firebase Auth] Signup failed: ${err.message}`);
-      if (!isMockAllowed()) {
+      const code = err.code || (err.message && err.message.includes("auth/") ? err.message.match(/auth\/[a-zA-Z0-9-_]+/)?.[0] : null);
+      const isCredentialError = [
+        "auth/email-already-in-use",
+        "auth/invalid-email",
+        "auth/weak-password"
+      ].includes(code);
+
+      if (!isMockAllowed() || isCredentialError) {
         throw err;
       }
       console.warn(`[Firebase Auth] Trying offline mock signup fallback.`);
