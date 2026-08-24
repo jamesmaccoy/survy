@@ -554,9 +554,11 @@ export function AuthCard() {
 
       <CardContent className="flex flex-col gap-5">
         {(formError || authError) && (
-          <Alert variant="destructive">
-            <TriangleAlertIcon />
-            <AlertDescription>{formError || authError}</AlertDescription>
+          <Alert className="border-red-500/30 bg-red-500/10 text-red-500">
+            <TriangleAlertIcon className="size-4 text-red-500" />
+            <AlertDescription className="text-red-400">
+              {formError || authError}
+            </AlertDescription>
           </Alert>
         )}
 
