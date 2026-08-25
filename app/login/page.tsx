@@ -43,14 +43,7 @@ export default function LoginPage() {
           </p>
         </header>
 
-        {loading ? (
-          <div className="flex h-44 items-center justify-center">
-            <Spinner className="size-6 text-muted-foreground" />
-            <span className="sr-only">Checking your session</span>
-          </div>
-        ) : (
-          <AuthCard />
-        )}
+        <AuthCard />
       </div>
 
       <nav
