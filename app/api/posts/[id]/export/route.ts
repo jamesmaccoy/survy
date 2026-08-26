@@ -42,6 +42,8 @@ export async function GET(
       icsLines.push(`SUMMARY:Booking - ${booking.customerName || "Guest"}`);
       icsLines.push(`DESCRIPTION:Booking Reference: ${booking.id}\\nProperty: ${property.title || "Stay"}`);
       icsLines.push(`LOCATION:${property.location || property.title || "South Africa"}`);
+      icsLines.push("STATUS:CONFIRMED");
+      icsLines.push("TRANSP:OPAQUE");
       icsLines.push("END:VEVENT");
     }
 
