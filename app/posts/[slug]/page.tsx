@@ -200,7 +200,7 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
       start.setHours(h, m, 0, 0);
 
       end = new Date(start.getTime());
-      end.setHours(end.getHours() + 4);
+      end.setHours(end.getHours() + 1);
     } else {
       start = new Date(fromDate);
       end = new Date(toDate);
