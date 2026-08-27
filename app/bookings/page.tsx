@@ -651,19 +651,21 @@ function BookingsCheckoutContent() {
                   </CardHeader>
 
                   <CardContent className="flex flex-1 flex-col gap-4">
-                    <div className="grid grid-cols-2 gap-4 rounded-lg border bg-muted/50 p-4">
+                    <div className={`grid gap-4 rounded-lg border bg-muted/50 p-4 ${isHourlyBooking ? "grid-cols-1" : "grid-cols-2"}`}>
                       <div className="flex flex-col gap-1">
                         <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                          Check-in
+                          {isHourlyBooking ? "Start time" : "Check-in"}
                         </span>
                         <span className="text-sm font-medium">{checkIn}</span>
                       </div>
-                      <div className="flex flex-col gap-1 border-l pl-4">
-                        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                          Check-out
-                        </span>
-                        <span className="text-sm font-medium">{checkOut}</span>
-                      </div>
+                      {!isHourlyBooking && (
+                        <div className="flex flex-col gap-1 border-l pl-4">
+                          <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                            Check-out
+                          </span>
+                          <span className="text-sm font-medium">{checkOut}</span>
+                        </div>
+                      )}
                     </div>
 
                     {(b.paymentStatus === "paid" || b.paymentStatus === "success") && (

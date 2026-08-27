@@ -117,12 +117,14 @@ export async function sendBookingConfirmationEmail(booking: {
 
     const base64Ics = Buffer.from(icsContent).toString("base64");
 
-    const subject = `Booking Paid & Confirmed - ${property?.title || "Stay"}`;
+    const subject = isHourly
+      ? `Booking Paid & Confirmed - ${property?.title || "Slot"}`
+      : `Booking Paid & Confirmed - ${property?.title || "Stay"}`;
     const emailHtml = `
       <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
-        <h2 style="color: #0d9488; margin-top: 0;">Stay Booking Confirmed!</h2>
+        <h2 style="color: #0d9488; margin-top: 0;">${isHourly ? "Slot Booking Confirmed!" : "Stay Booking Confirmed!"}</h2>
         <p>Hi <strong>${booking.customerName}</strong>,</p>
-        <p>Your payment has been successfully processed, and your stay is confirmed.</p>
+        <p>Your payment has been successfully processed, and your ${isHourly ? "slot" : "stay"} is confirmed.</p>
         
         <div style="background-color: #f8fafc; border: 1px solid #f1f5f9; padding: 15px; border-radius: 8px; margin: 20px 0;">
           <h3 style="margin-top: 0; font-size: 14px; text-transform: uppercase; color: #64748b; letter-spacing: 0.5px;">Booking Details</h3>
@@ -136,16 +138,18 @@ export async function sendBookingConfirmationEmail(booking: {
               <td style="padding: 6px 0; font-weight: bold; text-align: right; font-family: monospace;">${booking.id}</td>
             </tr>
             <tr>
-              <td style="padding: 6px 0; color: #64748b;">From:</td>
+              <td style="padding: 6px 0; color: #64748b;">${isHourly ? "Date & Time:" : "From:"}</td>
               <td style="padding: 6px 0; font-weight: bold; text-align: right;">${formatSastDateTime(start)}</td>
             </tr>
+            ${!isHourly ? `
             <tr>
               <td style="padding: 6px 0; color: #64748b;">To:</td>
               <td style="padding: 6px 0; font-weight: bold; text-align: right;">${formatSastDateTime(end)}</td>
             </tr>
+            ` : ""}
             <tr>
               <td style="padding: 6px 0; color: #64748b;">Package:</td>
-              <td style="padding: 6px 0; font-weight: bold; text-align: right;">${booking.packageId || "Standard Stay"}</td>
+              <td style="padding: 6px 0; font-weight: bold; text-align: right;">${booking.packageId || (isHourly ? "Standard Slot" : "Standard Stay")}</td>
             </tr>
             <tr style="border-top: 1px solid #e2e8f0;">
               <td style="padding: 10px 0 0 0; font-weight: bold;">Amount Paid:</td>

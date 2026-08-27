@@ -462,7 +462,7 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <CalendarIcon className="size-4 text-muted-foreground" />
-                Reserved stay dates
+                {isHourly ? "Reserved slot date" : "Reserved stay dates"}
               </CardTitle>
               <div data-slot="card-action" className="col-start-2 row-start-1 justify-self-end">
                 <Badge variant="secondary">
@@ -471,7 +471,7 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
               </div>
             </CardHeader>
 
-            <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <CardContent className={`grid grid-cols-1 gap-4 ${isHourly ? "" : "sm:grid-cols-2"}`}>
               {/* Check In */}
               <div className="flex flex-col gap-1 rounded-lg border bg-muted/40 p-4">
                 <div className="flex items-center justify-between gap-2">
@@ -491,30 +491,28 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
                       })
                     : "From 14:00"}
                 </span>
-                <span className="text-xs text-muted-foreground">Arrival window</span>
+                <span className="text-xs text-muted-foreground">
+                  {isHourly ? "Slot time" : "Arrival window"}
+                </span>
               </div>
 
               {/* Check Out */}
-              <div className="flex flex-col gap-1 rounded-lg border bg-muted/40 p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                    {isHourly ? "End time" : "Check-out"}
+              {!isHourly && (
+                <div className="flex flex-col gap-1 rounded-lg border bg-muted/40 p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                      Check-out
+                    </span>
+                    <span className="font-mono text-xs text-muted-foreground">
+                      {formatDisplayDate(to)}
+                    </span>
+                  </div>
+                  <span className="font-heading text-base font-semibold">
+                    By 10:00
                   </span>
-                  <span className="font-mono text-xs text-muted-foreground">
-                    {formatDisplayDate(to)}
-                  </span>
+                  <span className="text-xs text-muted-foreground">Departure window</span>
                 </div>
-                <span className="font-heading text-base font-semibold">
-                  {isHourly
-                    ? to.toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        hour12: false,
-                      })
-                    : "By 10:00"}
-                </span>
-                <span className="text-xs text-muted-foreground">Departure window</span>
-              </div>
+              )}
             </CardContent>
           </Card>
 
@@ -568,7 +566,9 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
 
                 <div className="flex flex-1 flex-col gap-1.5">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-heading text-sm font-medium">Standard stay</span>
+                    <span className="font-heading text-sm font-medium">
+                      {isHourly ? "Standard slot" : "Standard stay"}
+                    </span>
                     <Badge variant="outline">Basic</Badge>
                   </div>
                   <p className="text-sm leading-relaxed text-muted-foreground">

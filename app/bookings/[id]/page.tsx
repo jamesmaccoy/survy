@@ -357,17 +357,17 @@ function BookingDetailsContent({ id }: { id: string }) {
             <CardHeader className="flex-row items-center justify-between gap-4">
               <CardTitle className="flex items-center gap-2">
                 <CalendarIcon className="size-4 text-muted-foreground" />
-                Stay schedule
+                {isHourly ? "Slot schedule" : "Stay schedule"}
               </CardTitle>
               <Badge variant="secondary">
-                {isHourly ? "Hourly stay" : `${stayNights} night${stayNights > 1 ? "s" : ""} total`}
+                {isHourly ? "Hourly slot" : `${stayNights} night${stayNights > 1 ? "s" : ""} total`}
               </Badge>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <CardContent className={`grid grid-cols-1 gap-4 ${isHourly ? "" : "sm:grid-cols-2"}`}>
               <div className="flex flex-col gap-1 rounded-lg border bg-muted/50 p-4">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    Check-in
+                    {isHourly ? "Start time" : "Check-in"}
                   </span>
                   <span className="font-mono text-xs text-muted-foreground">{checkInTimeStr}</span>
                 </div>
@@ -375,16 +375,18 @@ function BookingDetailsContent({ id }: { id: string }) {
                 <span className="text-xs text-muted-foreground">{checkInLabel}</span>
               </div>
 
-              <div className="flex flex-col gap-1 rounded-lg border bg-muted/50 p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    Check-out
-                  </span>
-                  <span className="font-mono text-xs text-muted-foreground">{checkOutTimeStr}</span>
+              {!isHourly && (
+                <div className="flex flex-col gap-1 rounded-lg border bg-muted/50 p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Check-out
+                    </span>
+                    <span className="font-mono text-xs text-muted-foreground">{checkOutTimeStr}</span>
+                  </div>
+                  <span className="font-heading text-base font-medium">{checkOut}</span>
+                  <span className="text-xs text-muted-foreground">{checkOutLabel}</span>
                 </div>
-                <span className="font-heading text-base font-medium">{checkOut}</span>
-                <span className="text-xs text-muted-foreground">{checkOutLabel}</span>
-              </div>
+              )}
             </CardContent>
           </Card>
 
