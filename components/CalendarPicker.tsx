@@ -36,12 +36,6 @@ export default function CalendarPicker({
   singleMonth = false,
   bookingType = "nightly",
 }: CalendarPickerProps) {
-  // Current calendar month view (starts with the check-in date's month or current month)
-  const initialDate = selectedFromDate ? new Date(selectedFromDate) : new Date();
-  const [currentYear, setCurrentYear] = useState(initialDate.getFullYear());
-  const [currentMonth, setCurrentMonth] = useState(initialDate.getMonth()); // 0-indexed
-  const [rangeError, setRangeError] = useState<string | null>(null);
-
   // Helper to format date as YYYY-MM-DD in local time
   const formatDateString = (year: number, month: number, day: number): string => {
     const mm = String(month + 1).padStart(2, "0");
@@ -49,10 +43,21 @@ export default function CalendarPicker({
     return `${year}-${mm}-${dd}`;
   };
 
-  const todayStr = (() => {
-    const d = new Date();
-    return formatDateString(d.getFullYear(), d.getMonth(), d.getDate());
-  })();
+  const today = new Date();
+  const todayStr = formatDateString(today.getFullYear(), today.getMonth(), today.getDate());
+
+  // Current calendar month view (starts with the selected check-in date's month if it's in the future, otherwise current month)
+  const initialDate = (selectedFromDate && selectedFromDate >= todayStr)
+    ? new Date(selectedFromDate)
+    : today;
+
+  const [currentYear, setCurrentYear] = useState(initialDate.getFullYear());
+  const [currentMonth, setCurrentMonth] = useState(initialDate.getMonth()); // 0-indexed
+  const [rangeError, setRangeError] = useState<string | null>(null);
+
+  const isCurrentMonthOrPast = 
+    currentYear < today.getFullYear() || 
+    (currentYear === today.getFullYear() && currentMonth <= today.getMonth());
 
   // Navigate months
   const handlePrevMonth = () => {
@@ -135,6 +140,8 @@ export default function CalendarPicker({
       const dateStr = formatDateString(year, month, day);
       const booking = getBookingForDate(year, month, day);
       const isBooked = !!booking;
+      const isPast = dateStr < todayStr;
+      const isDisabled = isBooked || isPast;
 
       const isSelectedFrom = selectedFromDate === dateStr;
       const isSelectedTo = selectedToDate === dateStr;
@@ -149,7 +156,7 @@ export default function CalendarPicker({
 
       // Click handler for day selection
       const handleDayClick = () => {
-        if (isBooked) return;
+        if (isBooked || isPast) return;
 
         setRangeError(null);
 
@@ -203,6 +210,8 @@ export default function CalendarPicker({
         } else {
           tooltipText = `Booked by ${booking.customerName}`;
         }
+      } else if (isPast) {
+        tooltipText = "Past date";
       } else if (isToday) {
         tooltipText = "Today";
       }
@@ -223,6 +232,8 @@ export default function CalendarPicker({
         "relative flex aspect-square w-full items-center justify-center rounded-full text-xs font-medium transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none ";
       if (isBooked) {
         dayClass += "cursor-not-allowed text-destructive/70 line-through";
+      } else if (isPast) {
+        dayClass += "cursor-not-allowed text-muted-foreground/40 opacity-50";
       } else if (isSelectedFrom || isSelectedTo) {
         dayClass += "bg-primary font-semibold text-primary-foreground";
       } else if (isRangeInterior) {
@@ -242,7 +253,7 @@ export default function CalendarPicker({
           <button
             type="button"
             onClick={handleDayClick}
-            disabled={isBooked}
+            disabled={isDisabled}
             aria-label={tooltipText ? `${dateStr}. ${tooltipText}` : dateStr}
             aria-pressed={isSelectedFrom || isSelectedTo || isSelectedRange}
             className={dayClass}
@@ -307,6 +318,7 @@ export default function CalendarPicker({
           variant="outline"
           size="icon-sm"
           onClick={handlePrevMonth}
+          disabled={isCurrentMonthOrPast}
           aria-label="Previous month"
         >
           <ChevronLeftIcon />
