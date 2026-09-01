@@ -161,7 +161,7 @@ function SubscribeContent() {
                 <CardContent>
                   <Separator className="mb-6" />
                   <ul className="space-y-3">
-                    {["Access & create exclusive Pro-only packages", "High-resolution image uploads and sharing", "Airbnb / Google Calendar sync", "Unlimited property listings & custom deals"].map((feature) => (
+                    {["Access & create exclusive Pro-only packages", "Airbnb / Google Calendar sync", "Unlimited property listings & custom deals"].map((feature) => (
                       <li key={feature} className="flex items-start gap-2 text-sm">
                         <CheckCircle2 className="size-4 mt-0.5 shrink-0 text-primary" />
                         <span>{feature}</span>
@@ -188,8 +188,8 @@ function SubscribeContent() {
 
               {/* Annual Plan (Recommended) */}
               <Card className="relative border-primary/50 md:ring-1 md:ring-primary/20">
-                <div className="absolute -top-3 right-4">
-                  <Badge>Save R30 · 2 Months Free</Badge>
+                <div className="absolute top-3 right-4">
+                  <Badge>Save R30</Badge>
                 </div>
                 <CardHeader>
                   <div className="flex items-start justify-between">
@@ -208,7 +208,7 @@ function SubscribeContent() {
                 <CardContent>
                   <Separator className="mb-6" />
                   <ul className="space-y-3">
-                    {["Access & create exclusive Pro-only packages", "High-resolution image uploads and sharing", "Airbnb / Google Calendar sync", "Unlimited property listings & custom deals", "Priority features & promotional packages"].map((feature) => (
+                    {["Access & create exclusive Pro-only packages", "Airbnb / Google Calendar sync", "Unlimited property listings & custom deals", "Priority features & promotional packages"].map((feature) => (
                       <li key={feature} className="flex items-start gap-2 text-sm">
                         <CheckCircle2 className="size-4 mt-0.5 shrink-0 text-primary" />
                         <span>{feature}</span>
