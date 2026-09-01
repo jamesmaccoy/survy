@@ -3,6 +3,12 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useAuth, AuthProvider } from "@/components/auth";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Separator } from "@/components/ui/separator";
+import { CheckCircle2 } from "lucide-react";
 
 function SubscribeContent() {
   const { user, loading } = useAuth();
@@ -75,201 +81,186 @@ function SubscribeContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-zinc-950 text-white flex items-center justify-center">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-t-teal-500 border-white/10" />
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white font-sans selection:bg-teal-500/30 selection:text-teal-200">
-      {/* Background gradients */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
-        <div className="absolute -top-[10%] left-[20%] w-[60%] h-[60%] rounded-full bg-emerald-500/10 blur-[120px]" />
-      </div>
-
-      <div className="relative max-w-5xl mx-auto px-4 py-16 sm:px-6 lg:px-8">
-        <header className="mb-16 text-center">
-          <Link href="/" className="text-xs text-zinc-500 hover:text-white transition-colors mb-4 inline-block">
+    <div className="min-h-screen bg-background py-16 px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-5xl">
+        {/* Header */}
+        <div className="mb-16 text-center">
+          <Link href="/" className="mb-4 inline-block text-sm text-muted-foreground hover:text-foreground transition-colors">
             ← Back to Home
           </Link>
-          <h1 className="text-4xl sm:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-r from-white via-zinc-200 to-zinc-400 leading-tight">
+          <h1 className="text-balance text-4xl font-bold tracking-tight sm:text-5xl">
             Become a Pro
           </h1>
-          <p className="text-xs sm:text-sm text-zinc-400 mt-2 max-w-lg mx-auto">
+          <p className="mt-4 text-muted-foreground max-w-lg mx-auto">
             Choose a plan, unlock listing capabilities, and access exclusive Pro-only package deals.
           </p>
-        </header>
+        </div>
 
+        {/* Status Message */}
         {statusMessage && (
-          <div
-            className={`max-w-md mx-auto mb-8 rounded-xl border p-3.5 text-center text-xs font-bold ${
-              statusMessage.type === "success"
-                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
-                : "border-red-500/30 bg-red-500/10 text-red-400"
-            }`}
-          >
-            {statusMessage.text}
+          <div className="mb-8 max-w-md mx-auto">
+            <Alert variant={statusMessage.type === "success" ? "default" : "destructive"}>
+              <AlertDescription>{statusMessage.text}</AlertDescription>
+            </Alert>
           </div>
         )}
 
+        {/* Pro User View */}
         {user && user.isAdmin ? (
-          <div className="max-w-md mx-auto rounded-3xl border border-teal-500/20 bg-teal-500/5 p-8 text-center backdrop-blur-md">
-            <span className="text-5xl block mb-4">🎉</span>
-            <h2 className="text-xl font-black text-white">You are a Pro User!</h2>
-            <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
-              Your account has full listing capabilities, high-resolution imagery, calendar sync, and exclusive Pro-only package access. Go to the Pro Portal to create and publish stays.
-            </p>
-            <div className="mt-6 flex flex-col gap-2">
-              <Link
-                href="/admin/properties"
-                className="w-full rounded-xl bg-teal-500 py-3 text-center text-xs font-bold text-white hover:bg-teal-600 transition-all shadow-md shadow-teal-500/10"
-              >
-                Go to Pro Dashboard
-              </Link>
-              <Link
-                href="/"
-                className="w-full rounded-xl bg-white/5 border border-white/10 py-3 text-center text-xs font-bold text-zinc-300 hover:text-white transition-all"
-              >
-                Storefront Home
-              </Link>
-            </div>
+          <div className="mx-auto max-w-md">
+            <Card>
+              <CardHeader className="text-center">
+                <div className="mb-4 text-5xl">🎉</div>
+                <CardTitle>You are a Pro User!</CardTitle>
+                <CardDescription className="mt-2">
+                  Your account has full listing capabilities, high-resolution imagery, calendar sync, and exclusive Pro-only package access.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Link
+                  href="/admin/properties"
+                  className="block"
+                >
+                  <Button className="w-full">Go to Pro Dashboard</Button>
+                </Link>
+                <Link
+                  href="/"
+                  className="block"
+                >
+                  <Button variant="outline" className="w-full">Storefront Home</Button>
+                </Link>
+              </CardContent>
+            </Card>
           </div>
         ) : (
           <div className="space-y-12">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto items-stretch">
+            {/* Plan Cards Grid */}
+            <div className="grid grid-cols-1 gap-8 md:grid-cols-2 max-w-4xl mx-auto items-stretch">
               {/* Monthly Plan */}
-              <div className="flex flex-col rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur-md relative hover:border-white/20 transition-all">
-                <div className="mb-6">
-                  <span className="rounded bg-teal-500/10 border border-teal-500/20 px-2.5 py-0.5 text-[10px] font-bold text-teal-400 uppercase tracking-wide">
-                    Monthly Plan
-                  </span>
-                  <h3 className="text-xl font-bold text-white mt-3">Pro Monthly</h3>
-                  <div className="mt-4 flex items-baseline">
-                    <span className="text-4xl font-black text-white">R 15</span>
-                    <span className="text-xs text-zinc-400 ml-1.5">/ month</span>
+              <Card>
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <Badge variant="secondary" className="mb-3">Monthly Plan</Badge>
+                      <CardTitle>Pro Monthly</CardTitle>
+                    </div>
                   </div>
-                  <p className="text-[11px] text-zinc-400 mt-2">Flexible month-to-month access to all Pro features and packages.</p>
-                </div>
-                <div className="border-t border-white/5 pt-6 flex-grow">
-                  <ul className="space-y-3 text-xs text-zinc-300">
-                    <li className="flex items-center gap-2">
-                      <span className="text-teal-400">✓</span> Access & create exclusive Pro-only packages
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span className="text-teal-400">✓</span> High-resolution image uploads and sharing
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span className="text-teal-400">✓</span> Airbnb / Google Calendar sync
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span className="text-teal-400">✓</span> Unlimited property listings & custom deals
-                    </li>
+                  <CardDescription>Flexible month-to-month access to all Pro features.</CardDescription>
+                  <div className="mt-4 flex items-baseline gap-1">
+                    <span className="text-4xl font-bold">R 15</span>
+                    <span className="text-sm text-muted-foreground">/ month</span>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <Separator className="mb-6" />
+                  <ul className="space-y-3">
+                    {["Access & create exclusive Pro-only packages", "High-resolution image uploads and sharing", "Airbnb / Google Calendar sync", "Unlimited property listings & custom deals"].map((feature) => (
+                      <li key={feature} className="flex items-start gap-2 text-sm">
+                        <CheckCircle2 className="size-4 mt-0.5 shrink-0 text-primary" />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
                   </ul>
-                </div>
-                <div className="mt-8 border-t border-white/5 pt-6">
+                </CardContent>
+                <CardFooter>
                   {user ? (
-                    <button
+                    <Button
                       onClick={() => handleSubscribe("monthly")}
                       disabled={isRedirecting}
-                      className="w-full rounded-xl bg-teal-500 py-3 text-center text-xs font-bold text-white hover:bg-teal-600 transition-all shadow-md shadow-teal-500/10 active:scale-95 disabled:opacity-50"
+                      className="w-full"
                     >
-                      {isRedirecting ? "Connecting..." : "Subscribe Monthly (R 15/mo)"}
-                    </button>
+                      {isRedirecting ? "Connecting..." : "Subscribe Monthly"}
+                    </Button>
                   ) : (
-                    <Link
-                      href="/login"
-                      className="block w-full rounded-xl bg-white/5 border border-white/10 py-3 text-center text-xs font-bold text-zinc-300 hover:text-white transition-all"
-                    >
-                      Sign In to Subscribe
+                    <Link href="/login" className="w-full">
+                      <Button variant="outline" className="w-full">Sign In to Subscribe</Button>
                     </Link>
                   )}
-                </div>
-              </div>
+                </CardFooter>
+              </Card>
 
-              {/* Annual Plan */}
-              <div className="flex flex-col rounded-3xl border border-teal-500/40 bg-teal-500/5 p-8 backdrop-blur-md relative hover:border-teal-500/50 transition-all">
-                <div className="absolute top-4 right-4 rounded-full bg-teal-500/20 border border-teal-500/30 px-2.5 py-0.5 text-[9px] font-bold text-teal-300 uppercase tracking-wider">
-                  Save R30 · 2 Months Free
+              {/* Annual Plan (Recommended) */}
+              <Card className="relative border-primary/50 md:ring-1 md:ring-primary/20">
+                <div className="absolute -top-3 right-4">
+                  <Badge>Save R30 · 2 Months Free</Badge>
                 </div>
-                <div className="mb-6">
-                  <span className="rounded bg-teal-500/20 border border-teal-500/30 px-2.5 py-0.5 text-[10px] font-bold text-teal-300 uppercase tracking-wide">
-                    Annual Plan
-                  </span>
-                  <h3 className="text-xl font-bold text-white mt-3">Pro Annual</h3>
-                  <div className="mt-4 flex items-baseline">
-                    <span className="text-4xl font-black text-white">R 150</span>
-                    <span className="text-xs text-zinc-400 ml-1.5">/ year</span>
-                    <span className="text-[10px] text-teal-400 font-semibold ml-2">(R 12.50/mo)</span>
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <Badge className="mb-3">Annual Plan</Badge>
+                      <CardTitle>Pro Annual</CardTitle>
+                    </div>
                   </div>
-                  <p className="text-[11px] text-zinc-400 mt-2">Best value plan for serious hosts with full year-round Pro capabilities.</p>
-                </div>
-                <div className="border-t border-white/5 pt-6 flex-grow">
-                  <ul className="space-y-3 text-xs text-zinc-300">
-                    <li className="flex items-center gap-2">
-                      <span className="text-teal-400">✓</span> Access & create exclusive Pro-only packages
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span className="text-teal-400">✓</span> High-resolution image uploads and sharing
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span className="text-teal-400">✓</span> Airbnb / Google Calendar sync
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span className="text-teal-400">✓</span> Unlimited property listings & custom deals
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span className="text-teal-400">✓</span> Priority features & promotional packages
-                    </li>
+                  <CardDescription>Best value plan for serious hosts with year-round capabilities.</CardDescription>
+                  <div className="mt-4 flex items-baseline gap-1">
+                    <span className="text-4xl font-bold">R 150</span>
+                    <span className="text-sm text-muted-foreground">/ year</span>
+                    <span className="ml-2 text-xs text-primary font-medium">(R 12.50/mo)</span>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <Separator className="mb-6" />
+                  <ul className="space-y-3">
+                    {["Access & create exclusive Pro-only packages", "High-resolution image uploads and sharing", "Airbnb / Google Calendar sync", "Unlimited property listings & custom deals", "Priority features & promotional packages"].map((feature) => (
+                      <li key={feature} className="flex items-start gap-2 text-sm">
+                        <CheckCircle2 className="size-4 mt-0.5 shrink-0 text-primary" />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
                   </ul>
-                </div>
-                <div className="mt-8 border-t border-white/5 pt-6">
+                </CardContent>
+                <CardFooter>
                   {user ? (
-                    <button
+                    <Button
                       onClick={() => handleSubscribe("annual")}
                       disabled={isRedirecting}
-                      className="w-full rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 py-3 text-center text-xs font-bold text-white hover:brightness-110 transition-all shadow-md shadow-teal-500/10 active:scale-95 disabled:opacity-50"
+                      className="w-full"
                     >
-                      {isRedirecting ? "Connecting..." : "Subscribe Annually (R 150/yr)"}
-                    </button>
+                      {isRedirecting ? "Connecting..." : "Subscribe Annually"}
+                    </Button>
                   ) : (
-                    <Link
-                      href="/login"
-                      className="block w-full rounded-xl bg-white/5 border border-white/10 py-3 text-center text-xs font-bold text-zinc-300 hover:text-white transition-all"
-                    >
-                      Sign In to Subscribe
+                    <Link href="/login" className="w-full">
+                      <Button variant="outline" className="w-full">Sign In to Subscribe</Button>
                     </Link>
                   )}
-                </div>
-              </div>
+                </CardFooter>
+              </Card>
             </div>
 
             {/* Local Developer Bypass block */}
             {process.env.NODE_ENV !== "production" && user && (
-              <div className="max-w-md mx-auto rounded-2xl border border-white/5 bg-white/5 p-6 text-center">
-                <span className="text-xs text-zinc-500 block font-bold tracking-wider uppercase mb-3">🛠 Local Dev Control</span>
-                <p className="text-[10px] text-zinc-400 leading-normal mb-4">
-                  For testing, you can bypass the checkout gateway and upgrade this account instantly.
-                </p>
-                <div className="flex flex-col sm:flex-row justify-center gap-3">
-                  <button
-                    type="button"
+              <Card className="mx-auto max-w-md">
+                <CardHeader className="text-center">
+                  <CardTitle className="text-base">🛠 Local Dev Control</CardTitle>
+                  <CardDescription>
+                    For testing, bypass the checkout gateway and upgrade instantly.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-3 sm:flex-row justify-center">
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => handleMockBypass("monthly")}
                     disabled={isRedirecting}
-                    className="flex-1 rounded-xl border border-teal-500/30 bg-teal-500/10 hover:bg-teal-500/20 px-4 py-2.5 text-xs font-bold text-teal-400 hover:text-white transition-all active:scale-95"
                   >
                     Bypass as Pro Monthly
-                  </button>
-                  <button
-                    type="button"
+                  </Button>
+                  <Button
+                    size="sm"
                     onClick={() => handleMockBypass("annual")}
                     disabled={isRedirecting}
-                    className="flex-1 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 px-4 py-2.5 text-xs font-bold text-white hover:brightness-110 transition-all active:scale-95"
                   >
                     Bypass as Pro Annual
-                  </button>
-                </div>
-              </div>
+                  </Button>
+                </CardContent>
+              </Card>
             )}
           </div>
         )}
