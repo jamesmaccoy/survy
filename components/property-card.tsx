@@ -17,7 +17,8 @@ export function PropertyCard({ property, packages, onOpenPackages }: PropertyCar
     const bookingType = resolveBookingType(property)
     const isHourly = bookingType === "hourly"
     const standardCount = packages.filter((p) => p.category === "standard").length
-    const addonCount = packages.filter((p) => p.category === "addon").length
+    const proCount = packages.filter((p) => p.category === "pro").length
+    const addonCount = packages.filter((p) => p.category === "addon" || p.category === "hosted" || p.category === "special").length
     const hasPackages = packages.length > 0
 
     return (
@@ -109,7 +110,7 @@ export function PropertyCard({ property, packages, onOpenPackages }: PropertyCar
 
                     {hasPackages && (
                         <p className="text-[11px] font-medium text-muted-foreground">
-                            {standardCount} standard · {addonCount} add-on
+                            {standardCount} std{proCount > 0 ? ` · ${proCount} pro` : ""} · {addonCount} add-on
                         </p>
                     )}
                 </div>

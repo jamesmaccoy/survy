@@ -102,27 +102,40 @@ export function PackageForm({ initial, existingIds, onCancel, onSave, userPlan }
 
             <fieldset className="flex flex-col gap-1.5">
                 <legend className="mb-1.5 text-xs font-semibold text-foreground">Category</legend>
-                <div className="flex gap-2">
-                    {(["standard", "addon"] as const).map((value) => (
+                <div className="grid grid-cols-3 gap-2">
+                    {([
+                        { value: "standard", label: "Standard", hint: "Base rate" },
+                        { value: "addon", label: "Add-on", hint: "Billed on top" },
+                        { value: "pro", label: "Pro Only", hint: "Pros only" },
+                    ] as const).map((item) => (
                         <button
-                            key={value}
+                            key={item.value}
                             type="button"
-                            onClick={() => setCategory(value)}
-                            aria-pressed={category === value}
+                            onClick={() => setCategory(item.value)}
+                            aria-pressed={category === item.value}
                             className={cn(
-                                "flex-1 rounded-lg border px-3 py-2 text-xs font-bold tracking-wide uppercase transition-colors",
-                                category === value
-                                    ? "border-primary bg-primary text-primary-foreground"
+                                "flex flex-col items-center justify-center rounded-lg border px-2 py-2 text-xs font-bold tracking-wide uppercase transition-colors text-center",
+                                category === item.value
+                                    ? "border-primary bg-primary text-primary-foreground shadow-sm"
                                     : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground",
                             )}
                         >
-                            {value === "standard" ? "Standard" : "Add-on"}
+                            <span>{item.label}</span>
+                            <span className="text-[9px] font-normal lowercase tracking-normal opacity-80">{item.hint}</span>
                         </button>
                     ))}
                 </div>
                 <p className="text-[11px] leading-relaxed text-muted-foreground">
-                    Standard packages replace the base rate. Add-ons are billed on top of the booking.
+                    {category === "standard" && "Standard packages replace the base rate."}
+                    {category === "addon" && "Add-ons are billed on top of the booking."}
+                    {category === "pro" && "Pro packages appear as available packages exclusively for Pro subscribers."}
+                    {category !== "standard" && category !== "addon" && category !== "pro" && "Custom package deal."}
                 </p>
+                {userPlan === "standard" && category !== "standard" && (
+                    <p className="text-[11px] font-medium text-amber-600 dark:text-amber-400">
+                        Note: Standard plan hosts can only create Standard packages. Upgrade to Pro to publish Pro or Add-on packages.
+                    </p>
+                )}
             </fieldset>
 
             <div className="flex flex-col gap-1.5">

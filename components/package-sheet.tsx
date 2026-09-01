@@ -67,9 +67,12 @@ function PackageRow({
                     <div className="flex flex-wrap items-center gap-1.5">
                         <Badge
                             variant={pkg.category === "standard" ? "secondary" : "outline"}
-                            className="text-[10px] font-bold tracking-wider uppercase"
+                            className={cn(
+                                "text-[10px] font-bold tracking-wider uppercase",
+                                pkg.category === "pro" && "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                            )}
                         >
-                            {pkg.category === "standard" ? "Standard" : "Add-on"}
+                            {pkg.category === "standard" ? "Standard" : pkg.category === "pro" ? "Pro Only" : "Add-on"}
                         </Badge>
                         {!pkg.isEnabled && (
                             <Badge variant="outline" className="text-[10px] font-bold tracking-wider uppercase">
@@ -180,6 +183,7 @@ export function PackageSheet({
 
     const existingIds = useMemo(() => packages.map((p) => p.id), [packages])
     const standard = packages.filter((p) => p.category === "standard")
+    const proPackages = packages.filter((p) => p.category === "pro")
     const addons = packages.filter((p) => p.category === "addon" || p.category === "hosted" || p.category === "special")
     const liveValue = packages.filter((p) => p.isEnabled).reduce((sum, p) => sum + p.price, 0)
 
@@ -195,6 +199,7 @@ export function PackageSheet({
 
     const sections = [
         { key: "standard", label: "Standard packages", hint: "Replace the base rate", items: standard },
+        { key: "pro", label: "Pro Exclusive packages", hint: "Available to Pro subscribers only", items: proPackages },
         { key: "addon", label: "Add-ons & Premium", hint: "Billed on top of the booking", items: addons },
     ]
 
@@ -219,7 +224,7 @@ export function PackageSheet({
 
                 <div className="flex items-center justify-between gap-3 border-b border-border bg-secondary/40 px-5 py-3">
                     <p className="text-xs font-semibold text-muted-foreground">
-                        {standard.length} standard · {addons.length} add-on
+                        {standard.length} standard · {proPackages.length} pro · {addons.length} add-on
                     </p>
                     <Button
                         size="sm"

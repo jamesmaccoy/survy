@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { useAuth, AuthProvider } from "@/components/auth";
 
@@ -9,7 +9,7 @@ function SubscribeContent() {
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  const handleSubscribe = async (plan: "standard" | "pro") => {
+  const handleSubscribe = async (plan: "monthly" | "annual") => {
     if (!user) {
       setStatusMessage({ type: "error", text: "Please sign in or sign up to subscribe." });
       return;
@@ -19,7 +19,7 @@ function SubscribeContent() {
     setStatusMessage(null);
 
     try {
-      const amountInCents = plan === "standard" ? 15000 : 29900;
+      const amountInCents = plan === "monthly" ? 1500 : 15000;
       const res = await fetch("/api/subscribe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -45,7 +45,7 @@ function SubscribeContent() {
   };
 
   // Developer Bypass to become Pro instantly (in mock mode or development)
-  const handleMockBypass = async (plan: "standard" | "pro") => {
+  const handleMockBypass = async (plan: "monthly" | "annual") => {
     if (!user) return;
     setIsRedirecting(true);
     setStatusMessage(null);
@@ -53,11 +53,14 @@ function SubscribeContent() {
       const res = await fetch("/api/subscribe/mock-confirm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.uid, plan })
+        body: JSON.stringify({ userId: user.uid, plan: "pro" })
       });
       const result = await res.json();
       if (res.ok && result.success) {
-        setStatusMessage({ type: "success", text: `Success! Promoted to ${plan === 'standard' ? 'Standard Pro' : 'Professional Portfolio Manager'}. Reloading session...` });
+        setStatusMessage({
+          type: "success",
+          text: `Success! Promoted to Pro (${plan === "monthly" ? "Monthly Plan" : "Annual Plan"}). Reloading session...`
+        });
         setTimeout(() => {
           window.location.href = "/admin/properties";
         }, 1500);
@@ -94,16 +97,17 @@ function SubscribeContent() {
             Become a Pro
           </h1>
           <p className="text-xs sm:text-sm text-zinc-400 mt-2 max-w-lg mx-auto">
-            Choose a plan, unlock listing capabilities, and manage high-resolution imagery.
+            Choose a plan, unlock listing capabilities, and access exclusive Pro-only package deals.
           </p>
         </header>
 
         {statusMessage && (
           <div
-            className={`max-w-md mx-auto mb-8 rounded-xl border p-3.5 text-center text-xs font-bold ${statusMessage.type === "success"
-              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
-              : "border-red-500/30 bg-red-500/10 text-red-400"
-              }`}
+            className={`max-w-md mx-auto mb-8 rounded-xl border p-3.5 text-center text-xs font-bold ${
+              statusMessage.type === "success"
+                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                : "border-red-500/30 bg-red-500/10 text-red-400"
+            }`}
           >
             {statusMessage.text}
           </div>
@@ -114,7 +118,7 @@ function SubscribeContent() {
             <span className="text-5xl block mb-4">🎉</span>
             <h2 className="text-xl font-black text-white">You are a Pro User!</h2>
             <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
-              Your account has listing management and image upload and sharing. Go to the Pro Portal to create and publish stays.
+              Your account has full listing capabilities, high-resolution imagery, calendar sync, and exclusive Pro-only package access. Go to the Pro Portal to create and publish stays.
             </p>
             <div className="mt-6 flex flex-col gap-2">
               <Link
@@ -134,23 +138,23 @@ function SubscribeContent() {
         ) : (
           <div className="space-y-12">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto items-stretch">
-              {/* Standard Host */}
+              {/* Monthly Plan */}
               <div className="flex flex-col rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur-md relative hover:border-white/20 transition-all">
                 <div className="mb-6">
-                  <span className="rounded bg-teal-500/10 border border-teal-500/20 px-2 py-0.5 text-[10px] font-bold text-teal-400 uppercase tracking-wide">
-                    Standard
+                  <span className="rounded bg-teal-500/10 border border-teal-500/20 px-2.5 py-0.5 text-[10px] font-bold text-teal-400 uppercase tracking-wide">
+                    Monthly Plan
                   </span>
-                  <h3 className="text-xl font-bold text-white mt-3">Storefront Pro</h3>
+                  <h3 className="text-xl font-bold text-white mt-3">Pro Monthly</h3>
                   <div className="mt-4 flex items-baseline">
-                    <span className="text-4xl font-black text-white">R 150</span>
-                    <span className="text-xs text-zinc-550 ml-1">/ month</span>
+                    <span className="text-4xl font-black text-white">R 15</span>
+                    <span className="text-xs text-zinc-400 ml-1.5">/ month</span>
                   </div>
-                  <p className="text-[11px] text-zinc-400 mt-2">Perfect for individual homeowners looking to list stays.</p>
+                  <p className="text-[11px] text-zinc-400 mt-2">Flexible month-to-month access to all Pro features and packages.</p>
                 </div>
                 <div className="border-t border-white/5 pt-6 flex-grow">
                   <ul className="space-y-3 text-xs text-zinc-300">
                     <li className="flex items-center gap-2">
-                      <span className="text-teal-400">✓</span> List up to 3 properties
+                      <span className="text-teal-400">✓</span> Access & create exclusive Pro-only packages
                     </li>
                     <li className="flex items-center gap-2">
                       <span className="text-teal-400">✓</span> High-resolution image uploads and sharing
@@ -158,16 +162,19 @@ function SubscribeContent() {
                     <li className="flex items-center gap-2">
                       <span className="text-teal-400">✓</span> Airbnb / Google Calendar sync
                     </li>
+                    <li className="flex items-center gap-2">
+                      <span className="text-teal-400">✓</span> Unlimited property listings & custom deals
+                    </li>
                   </ul>
                 </div>
                 <div className="mt-8 border-t border-white/5 pt-6">
                   {user ? (
                     <button
-                      onClick={() => handleSubscribe("standard")}
+                      onClick={() => handleSubscribe("monthly")}
                       disabled={isRedirecting}
-                      className="w-full rounded-xl bg-teal-500 py-3 text-center text-xs font-bold text-white hover:bg-teal-600 transition-all shadow-md shadow-teal-500/10 active:scale-95"
+                      className="w-full rounded-xl bg-teal-500 py-3 text-center text-xs font-bold text-white hover:bg-teal-600 transition-all shadow-md shadow-teal-500/10 active:scale-95 disabled:opacity-50"
                     >
-                      {isRedirecting ? "Connecting..." : "Subscribe Now"}
+                      {isRedirecting ? "Connecting..." : "Subscribe Monthly (R 15/mo)"}
                     </button>
                   ) : (
                     <Link
@@ -180,26 +187,27 @@ function SubscribeContent() {
                 </div>
               </div>
 
-              {/* Pro Host */}
-              <div className="flex flex-col rounded-3xl border border-teal-550/40 bg-teal-500/5 p-8 backdrop-blur-md relative hover:border-teal-500/30 transition-all">
-                <div className="absolute top-4 right-4 rounded-full bg-teal-500/10 border border-teal-500/20 px-2.5 py-0.5 text-[8px] font-bold text-teal-400 uppercase tracking-widest">
-                  Popular
+              {/* Annual Plan */}
+              <div className="flex flex-col rounded-3xl border border-teal-500/40 bg-teal-500/5 p-8 backdrop-blur-md relative hover:border-teal-500/50 transition-all">
+                <div className="absolute top-4 right-4 rounded-full bg-teal-500/20 border border-teal-500/30 px-2.5 py-0.5 text-[9px] font-bold text-teal-300 uppercase tracking-wider">
+                  Save R30 · 2 Months Free
                 </div>
                 <div className="mb-6">
-                  <span className="rounded bg-teal-500/20 border border-teal-500/30 px-2 py-0.5 text-[10px] font-bold text-teal-300 uppercase tracking-wide">
-                    Professional
+                  <span className="rounded bg-teal-500/20 border border-teal-500/30 px-2.5 py-0.5 text-[10px] font-bold text-teal-300 uppercase tracking-wide">
+                    Annual Plan
                   </span>
-                  <h3 className="text-xl font-bold text-white mt-3">Portfolio Manager</h3>
+                  <h3 className="text-xl font-bold text-white mt-3">Pro Annual</h3>
                   <div className="mt-4 flex items-baseline">
-                    <span className="text-4xl font-black text-white">R 299</span>
-                    <span className="text-xs text-zinc-550 ml-1">/ month</span>
+                    <span className="text-4xl font-black text-white">R 150</span>
+                    <span className="text-xs text-zinc-400 ml-1.5">/ year</span>
+                    <span className="text-[10px] text-teal-400 font-semibold ml-2">(R 12.50/mo)</span>
                   </div>
-                  <p className="text-[11px] text-zinc-400 mt-2">Designed for rental portfolios and property managers.</p>
+                  <p className="text-[11px] text-zinc-400 mt-2">Best value plan for serious hosts with full year-round Pro capabilities.</p>
                 </div>
                 <div className="border-t border-white/5 pt-6 flex-grow">
                   <ul className="space-y-3 text-xs text-zinc-300">
                     <li className="flex items-center gap-2">
-                      <span className="text-teal-400">✓</span> List unlimited properties
+                      <span className="text-teal-400">✓</span> Access & create exclusive Pro-only packages
                     </li>
                     <li className="flex items-center gap-2">
                       <span className="text-teal-400">✓</span> High-resolution image uploads and sharing
@@ -208,18 +216,21 @@ function SubscribeContent() {
                       <span className="text-teal-400">✓</span> Airbnb / Google Calendar sync
                     </li>
                     <li className="flex items-center gap-2">
-                      <span className="text-teal-400">✓</span> Exclusive package for development and payment options
+                      <span className="text-teal-400">✓</span> Unlimited property listings & custom deals
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="text-teal-400">✓</span> Priority features & promotional packages
                     </li>
                   </ul>
                 </div>
                 <div className="mt-8 border-t border-white/5 pt-6">
                   {user ? (
                     <button
-                      onClick={() => handleSubscribe("pro")}
+                      onClick={() => handleSubscribe("annual")}
                       disabled={isRedirecting}
-                      className="w-full rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 py-3 text-center text-xs font-bold text-white hover:brightness-110 transition-all shadow-md shadow-teal-500/10 active:scale-95"
+                      className="w-full rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 py-3 text-center text-xs font-bold text-white hover:brightness-110 transition-all shadow-md shadow-teal-500/10 active:scale-95 disabled:opacity-50"
                     >
-                      {isRedirecting ? "Connecting..." : "Subscribe Now"}
+                      {isRedirecting ? "Connecting..." : "Subscribe Annually (R 150/yr)"}
                     </button>
                   ) : (
                     <Link
@@ -234,7 +245,7 @@ function SubscribeContent() {
             </div>
 
             {/* Local Developer Bypass block */}
-            {process.env.NODE_ENV !== 'production' && user && (
+            {process.env.NODE_ENV !== "production" && user && (
               <div className="max-w-md mx-auto rounded-2xl border border-white/5 bg-white/5 p-6 text-center">
                 <span className="text-xs text-zinc-500 block font-bold tracking-wider uppercase mb-3">🛠 Local Dev Control</span>
                 <p className="text-[10px] text-zinc-400 leading-normal mb-4">
@@ -243,19 +254,19 @@ function SubscribeContent() {
                 <div className="flex flex-col sm:flex-row justify-center gap-3">
                   <button
                     type="button"
-                    onClick={() => handleMockBypass("standard")}
+                    onClick={() => handleMockBypass("monthly")}
                     disabled={isRedirecting}
-                    className="flex-1 rounded-xl border border-teal-500/30 bg-teal-550/10 hover:bg-teal-500/20 px-4 py-2.5 text-xs font-bold text-teal-400 hover:text-white transition-all active:scale-95"
+                    className="flex-1 rounded-xl border border-teal-500/30 bg-teal-500/10 hover:bg-teal-500/20 px-4 py-2.5 text-xs font-bold text-teal-400 hover:text-white transition-all active:scale-95"
                   >
-                    Bypass as Standard
+                    Bypass as Pro Monthly
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleMockBypass("pro")}
+                    onClick={() => handleMockBypass("annual")}
                     disabled={isRedirecting}
                     className="flex-1 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 px-4 py-2.5 text-xs font-bold text-white hover:brightness-110 transition-all active:scale-95"
                   >
-                    Bypass as Pro
+                    Bypass as Pro Annual
                   </button>
                 </div>
               </div>

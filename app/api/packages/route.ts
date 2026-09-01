@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     if (userPlan === "standard" && resolvedCategory !== "standard") {
       return NextResponse.json({
         success: false,
-        data: "Package category entitlement restricted. Standard plan subscribers can only create packages in the 'standard' category. Upgrade to Pro to configure premium packages (Hosted, Add-on, Special)."
+        data: "Package category entitlement restricted. Standard plan subscribers can only create packages in the 'standard' category. Upgrade to Pro to configure premium packages (Pro, Hosted, Add-on, Special)."
       }, { status: 403 });
     }
 

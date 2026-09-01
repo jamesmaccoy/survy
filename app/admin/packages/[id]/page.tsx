@@ -368,6 +368,13 @@ function PackageEditorContent({ id }: { id: string }) {
                 >
                   <option value="standard" className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-white">Standard</option>
                   <option 
+                    value="pro" 
+                    disabled={userPlan === "standard"} 
+                    className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-white disabled:opacity-50"
+                  >
+                    Pro Only {userPlan === "standard" ? "🔒 (Pro)" : ""}
+                  </option>
+                  <option 
                     value="hosted" 
                     disabled={userPlan === "standard"} 
                     className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-white disabled:opacity-50"

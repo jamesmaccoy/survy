@@ -32,7 +32,7 @@ export interface PropertyPackage {
   isEnabled: boolean;
 }
 
-export type PackageCategory = "standard" | "addon" | "hosted" | "special";
+export type PackageCategory = "standard" | "addon" | "hosted" | "special" | "pro";
 
 export function formatZar(value: number): string {
   return `R ${Math.round(value).toLocaleString()}`;

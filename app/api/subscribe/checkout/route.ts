@@ -6,24 +6,28 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => ({}));
     const { userId, plan, amountInCents } = body;
 
-    if (!userId || !plan || !amountInCents) {
-      return NextResponse.json({ success: false, error: "Missing required parameters (userId, plan, amountInCents)" }, { status: 400 });
+    if (!userId || !plan) {
+      return NextResponse.json({ success: false, error: "Missing required parameters (userId, plan)" }, { status: 400 });
     }
+
+    const isAnnual = plan === "annual";
+    const resolvedAmountInCents = amountInCents ? Number(amountInCents) : isAnnual ? 15000 : 1500;
 
     const host = request.headers.get("host") || "";
     const proto = request.headers.get("x-forwarded-proto") || (host.includes("localhost") ? "http" : "https");
     const siteUrl = host ? `${proto}://${host}` : request.nextUrl.origin;
 
-    const description = `${plan === "standard" ? "Standard" : "Pro"} Pro Subscription Plan`;
+    const description = `Pro Subscription (${isAnnual ? "Annual" : "Monthly"} Plan)`;
 
     // Initialize Yoco checkout flow with "subscription" metadata
     const redirectUrl = await createCheckout({
-      amountInCents: Number(amountInCents),
+      amountInCents: resolvedAmountInCents,
       description,
       metadata: {
         intent: "subscription",
         userId,
-        plan
+        plan: "pro",
+        billingInterval: isAnnual ? "annual" : "monthly"
       },
       siteUrl
     });
