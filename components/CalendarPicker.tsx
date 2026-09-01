@@ -203,12 +203,10 @@ export default function CalendarPicker({
       // Determine label & styles for tooltip/indicator
       let tooltipText = "";
       if (isBooked && booking) {
-        if (booking.source === "gcal") {
-          tooltipText = `Unavailable: ${booking.customerName}`;
-        } else if (booking.source === "airbnb") {
-          tooltipText = `Airbnb: Blocked Dates`;
+        if (booking.source === "airbnb") {
+          tooltipText = "Airbnb: Blocked Dates";
         } else {
-          tooltipText = `Booked by ${booking.customerName}`;
+          tooltipText = "Unavailable";
         }
       } else if (isPast) {
         tooltipText = "Past date";
