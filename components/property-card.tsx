@@ -16,8 +16,8 @@ interface PropertyCardProps {
 export function PropertyCard({ property, packages, onOpenPackages }: PropertyCardProps) {
     const bookingType = resolveBookingType(property)
     const isHourly = bookingType === "hourly"
-    const standardCount = packages.filter((p) => p.category === "standard").length
-    const proCount = packages.filter((p) => p.category === "pro").length
+    const proCount = packages.filter((p) => p.isPro || p.category === "pro").length
+    const standardCount = packages.filter((p) => p.category === "standard" || (!p.category && !p.isPro)).length
     const addonCount = packages.filter((p) => p.category === "addon" || p.category === "hosted" || p.category === "special").length
     const hasPackages = packages.length > 0
 

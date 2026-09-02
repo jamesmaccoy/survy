@@ -23,6 +23,7 @@ interface Package {
   description: string;
   category: string;
   isEnabled: boolean;
+  isPro?: boolean;
 }
 
 function PackageEditorContent({ id }: { id: string }) {
@@ -46,6 +47,7 @@ function PackageEditorContent({ id }: { id: string }) {
   const [price, setPrice] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("standard");
+  const [isPro, setIsPro] = useState(false);
   const [isEnabled, setIsEnabled] = useState(true);
 
   const selectedProperty = properties.find((p) => p.id === propertyId);
@@ -89,6 +91,7 @@ function PackageEditorContent({ id }: { id: string }) {
             setPrice(String(pkg.price));
             setDescription(pkg.description || "");
             setCategory(pkg.category || "standard");
+            setIsPro(Boolean(pkg.isPro || pkg.category === "pro"));
             setIsEnabled(pkg.isEnabled !== false);
           } else {
             setStatusMessage({ type: "error", text: "Package not found." });
@@ -127,10 +130,10 @@ function PackageEditorContent({ id }: { id: string }) {
     }
 
     // Front-end check for category entitlement
-    if (userPlan === "standard" && category !== "standard") {
+    if (userPlan === "standard" && (category !== "standard" || isPro)) {
       setStatusMessage({
         type: "error",
-        text: "Category entitlement restricted: Standard plan hosts can only create packages in the 'Standard' category. Upgrade to Professional to unlock Hosted, Add-on, and Special packages.",
+        text: "Category entitlement restricted: Standard plan hosts can only create standard packages for all guests. Upgrade to Professional to unlock Pro-exclusive and Add-on packages.",
       });
       return;
     }
@@ -153,6 +156,7 @@ function PackageEditorContent({ id }: { id: string }) {
           price: Number(price),
           description,
           category,
+          isPro: Boolean(isPro || category === "pro"),
           isEnabled,
         }),
       });
@@ -396,6 +400,20 @@ function PackageEditorContent({ id }: { id: string }) {
                     Special {userPlan === "standard" ? "🔒 (Pro)" : ""}
                   </option>
                 </select>
+
+                <div className="mt-2.5 flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="pkg-ispro"
+                    checked={isPro}
+                    disabled={userPlan === "standard"}
+                    onChange={(e) => setIsPro(e.target.checked)}
+                    className="size-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500 disabled:opacity-50"
+                  />
+                  <label htmlFor="pkg-ispro" className="text-xs text-slate-700 dark:text-zinc-300 font-medium cursor-pointer">
+                    ⭐ Pro Category: Available exclusively to Pro subscribers {userPlan === "standard" ? "🔒 (Upgrade to Pro)" : ""}
+                  </label>
+                </div>
               </div>
             </div>
 

@@ -341,7 +341,7 @@ export async function deleteProperty(id: string): Promise<boolean> {
 // PACKAGES CRUD
 // ==========================================
 
-export async function createPackage(data: { id?: string; propertyId: string; name: string; price: number; description: string; category?: string; isEnabled?: boolean }): Promise<any> {
+export async function createPackage(data: { id?: string; propertyId: string; name: string; price: number; description: string; category?: string; isPro?: boolean; isEnabled?: boolean }): Promise<any> {
   const db = getFirestore();
   const id = data.id || `pkg_${Math.random().toString(36).substring(2, 11)}`;
   

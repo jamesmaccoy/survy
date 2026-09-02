@@ -65,6 +65,7 @@ interface PackageData {
   description: string;
   category: string;
   isEnabled: boolean;
+  isPro?: boolean;
 }
 
 interface PropertyDetailsContentProps {
@@ -484,7 +485,7 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
                 <GiftIcon className="size-4 text-muted-foreground" />
                 Available packages
               </CardTitle>
-              {isProUser && packages.some((p) => p.category === "pro") && (
+              {isProUser && packages.some((p) => p.isPro || p.category === "pro") && (
                 <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-[10px] font-bold tracking-wider uppercase">
                   Pro Member Access
                 </Badge>
@@ -492,104 +493,112 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
             </CardHeader>
 
             <CardContent className="flex flex-col gap-4">
-              {packages.filter((pkg) => pkg.category !== "addon" && (pkg.category !== "pro" || isProUser)).length === 0 &&
-              packages.filter((pkg) => pkg.category === "pro").length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No specific package configurations created for this property yet.
-                </p>
-              ) : (
-                <div className="flex flex-col gap-3">
-                  {packages
-                    .filter((pkg) => pkg.category !== "addon" && (pkg.category !== "pro" || isProUser))
-                    .map((pkg) => {
-                      const isProPackage = pkg.category === "pro";
-                      return (
-                        <div
-                          key={pkg.id}
-                          className={cn(
-                            "flex items-start justify-between gap-4 rounded-lg border p-4 transition-colors",
-                            isProPackage
-                              ? "border-amber-500/40 bg-amber-500/5 shadow-sm"
-                              : "border-border bg-muted/40"
-                          )}
-                        >
-                          <div className="flex flex-col items-start gap-1.5">
-                            <div className="flex flex-wrap items-center gap-1.5">
-                              {isProPackage ? (
-                                <Badge className="bg-amber-500 hover:bg-amber-500 text-black border-none font-bold text-[10px] uppercase flex items-center gap-1">
-                                  <SparklesIcon className="size-3" />
-                                  Pro Exclusive
-                                </Badge>
-                              ) : (
-                                pkg.category && <Badge variant="outline">{pkg.category}</Badge>
+              {(() => {
+                const isPackagePro = (p: PackageData) => Boolean(p.isPro || p.category === "pro");
+                const isPackageAddon = (p: PackageData) => p.category === "addon";
+                const availableStayPackages = packages.filter(
+                  (pkg) => !isPackageAddon(pkg) && (!isPackagePro(pkg) || isProUser)
+                );
+                const allProPackages = packages.filter(isPackagePro);
+
+                return (
+                  <>
+                    {availableStayPackages.length === 0 && allProPackages.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        No specific package configurations created for this property yet.
+                      </p>
+                    ) : (
+                      <div className="flex flex-col gap-3">
+                        {availableStayPackages.map((pkg) => {
+                          const isProPackage = isPackagePro(pkg);
+                          return (
+                            <div
+                              key={pkg.id}
+                              className={cn(
+                                "flex items-start justify-between gap-4 rounded-lg border p-4 transition-colors",
+                                isProPackage
+                                  ? "border-amber-500/40 bg-amber-500/5 shadow-sm"
+                                  : "border-border bg-muted/40"
                               )}
+                            >
+                              <div className="flex flex-col items-start gap-1.5">
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  {isProPackage ? (
+                                    <Badge className="bg-amber-500 hover:bg-amber-500 text-black border-none font-bold text-[10px] uppercase flex items-center gap-1">
+                                      <SparklesIcon className="size-3" />
+                                      Pro Exclusive
+                                    </Badge>
+                                  ) : (
+                                    pkg.category && <Badge variant="outline">{pkg.category}</Badge>
+                                  )}
+                                </div>
+                                <h4 className="font-heading text-sm font-medium">{pkg.name}</h4>
+                                {pkg.description && (
+                                  <p className="text-sm leading-relaxed text-muted-foreground">
+                                    {pkg.description}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="flex shrink-0 flex-col items-end gap-0.5">
+                                <span className="text-xs text-muted-foreground">Price</span>
+                                <p className="font-heading text-sm font-semibold">
+                                  R {pkg.price.toLocaleString()}
+                                </p>
+                              </div>
                             </div>
-                            <h4 className="font-heading text-sm font-medium">{pkg.name}</h4>
-                            {pkg.description && (
-                              <p className="text-sm leading-relaxed text-muted-foreground">
-                                {pkg.description}
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Locked Pro-exclusive Packages Teaser for Non-Pro Users */}
+                    {!isProUser && allProPackages.length > 0 && (
+                      <div className="flex flex-col gap-3 rounded-xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-2.5">
+                            <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-amber-500/20 text-amber-600 dark:text-amber-400">
+                              <LockIcon className="size-3.5" />
+                            </div>
+                            <div>
+                              <p className="text-[11px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                                {allProPackages.length} Pro-Exclusive Package{allProPackages.length > 1 ? "s" : ""}
                               </p>
-                            )}
+                              <p className="text-xs font-semibold text-foreground">
+                                Available for Pro subscribers only
+                              </p>
+                            </div>
                           </div>
-                          <div className="flex shrink-0 flex-col items-end gap-0.5">
-                            <span className="text-xs text-muted-foreground">Price</span>
-                            <p className="font-heading text-sm font-semibold">
-                              R {pkg.price.toLocaleString()}
-                            </p>
-                          </div>
+
+                          <Link href="/subscribe">
+                            <Button size="sm" className="h-7 bg-amber-500 hover:bg-amber-600 text-black text-xs font-bold px-3">
+                              Unlock with Pro
+                            </Button>
+                          </Link>
                         </div>
-                      );
-                    })}
-                </div>
-              )}
 
-              {/* Locked Pro-exclusive Packages Teaser for Non-Pro Users */}
-              {!isProUser && packages.filter((pkg) => pkg.category === "pro").length > 0 && (
-                <div className="flex flex-col gap-3 rounded-xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-2.5">
-                      <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-amber-500/20 text-amber-600 dark:text-amber-400">
-                        <LockIcon className="size-3.5" />
-                      </div>
-                      <div>
-                        <p className="text-[11px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-                          {packages.filter((pkg) => pkg.category === "pro").length} Pro-Exclusive Package{packages.filter((pkg) => pkg.category === "pro").length > 1 ? "s" : ""}
-                        </p>
-                        <p className="text-xs font-semibold text-foreground">
-                          Available for Pro subscribers only
-                        </p>
-                      </div>
-                    </div>
-
-                    <Link href="/subscribe">
-                      <Button size="sm" className="h-7 bg-amber-500 hover:bg-amber-600 text-black text-xs font-bold px-3">
-                        Unlock with Pro
-                      </Button>
-                    </Link>
-                  </div>
-
-                  <div className="flex flex-col gap-2 pt-1 border-t border-amber-500/20">
-                    {packages
-                      .filter((pkg) => pkg.category === "pro")
-                      .map((pkg) => (
-                        <div
-                          key={pkg.id}
-                          className="flex items-center justify-between gap-3 rounded-lg border border-amber-500/20 bg-background/60 px-3 py-2 text-xs"
-                        >
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="border-amber-500/40 text-amber-600 dark:text-amber-400 text-[9px] font-bold uppercase">
-                              Pro Only
-                            </Badge>
-                            <span className="font-medium text-foreground">{pkg.name}</span>
-                          </div>
-                          <span className="font-semibold text-muted-foreground">
-                            R {pkg.price.toLocaleString()}
-                          </span>
+                        <div className="flex flex-col gap-2 pt-1 border-t border-amber-500/20">
+                          {allProPackages.map((pkg) => (
+                            <div
+                              key={pkg.id}
+                              className="flex items-center justify-between gap-3 rounded-lg border border-amber-500/20 bg-background/60 px-3 py-2 text-xs"
+                            >
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="border-amber-500/40 text-amber-600 dark:text-amber-400 text-[9px] font-bold uppercase">
+                                  {pkg.category === "addon" ? "Pro Add-on" : "Pro Stay"}
+                                </Badge>
+                                <span className="font-medium text-foreground">{pkg.name}</span>
+                              </div>
+                              <span className="font-semibold text-muted-foreground">
+                                R {pkg.price.toLocaleString()}
+                              </span>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                  </div>
-                </div>
-              )}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </CardContent>
           </Card>
         </div>

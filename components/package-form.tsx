@@ -5,8 +5,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-import { formatZar, type PackageCategory, type PropertyPackage } from "@/lib/types"
+import { formatZar, type PropertyPackage } from "@/lib/types"
+import { SparklesIcon } from "lucide-react"
 
 export type PackageDraft = Omit<PropertyPackage, "propertyId">
 
@@ -31,7 +33,11 @@ export function PackageForm({ initial, existingIds, onCancel, onSave, userPlan }
     const [name, setName] = useState(initial?.name ?? "")
     const [description, setDescription] = useState(initial?.description ?? "")
     const [price, setPrice] = useState(String(initial?.price ?? ""))
-    const [category, setCategory] = useState<PackageCategory>((initial?.category as PackageCategory) ?? "standard")
+    
+    const isInitialPro = Boolean(initial?.isPro || initial?.category === "pro")
+    const isInitialAddon = initial?.category === "addon"
+    const [baseCategory, setBaseCategory] = useState<"standard" | "addon">(isInitialAddon ? "addon" : "standard")
+    const [isPro, setIsPro] = useState<boolean>(isInitialPro)
 
     const derivedId = initial?.id ?? slugify(name)
     const numericPrice = Number(price) || 0
@@ -50,7 +56,8 @@ export function PackageForm({ initial, existingIds, onCancel, onSave, userPlan }
             name: name.trim(),
             description: description.trim(),
             price: numericPrice,
-            category,
+            category: baseCategory,
+            isPro,
             isEnabled: initial?.isEnabled ?? true,
         })
     }
@@ -100,40 +107,107 @@ export function PackageForm({ initial, existingIds, onCancel, onSave, userPlan }
                 />
             </div>
 
-            <fieldset className="flex flex-col gap-1.5">
-                <legend className="mb-1.5 text-xs font-semibold text-foreground">Category</legend>
-                <div className="grid grid-cols-3 gap-2">
-                    {([
-                        { value: "standard", label: "Standard", hint: "Base rate" },
-                        { value: "addon", label: "Add-on", hint: "Billed on top" },
-                        { value: "pro", label: "Pro Only", hint: "Pros only" },
-                    ] as const).map((item) => (
-                        <button
-                            key={item.value}
-                            type="button"
-                            onClick={() => setCategory(item.value)}
-                            aria-pressed={category === item.value}
-                            className={cn(
-                                "flex flex-col items-center justify-center rounded-lg border px-2 py-2 text-xs font-bold tracking-wide uppercase transition-colors text-center",
-                                category === item.value
-                                    ? "border-primary bg-primary text-primary-foreground shadow-sm"
-                                    : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground",
-                            )}
-                        >
-                            <span>{item.label}</span>
-                            <span className="text-[9px] font-normal lowercase tracking-normal opacity-80">{item.hint}</span>
-                        </button>
-                    ))}
+            <fieldset className="flex flex-col gap-2.5">
+                <div className="flex items-center justify-between">
+                    <legend className="text-xs font-semibold text-foreground">Category</legend>
+                    {isPro && (
+                        <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-[9px] font-bold uppercase flex items-center gap-1">
+                            <SparklesIcon className="size-2.5" />
+                            Pro Exclusive
+                        </Badge>
+                    )}
                 </div>
+
+                {/* Base Category: Standard or Add-on */}
+                <div className="grid grid-cols-2 gap-2">
+                    <button
+                        type="button"
+                        onClick={() => setBaseCategory("standard")}
+                        aria-pressed={baseCategory === "standard"}
+                        className={cn(
+                            "flex flex-col items-center justify-center rounded-lg border px-3 py-2 text-xs font-bold tracking-wide uppercase transition-colors text-center",
+                            baseCategory === "standard"
+                                ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                                : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground",
+                        )}
+                    >
+                        <span>Standard</span>
+                        <span className="text-[9px] font-normal lowercase tracking-normal opacity-80">Replaces base rate</span>
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setBaseCategory("addon")}
+                        aria-pressed={baseCategory === "addon"}
+                        className={cn(
+                            "flex flex-col items-center justify-center rounded-lg border px-3 py-2 text-xs font-bold tracking-wide uppercase transition-colors text-center",
+                            baseCategory === "addon"
+                                ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                                : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground",
+                        )}
+                    >
+                        <span>Add-on</span>
+                        <span className="text-[9px] font-normal lowercase tracking-normal opacity-80">Billed on top</span>
+                    </button>
+                </div>
+
+                {/* Pro Tier Category Toggle */}
+                <button
+                    type="button"
+                    onClick={() => setIsPro(!isPro)}
+                    aria-pressed={isPro}
+                    className={cn(
+                        "flex items-center justify-between rounded-lg border px-3 py-2.5 text-xs transition-all text-left",
+                        isPro
+                            ? "border-amber-500/50 bg-amber-500/10 text-amber-600 dark:text-amber-400 shadow-sm"
+                            : "border-border bg-background text-muted-foreground hover:border-amber-500/30 hover:text-foreground"
+                    )}
+                >
+                    <div className="flex items-center gap-2.5">
+                        <span className={cn(
+                            "flex size-5 shrink-0 items-center justify-center rounded-md border text-[11px] font-bold transition-colors",
+                            isPro
+                                ? "border-amber-500 bg-amber-500 text-black"
+                                : "border-muted-foreground/40 text-transparent"
+                        )}>
+                            ✓
+                        </span>
+                        <div className="flex flex-col">
+                            <span className="font-bold uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                                Pro Category
+                                {isPro && (
+                                    <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                                        ({baseCategory === "addon" ? "Add-on + Pro" : "Standard + Pro"})
+                                    </span>
+                                )}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground font-normal">
+                                {isPro
+                                    ? `This ${baseCategory === "addon" ? "add-on" : "standard package"} is enabled for Pro subscribers only`
+                                    : `Enable to make this ${baseCategory === "addon" ? "add-on" : "standard package"} exclusive to Pro subscribers`
+                                }
+                            </span>
+                        </div>
+                    </div>
+
+                    <Badge variant="outline" className={cn(
+                        "text-[9px] uppercase font-bold shrink-0",
+                        isPro ? "border-amber-500/40 text-amber-600 dark:text-amber-400 bg-amber-500/10" : "text-muted-foreground"
+                    )}>
+                        {isPro ? "Pro Only" : "All Guests"}
+                    </Badge>
+                </button>
+
                 <p className="text-[11px] leading-relaxed text-muted-foreground">
-                    {category === "standard" && "Standard packages replace the base rate."}
-                    {category === "addon" && "Add-ons are billed on top of the booking."}
-                    {category === "pro" && "Pro packages appear as available packages exclusively for Pro subscribers."}
-                    {category !== "standard" && category !== "addon" && category !== "pro" && "Custom package deal."}
+                    {baseCategory === "standard" && !isPro && "Standard packages replace the base rate."}
+                    {baseCategory === "addon" && !isPro && "Add-ons are billed on top of the booking."}
+                    {baseCategory === "standard" && isPro && "Standard + Pro package: replaces the base stay rate, available exclusively to Pro subscribers."}
+                    {baseCategory === "addon" && isPro && "Add-on + Pro package: billed on top of the booking, available exclusively to Pro subscribers."}
                 </p>
-                {userPlan === "standard" && category !== "standard" && (
+
+                {userPlan === "standard" && (baseCategory === "addon" || isPro) && (
                     <p className="text-[11px] font-medium text-amber-600 dark:text-amber-400">
-                        Note: Standard plan hosts can only create Standard packages. Upgrade to Pro to publish Pro or Add-on packages.
+                        Note: Standard plan hosts can only create standard packages for all guests. Upgrade to Pro to publish Add-on or Pro-exclusive packages.
                     </p>
                 )}
             </fieldset>

@@ -80,13 +80,15 @@ export function SuggestedPackages({ suggested, properties, onCopy }: SuggestedPa
                       <div className="flex flex-wrap items-center gap-1.5">
                         <Badge
                           variant={pkg.category === "standard" ? "secondary" : "outline"}
-                          className={cn(
-                            "text-[9px] font-bold tracking-wider uppercase animate-fade-in",
-                            pkg.category === "pro" && "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                          )}
+                          className="text-[9px] font-bold tracking-wider uppercase animate-fade-in"
                         >
-                          {pkg.category === "standard" ? "Standard" : pkg.category === "pro" ? "Pro Only" : "Add-on"}
+                          {pkg.category === "addon" ? "Add-on" : "Standard"}
                         </Badge>
+                        {(pkg.isPro || pkg.category === "pro") && (
+                          <Badge className="border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[9px] font-bold tracking-wider uppercase animate-fade-in">
+                            Pro Only
+                          </Badge>
+                        )}
                       </div>
                       <span className="text-sm font-bold text-primary">{formatZar(pkg.price)}</span>
                     </div>

@@ -56,6 +56,7 @@ interface PackageData {
   description: string;
   category: string;
   isEnabled: boolean;
+  isPro?: boolean;
 }
 
 interface Booking {

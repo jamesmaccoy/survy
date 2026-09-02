@@ -67,13 +67,15 @@ function PackageRow({
                     <div className="flex flex-wrap items-center gap-1.5">
                         <Badge
                             variant={pkg.category === "standard" ? "secondary" : "outline"}
-                            className={cn(
-                                "text-[10px] font-bold tracking-wider uppercase",
-                                pkg.category === "pro" && "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                            )}
+                            className="text-[10px] font-bold tracking-wider uppercase"
                         >
-                            {pkg.category === "standard" ? "Standard" : pkg.category === "pro" ? "Pro Only" : "Add-on"}
+                            {pkg.category === "addon" ? "Add-on" : "Standard"}
                         </Badge>
+                        {(pkg.isPro || pkg.category === "pro") && (
+                            <Badge className="border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-bold tracking-wider uppercase">
+                                Pro Only
+                            </Badge>
+                        )}
                         {!pkg.isEnabled && (
                             <Badge variant="outline" className="text-[10px] font-bold tracking-wider uppercase">
                                 Hidden
@@ -182,9 +184,12 @@ export function PackageSheet({
     }, [])
 
     const existingIds = useMemo(() => packages.map((p) => p.id), [packages])
-    const standard = packages.filter((p) => p.category === "standard")
-    const proPackages = packages.filter((p) => p.category === "pro")
-    const addons = packages.filter((p) => p.category === "addon" || p.category === "hosted" || p.category === "special")
+    const isPkgPro = (p: PropertyPackage) => Boolean(p.isPro || p.category === "pro");
+    const isPkgAddon = (p: PropertyPackage) => p.category === "addon" || p.category === "hosted" || p.category === "special";
+
+    const standard = packages.filter((p) => !isPkgAddon(p) && !isPkgPro(p));
+    const proPackages = packages.filter((p) => isPkgPro(p));
+    const addons = packages.filter((p) => isPkgAddon(p) && !isPkgPro(p));
     const liveValue = packages.filter((p) => p.isEnabled).reduce((sum, p) => sum + p.price, 0)
 
     function close(next: boolean) {
@@ -199,7 +204,7 @@ export function PackageSheet({
 
     const sections = [
         { key: "standard", label: "Standard packages", hint: "Replace the base rate", items: standard },
-        { key: "pro", label: "Pro Exclusive packages", hint: "Available to Pro subscribers only", items: proPackages },
+        { key: "pro", label: "Pro Exclusive packages", hint: "Available to Pro subscribers only (Standard & Add-on)", items: proPackages },
         { key: "addon", label: "Add-ons & Premium", hint: "Billed on top of the booking", items: addons },
     ]
 

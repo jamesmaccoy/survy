@@ -30,6 +30,7 @@ export interface PropertyPackage {
   description: string;
   category: string;
   isEnabled: boolean;
+  isPro?: boolean;
 }
 
 export type PackageCategory = "standard" | "addon" | "hosted" | "special" | "pro";

@@ -30,6 +30,7 @@ export async function POST(request: NextRequest) {
       price,
       description,
       category,
+      isPro,
       isEnabled
     } = body;
 
@@ -51,11 +52,12 @@ export async function POST(request: NextRequest) {
     const profile = await getUserProfile(userId);
     const userPlan = profile?.plan || "standard";
     const resolvedCategory = category || "standard";
+    const isProPackage = Boolean(isPro || category === "pro");
 
-    if (userPlan === "standard" && resolvedCategory !== "standard") {
+    if (userPlan === "standard" && (resolvedCategory !== "standard" || isProPackage)) {
       return NextResponse.json({
         success: false,
-        data: "Package category entitlement restricted. Standard plan subscribers can only create packages in the 'standard' category. Upgrade to Pro to configure premium packages (Pro, Hosted, Add-on, Special)."
+        data: "Package category entitlement restricted. Standard plan subscribers can only create packages in the 'standard' category for all guests. Upgrade to Pro to configure premium packages (Pro, Hosted, Add-on, Special)."
       }, { status: 403 });
     }
 
@@ -70,7 +72,8 @@ export async function POST(request: NextRequest) {
       name,
       price: priceNum,
       description: description || "",
-      category: category || "standard",
+      category: resolvedCategory,
+      isPro: isProPackage,
       isEnabled: isEnabled !== undefined ? Boolean(isEnabled) : true
     });
 

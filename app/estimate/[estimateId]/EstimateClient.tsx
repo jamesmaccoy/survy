@@ -82,6 +82,7 @@ interface Package {
   description: string;
   category: string;
   isEnabled: boolean;
+  isPro?: boolean;
 }
 
 interface EstimateClientProps {
@@ -614,6 +615,11 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-heading text-sm font-medium">{pkg.name}</span>
                           {pkg.category && <Badge variant="outline">{pkg.category}</Badge>}
+                          {(pkg.isPro || pkg.category === "pro") && (
+                            <Badge className="border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-bold uppercase">
+                              Pro
+                            </Badge>
+                          )}
                           {mandatoryPackageId === pkg.id && (
                             <Badge variant="destructive" className="bg-amber-500 hover:bg-amber-600 text-black border-none font-semibold">
                               Required for stay length
