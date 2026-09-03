@@ -3,14 +3,17 @@
 import React, { useState, useEffect, use, Suspense } from "react";
 import { useAuth, AuthProvider } from "@/components/auth";
 import Link from "next/link";
-import { formatDisplayDate } from "@/lib/utils";
+import { formatDisplayDate, cn } from "@/lib/utils";
 import {
   ArrowLeftIcon,
   CalendarIcon,
   CheckIcon,
+  GiftIcon,
   KeyRoundIcon,
+  LockIcon,
   Share2Icon,
   ShieldXIcon,
+  SparklesIcon,
   TriangleAlertIcon,
   UserIcon,
   UsersIcon,
@@ -79,6 +82,7 @@ function BookingDetailsContent({ id }: { id: string }) {
   const [booking, setBooking] = useState<Booking | null>(null);
   const [property, setProperty] = useState<Property | null>(null);
   const [packages, setPackages] = useState<PackageData[]>([]);
+  const [isProUser, setIsProUser] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [purchasingAddonId, setPurchasingAddonId] = useState<string>("");
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
@@ -96,6 +100,23 @@ function BookingDetailsContent({ id }: { id: string }) {
         }
         const bkData = bkResult.data;
         setBooking(bkData);
+
+        // Fetch user profile to verify Pro status for current viewer / customer
+        const targetUserId = user?.uid;
+        const targetEmail = user?.email || bkData.customerEmail;
+        if (targetUserId || targetEmail) {
+          try {
+            const profileRes = await fetch(`/api/user/profile?userId=${targetUserId || ""}&email=${targetEmail || ""}`);
+            const profileResult = await profileRes.json();
+            if (profileResult.success && profileResult.data) {
+              const plan = profileResult.data.plan;
+              const isAdmin = profileResult.data.isAdmin;
+              setIsProUser(plan === "pro" || Boolean(isAdmin));
+            }
+          } catch (e) {
+            console.error("Failed to load user profile for pro status check:", e);
+          }
+        }
 
         // 2. Fetch specific property details directly
         const propRes = await fetch(`/api/posts/${bkData.propertyId}`);
@@ -118,7 +139,7 @@ function BookingDetailsContent({ id }: { id: string }) {
     };
 
     fetchBookingDetails();
-  }, [id]);
+  }, [id, user]);
 
   const handleCopyInviteLink = () => {
     if (!booking?.token) return;
@@ -130,12 +151,22 @@ function BookingDetailsContent({ id }: { id: string }) {
 
   const handlePurchaseAddon = async (addon: PackageData) => {
     if (!booking) return;
+    const isProAddon = Boolean(addon.isPro || addon.category === "pro");
+    if (isProAddon && !isProUser) {
+      setAddonError("This add-on is exclusively available to Pro subscribers. Upgrade to Pro to add it to your stay.");
+      return;
+    }
+
     setAddonError(null);
     setPurchasingAddonId(addon.id);
     try {
       const response = await fetch("/api/v1/generate_checkout_link", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-id": user?.uid || "",
+          "x-user-email": user?.email || booking.customerEmail || "",
+        },
         body: JSON.stringify({
           type: addon.id,
           bookingId: booking.id,
@@ -284,7 +315,22 @@ function BookingDetailsContent({ id }: { id: string }) {
   }
   const propName = property ? property.title : booking.propertyId;
   const isPaid = booking.paymentStatus === "paid" || booking.paymentStatus === "success";
-  const addonsList = packages.filter((p) => p.propertyId === booking.propertyId && p.category === "addon");
+
+  const isPackagePro = (p: PackageData) => Boolean(p.isPro || p.category === "pro");
+  const isAddon = (p: PackageData) => p.category === "addon";
+
+  // Standard add-ons available for any guest, or all add-ons if customer is Pro
+  const availableAddons = packages.filter(
+    (p) => p.propertyId === booking.propertyId && isAddon(p) && (isProUser || !isPackagePro(p))
+  );
+
+  // Pro-exclusive add-ons on this property
+  const proAddons = packages.filter(
+    (p) => p.propertyId === booking.propertyId && isAddon(p) && isPackagePro(p)
+  );
+
+  const bookedPackage = packages.find((p) => p.id === booking.packageId);
+
   const statusVariant: "default" | "secondary" | "destructive" = isPaid
     ? "default"
     : booking.paymentStatus === "failed"
@@ -350,6 +396,19 @@ function BookingDetailsContent({ id }: { id: string }) {
                 <span className="text-muted-foreground">Contact email</span>
                 <span className="truncate font-mono text-xs">{booking.customerEmail}</span>
               </div>
+              {booking.packageId && (
+                <div className="flex items-center justify-between gap-4 text-sm">
+                  <span className="text-muted-foreground">Stay package</span>
+                  <div className="flex items-center gap-1.5 font-medium">
+                    <span>{bookedPackage?.name || booking.packageId}</span>
+                    {bookedPackage && isPackagePro(bookedPackage) && (
+                      <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-[9px] font-bold uppercase">
+                        Pro
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -473,13 +532,23 @@ function BookingDetailsContent({ id }: { id: string }) {
           {/* In-App Add-ons Purchases */}
           {isPaid && (
             <Card>
-              <CardHeader>
-                <CardTitle>Enhance stay</CardTitle>
-                <CardDescription>
-                  Select optional upgrades for this destination listing.
-                </CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between pb-4">
+                <div className="flex flex-col gap-1">
+                  <CardTitle className="flex items-center gap-2">
+                    <GiftIcon className="size-4 text-muted-foreground" />
+                    Enhance stay
+                  </CardTitle>
+                  <CardDescription>
+                    Select optional upgrades for this destination listing.
+                  </CardDescription>
+                </div>
+                {isProUser && proAddons.length > 0 && (
+                  <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-[10px] font-bold tracking-wider uppercase">
+                    Pro Member Access
+                  </Badge>
+                )}
               </CardHeader>
-              <CardContent className="flex flex-col gap-3">
+              <CardContent className="flex flex-col gap-4">
                 {addonError && (
                   <Alert variant="destructive">
                     <TriangleAlertIcon />
@@ -488,42 +557,107 @@ function BookingDetailsContent({ id }: { id: string }) {
                   </Alert>
                 )}
 
-                {addonsList.length === 0 ? (
+                {availableAddons.length === 0 && (!isProUser && proAddons.length === 0) ? (
                   <p className="text-sm text-muted-foreground">
                     No add-ons available for this property.
                   </p>
                 ) : (
-                  addonsList.map((addon) => (
-                    <div
-                      key={addon.id}
-                      className="flex flex-col gap-3 rounded-lg border bg-muted/50 p-4 transition-colors hover:border-primary/50"
-                    >
-                      <div className="flex flex-col gap-1">
-                        <h3 className="font-heading text-sm font-medium">{addon.name}</h3>
-                        {addon.description && (
-                          <p className="text-sm leading-relaxed text-muted-foreground">
-                            {addon.description}
-                          </p>
-                        )}
-                      </div>
-                      <Separator />
-                      <div className="flex items-center justify-between gap-4">
-                        <span className="font-heading text-sm font-semibold tabular-nums">
-                          R {addon.price.toLocaleString()}
-                        </span>
-                        <Button
-                          size="sm"
-                          onClick={() => handlePurchaseAddon(addon)}
-                          disabled={purchasingAddonId === addon.id}
-                        >
-                          {purchasingAddonId === addon.id && (
-                            <Spinner className="size-3.5" data-icon="inline-start" />
+                  <div className="flex flex-col gap-3">
+                    {availableAddons.map((addon) => {
+                      const isProAddonItem = isPackagePro(addon);
+                      return (
+                        <div
+                          key={addon.id}
+                          className={cn(
+                            "flex flex-col gap-3 rounded-lg border p-4 transition-colors",
+                            isProAddonItem
+                              ? "border-amber-500/40 bg-amber-500/5 hover:border-amber-500/60"
+                              : "border-border bg-muted/50 hover:border-primary/50"
                           )}
-                          {purchasingAddonId === addon.id ? "Connecting..." : "Add to stay"}
-                        </Button>
+                        >
+                          <div className="flex flex-col gap-1.5">
+                            <div className="flex items-center gap-2">
+                              {isProAddonItem && (
+                                <Badge className="bg-amber-500 hover:bg-amber-500 text-black border-none font-bold text-[9px] uppercase flex items-center gap-1">
+                                  <SparklesIcon className="size-2.5" />
+                                  Pro Exclusive
+                                </Badge>
+                              )}
+                              <h3 className="font-heading text-sm font-medium">{addon.name}</h3>
+                            </div>
+                            {addon.description && (
+                              <p className="text-sm leading-relaxed text-muted-foreground">
+                                {addon.description}
+                              </p>
+                            )}
+                          </div>
+                          <Separator />
+                          <div className="flex items-center justify-between gap-4">
+                            <span className="font-heading text-sm font-semibold tabular-nums">
+                              R {addon.price.toLocaleString()}
+                            </span>
+                            <Button
+                              size="sm"
+                              onClick={() => handlePurchaseAddon(addon)}
+                              disabled={purchasingAddonId === addon.id}
+                              className={isProAddonItem ? "bg-amber-500 hover:bg-amber-600 text-black font-semibold" : undefined}
+                            >
+                              {purchasingAddonId === addon.id && (
+                                <Spinner className="size-3.5" data-icon="inline-start" />
+                              )}
+                              {purchasingAddonId === addon.id ? "Connecting..." : "Add to stay"}
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Locked Pro Add-on Teaser for Non-Pro Customers */}
+                {!isProUser && proAddons.length > 0 && (
+                  <div className="flex flex-col gap-3 rounded-xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-amber-500/20 text-amber-600 dark:text-amber-400">
+                          <LockIcon className="size-3.5" />
+                        </div>
+                        <div>
+                          <p className="text-[11px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                            {proAddons.length} Pro-Exclusive Add-on{proAddons.length > 1 ? "s" : ""}
+                          </p>
+                          <p className="text-xs font-semibold text-foreground">
+                            Available for Pro subscribers only
+                          </p>
+                        </div>
                       </div>
+
+                      <Link href="/subscribe">
+                        <Button size="sm" className="h-7 bg-amber-500 hover:bg-amber-600 text-black text-xs font-bold px-3">
+                          Unlock with Pro
+                        </Button>
+                      </Link>
                     </div>
-                  ))
+
+                    <div className="flex flex-col gap-2 pt-1 border-t border-amber-500/20">
+                      {proAddons.map((addon) => (
+                        <div
+                          key={addon.id}
+                          className="flex items-center justify-between gap-3 rounded-lg border border-amber-500/20 bg-background/60 px-3 py-2 text-xs"
+                        >
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="border-amber-500/40 text-amber-600 dark:text-amber-400 text-[9px] font-bold uppercase">
+                              Pro Only
+                            </Badge>
+                            <span className="font-medium text-foreground">{addon.name}</span>
+                          </div>
+                          <span className="font-semibold text-muted-foreground">
+                            R {addon.price.toLocaleString()}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 )}
               </CardContent>
             </Card>

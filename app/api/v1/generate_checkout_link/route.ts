@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPackage, getProjectId, listPackageDocIds } from "@/lib/firebase";
+import { getPackage, getProjectId, listPackageDocIds, getBooking, getUserProfile, isUserAdmin } from "@/lib/firebase";
 import { parsePriceToCents, createCheckout } from "@/lib/yoco";
 
 const PACKAGE_LABELS: Record<string, string> = {
@@ -103,7 +103,10 @@ export async function POST(request: NextRequest) {
     const proto = request.headers.get("x-forwarded-proto") || (host.includes("localhost") ? "http" : "https");
     const siteUrl = host ? `${proto}://${host}` : request.nextUrl.origin;
 
-    return processGenerateRequest(type, bookingId, estimateId, amountInCentsOverride, descriptionOverride, siteUrl);
+    const userId = request.headers.get("x-user-id");
+    const userEmail = request.headers.get("x-user-email");
+
+    return processGenerateRequest(type, bookingId, estimateId, amountInCentsOverride, descriptionOverride, siteUrl, userId, userEmail);
   } catch (err: any) {
     console.error("generate_checkout_link post parsing error:", err);
     return NextResponse.json(
@@ -119,7 +122,9 @@ async function processGenerateRequest(
   estimateId?: string,
   amountInCentsOverride?: number,
   descriptionOverride?: string,
-  siteUrl?: string
+  siteUrl?: string,
+  userId?: string | null,
+  userEmail?: string | null
 ) {
   try {
     let pkg = await getPackage(type);
@@ -139,6 +144,30 @@ async function processGenerateRequest(
             projectId: getProjectId(),
           },
           { status: 404, headers: corsHeaders() }
+        );
+      }
+    }
+
+    // Verify Pro subscription entitlement if the package or add-on is exclusive to Pro
+    if (pkg && (pkg.isPro || pkg.category === "pro")) {
+      let isPro = false;
+      if (bookingId) {
+        const bk = await getBooking(bookingId);
+        if (bk) {
+          const profile = await getUserProfile(userId || bk.customerEmail);
+          const admin = await isUserAdmin(userId || bk.customerEmail, bk.customerEmail);
+          if (profile?.plan === "pro" || admin) isPro = true;
+        }
+      }
+      if (!isPro && (userId || userEmail)) {
+        const profile = userId ? await getUserProfile(userId) : null;
+        const admin = await isUserAdmin(userId || "", userEmail || "");
+        if (profile?.plan === "pro" || admin) isPro = true;
+      }
+      if (!isPro) {
+        return NextResponse.json(
+          { status: false, data: "This package or add-on is exclusive to Pro subscribers." },
+          { status: 403, headers: corsHeaders() }
         );
       }
     }

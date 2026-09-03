@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createBooking, listBookings, getProperty, updateBookingStatus } from "@/lib/firebase";
+import { createBooking, listBookings, getProperty, updateBookingStatus, getPackage, getUserProfile, isUserAdmin } from "@/lib/firebase";
 
 // In-memory cache for external feeds keyed by URL to support multiple properties
 interface CacheEntry {
@@ -210,7 +210,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "The selected dates conflict with an existing booking." }, { status: 400 });
     }
 
-    // 2. Persist the Booking
+    // 2. Verify Pro package entitlement if packageId is specified
+    if (packageId) {
+      const selectedPkg = await getPackage(packageId);
+      if (selectedPkg && (selectedPkg.isPro || selectedPkg.category === "pro")) {
+        const userId = request.headers.get("x-user-id");
+        const userEmail = request.headers.get("x-user-email") || customerEmail;
+        const profile = userId ? await getUserProfile(userId) : null;
+        const isAdmin = await isUserAdmin(userId || "", userEmail || "");
+        const isProCustomer = profile?.plan === "pro" || Boolean(isAdmin);
+
+        if (!isProCustomer) {
+          return NextResponse.json(
+            { success: false, error: "This package is exclusively available to Pro subscribers. Upgrade to Pro to book this package." },
+            { status: 403 }
+          );
+        }
+      }
+    }
+
+    // 3. Persist the Booking
     const booking = await createBooking({
       propertyId,
       packageId: packageId || null,

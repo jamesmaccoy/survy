@@ -14,6 +14,7 @@ import {
   CheckIcon,
   ClockIcon,
   KeyRoundIcon,
+  LockIcon,
   LuggageIcon,
   TriangleAlertIcon,
   UsersIcon,
@@ -103,6 +104,7 @@ function BookingsCheckoutContent() {
   const [savedDates, setSavedDates] = useState<{ fromDate: string; toDate: string } | null>(null);
   const [packages, setPackages] = useState<PackageData[]>([]);
   const [selectedPackageId, setSelectedPackageId] = useState<string>("");
+  const [isProUser, setIsProUser] = useState<boolean>(false);
 
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -242,6 +244,14 @@ function BookingsCheckoutContent() {
         const estResult = await estRes.json();
         if (estResult.success && estResult.data) {
           setLatestEstimate(estResult.data);
+        }
+
+        const profileRes = await fetch(`/api/user/profile?userId=${user.uid}&email=${user.email || ""}`);
+        const profileResult = await profileRes.json();
+        if (profileResult.success && profileResult.data) {
+          const plan = profileResult.data.plan;
+          const isAdmin = profileResult.data.isAdmin;
+          setIsProUser(plan === "pro" || Boolean(isAdmin));
         }
       } catch (err) {
         console.error("Failed to retrieve user dates or estimate:", err);
@@ -871,6 +881,8 @@ function BookingsCheckoutContent() {
                 {packages
                   .filter((p) => p.category !== "addon")
                   .map((pkg) => {
+                    const isPkgPro = Boolean(pkg.isPro || pkg.category === "pro");
+                    const isProLocked = isPkgPro && !isProUser;
                     const isSelected = selectedPackageId === pkg.id;
                     const price = pkg.price || 0;
 
@@ -880,32 +892,40 @@ function BookingsCheckoutContent() {
                         type="button"
                         role="radio"
                         aria-checked={isSelected}
-                        disabled={mandatoryPackageId ? pkg.id !== mandatoryPackageId : false}
-                        onClick={() => !mandatoryPackageId && setSelectedPackageId(pkg.id)}
-                        className={`flex w-full items-start gap-4 rounded-lg border p-4 text-left transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-70 disabled:cursor-not-allowed ${
-                          isSelected
-                            ? "border-primary bg-accent/50"
-                            : "bg-card hover:border-primary/50"
-                        }`}
+                        disabled={isProLocked || (mandatoryPackageId ? pkg.id !== mandatoryPackageId : false)}
+                        onClick={() => {
+                          if (isProLocked) return;
+                          if (!mandatoryPackageId) setSelectedPackageId(pkg.id);
+                        }}
+                        className={`flex w-full items-start gap-4 rounded-lg border p-4 text-left transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none ${
+                          isProLocked
+                            ? "border-amber-500/30 bg-amber-500/5 opacity-80 cursor-not-allowed"
+                            : isSelected
+                              ? "border-primary bg-accent/50"
+                              : "bg-card hover:border-primary/50"
+                        } ${mandatoryPackageId ? "disabled:opacity-70 disabled:cursor-not-allowed" : ""}`}
                       >
                         <span
                           aria-hidden="true"
                           className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border ${
-                            isSelected
-                              ? "border-primary bg-primary text-primary-foreground"
-                              : "border-input"
+                            isProLocked
+                              ? "border-amber-500/40 text-amber-600 dark:text-amber-400"
+                              : isSelected
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-input"
                           }`}
                         >
-                          {isSelected && <CheckIcon className="size-3" />}
+                          {isProLocked ? <LockIcon className="size-2.5" /> : isSelected && <CheckIcon className="size-3" />}
                         </span>
 
                         <div className="flex flex-1 flex-col gap-1.5">
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="font-heading text-sm font-medium">{pkg.name}</span>
                             {pkg.category && <Badge variant="secondary">{pkg.category}</Badge>}
-                            {(pkg.isPro || pkg.category === "pro") && (
-                              <Badge className="border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-bold uppercase">
-                                Pro
+                            {isPkgPro && (
+                              <Badge className="border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-bold uppercase flex items-center gap-1">
+                                {isProLocked ? <LockIcon className="size-2.5" /> : null}
+                                Pro Exclusive
                               </Badge>
                             )}
                             {mandatoryPackageId === pkg.id && (
@@ -917,6 +937,11 @@ function BookingsCheckoutContent() {
                           {pkg.description && (
                             <p className="text-sm leading-relaxed text-muted-foreground">
                               {pkg.description}
+                            </p>
+                          )}
+                          {isProLocked && (
+                            <p className="text-xs font-semibold text-amber-600 dark:text-amber-400">
+                              Available exclusively for Pro subscribers. Upgrade to Pro to book this deal.
                             </p>
                           )}
                         </div>
