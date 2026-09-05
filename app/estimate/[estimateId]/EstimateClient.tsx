@@ -57,7 +57,7 @@ interface Estimate {
   guestsDetails?: Record<string, { name: string; email: string }>;
 }
 
-import { MandatoryRule } from "@/lib/types";
+import { MandatoryRule, getRulePackageIds } from "@/lib/types";
 
 interface Property {
   id: string;
@@ -178,26 +178,34 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
     }
   };
 
-  const mandatoryPackageId = React.useMemo(() => {
-    if (!property || isHourly) return null;
-    const rule = property.mandatoryRules?.find(r => {
+  const mandatoryPackageIds = React.useMemo(() => {
+    if (!property || isHourly) return [];
+    const rule = property.mandatoryRules?.find((r) => {
       switch (r.operator) {
-        case "equals": return nights === r.nights;
-        case "greater": return nights > r.nights;
-        case "less": return nights < r.nights;
-        case "greater_or_equal": return nights >= r.nights;
-        case "less_or_equal": return nights <= r.nights;
-        default: return false;
+        case "equals":
+          return nights === r.nights;
+        case "greater":
+          return nights > r.nights;
+        case "less":
+          return nights < r.nights;
+        case "greater_or_equal":
+          return nights >= r.nights;
+        case "less_or_equal":
+          return nights <= r.nights;
+        default:
+          return false;
       }
     });
-    return rule?.packageId || null;
+    return getRulePackageIds(rule);
   }, [property, nights, isHourly]);
 
+  const hasMandatoryRule = mandatoryPackageIds.length > 0;
+
   useEffect(() => {
-    if (mandatoryPackageId && selectedPackageId !== mandatoryPackageId) {
-      handlePackageChange(mandatoryPackageId);
+    if (hasMandatoryRule && !mandatoryPackageIds.includes(selectedPackageId)) {
+      handlePackageChange(mandatoryPackageIds[0] || "");
     }
-  }, [mandatoryPackageId, selectedPackageId]);
+  }, [hasMandatoryRule, mandatoryPackageIds, selectedPackageId]);
 
   // Fetch packages for the property
   useEffect(() => {
@@ -546,13 +554,13 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
                 type="button"
                 role="radio"
                 aria-checked={selectedPackageId === ""}
-                disabled={isUpdatingPackage || isPaid || !!mandatoryPackageId}
+                disabled={isUpdatingPackage || isPaid || hasMandatoryRule}
                 onClick={() => handlePackageChange("")}
                 className={`flex w-full items-start justify-between gap-4 rounded-lg border p-4 text-left transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-70 ${
                   selectedPackageId === ""
                     ? "border-primary bg-primary/5"
                     : "bg-muted/30 hover:bg-muted/60"
-                }`}
+                } ${hasMandatoryRule ? "opacity-50 cursor-not-allowed" : ""}`}
               >
                 <span
                   aria-hidden="true"
@@ -584,6 +592,8 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
                 .filter((p) => p.category !== "addon")
                 .map((pkg) => {
                   const isSelected = selectedPackageId === pkg.id;
+                  const isAllowedByRule = !hasMandatoryRule || mandatoryPackageIds.includes(pkg.id);
+                  const isDisabled = isUpdatingPackage || isPaid || !isAllowedByRule;
                   const price = pkg.price || 0;
 
                   return (
@@ -592,13 +602,13 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
                       type="button"
                       role="radio"
                       aria-checked={isSelected}
-                      disabled={isUpdatingPackage || isPaid || (mandatoryPackageId ? pkg.id !== mandatoryPackageId : false)}
-                      onClick={() => handlePackageChange(pkg.id)}
+                      disabled={isDisabled}
+                      onClick={() => !isDisabled && handlePackageChange(pkg.id)}
                       className={`flex w-full items-start justify-between gap-4 rounded-lg border p-4 text-left transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-70 ${
                         isSelected
                           ? "border-primary bg-primary/5"
                           : "bg-muted/30 hover:bg-muted/60"
-                      }`}
+                      } ${!isAllowedByRule ? "opacity-50 cursor-not-allowed" : ""}`}
                     >
                       <span
                         aria-hidden="true"
@@ -620,15 +630,20 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
                               Pro
                             </Badge>
                           )}
-                          {mandatoryPackageId === pkg.id && (
+                          {hasMandatoryRule && mandatoryPackageIds.includes(pkg.id) && (
                             <Badge variant="destructive" className="bg-amber-500 hover:bg-amber-600 text-black border-none font-semibold">
-                              Required for stay length
+                              {mandatoryPackageIds.length === 1 ? "Required for stay length" : "Mandatory option"}
                             </Badge>
                           )}
                         </div>
                         {pkg.description && (
                           <p className="text-sm leading-relaxed text-muted-foreground">
                             {pkg.description}
+                          </p>
+                        )}
+                        {hasMandatoryRule && !isAllowedByRule && (
+                          <p className="text-xs text-muted-foreground italic">
+                            Not eligible for {nights} {nights === 1 ? "night" : "nights"} stay length.
                           </p>
                         )}
                       </div>

@@ -43,7 +43,7 @@ import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
-import { MandatoryRule } from "@/lib/types";
+import { MandatoryRule, getRulePackageIds } from "@/lib/types";
 
 interface Property {
   id: string;
@@ -146,26 +146,34 @@ function BookingsCheckoutContent() {
   const packagePrice = selectedPackage ? selectedPackage.price || 0 : 0;
   const finalTotal = baseCost + packagePrice;
 
-  const mandatoryPackageId = React.useMemo(() => {
-    if (!property || isHourly) return null;
-    const rule = property.mandatoryRules?.find(r => {
+  const mandatoryPackageIds = React.useMemo(() => {
+    if (!property || isHourly) return [];
+    const rule = property.mandatoryRules?.find((r) => {
       switch (r.operator) {
-        case "equals": return nights === r.nights;
-        case "greater": return nights > r.nights;
-        case "less": return nights < r.nights;
-        case "greater_or_equal": return nights >= r.nights;
-        case "less_or_equal": return nights <= r.nights;
-        default: return false;
+        case "equals":
+          return nights === r.nights;
+        case "greater":
+          return nights > r.nights;
+        case "less":
+          return nights < r.nights;
+        case "greater_or_equal":
+          return nights >= r.nights;
+        case "less_or_equal":
+          return nights <= r.nights;
+        default:
+          return false;
       }
     });
-    return rule?.packageId || null;
+    return getRulePackageIds(rule);
   }, [property, nights, isHourly]);
 
+  const hasMandatoryRule = mandatoryPackageIds.length > 0;
+
   useEffect(() => {
-    if (mandatoryPackageId && selectedPackageId !== mandatoryPackageId) {
-      setSelectedPackageId(mandatoryPackageId);
+    if (hasMandatoryRule && !mandatoryPackageIds.includes(selectedPackageId)) {
+      setSelectedPackageId(mandatoryPackageIds[0] || "");
     }
-  }, [mandatoryPackageId, selectedPackageId]);
+  }, [hasMandatoryRule, mandatoryPackageIds, selectedPackageId]);
 
   // Load property, user dates, and packages
   useEffect(() => {
@@ -845,8 +853,8 @@ function BookingsCheckoutContent() {
                   type="button"
                   role="radio"
                   aria-checked={selectedPackageId === ""}
-                  disabled={!!mandatoryPackageId}
-                  onClick={() => !mandatoryPackageId && setSelectedPackageId("")}
+                  disabled={hasMandatoryRule}
+                  onClick={() => !hasMandatoryRule && setSelectedPackageId("")}
                   className={`flex w-full items-start gap-4 rounded-lg border p-4 text-left transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-70 disabled:cursor-not-allowed ${
                     selectedPackageId === ""
                       ? "border-primary bg-accent/50"
@@ -883,7 +891,9 @@ function BookingsCheckoutContent() {
                   .map((pkg) => {
                     const isPkgPro = Boolean(pkg.isPro || pkg.category === "pro");
                     const isProLocked = isPkgPro && !isProUser;
+                    const isAllowedByRule = !hasMandatoryRule || mandatoryPackageIds.includes(pkg.id);
                     const isSelected = selectedPackageId === pkg.id;
+                    const isDisabled = isProLocked || !isAllowedByRule;
                     const price = pkg.price || 0;
 
                     return (
@@ -892,10 +902,9 @@ function BookingsCheckoutContent() {
                         type="button"
                         role="radio"
                         aria-checked={isSelected}
-                        disabled={isProLocked || (mandatoryPackageId ? pkg.id !== mandatoryPackageId : false)}
+                        disabled={isDisabled}
                         onClick={() => {
-                          if (isProLocked) return;
-                          if (!mandatoryPackageId) setSelectedPackageId(pkg.id);
+                          if (!isDisabled) setSelectedPackageId(pkg.id);
                         }}
                         className={`flex w-full items-start gap-4 rounded-lg border p-4 text-left transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none ${
                           isProLocked
@@ -903,7 +912,7 @@ function BookingsCheckoutContent() {
                             : isSelected
                               ? "border-primary bg-accent/50"
                               : "bg-card hover:border-primary/50"
-                        } ${mandatoryPackageId ? "disabled:opacity-70 disabled:cursor-not-allowed" : ""}`}
+                        } ${isDisabled && !isProLocked ? "opacity-60 cursor-not-allowed" : ""}`}
                       >
                         <span
                           aria-hidden="true"
@@ -928,9 +937,9 @@ function BookingsCheckoutContent() {
                                 Pro Exclusive
                               </Badge>
                             )}
-                            {mandatoryPackageId === pkg.id && (
+                            {hasMandatoryRule && mandatoryPackageIds.includes(pkg.id) && (
                               <Badge variant="destructive" className="bg-amber-500 hover:bg-amber-600 text-black border-none font-semibold">
-                                Required for stay length
+                                {mandatoryPackageIds.length === 1 ? "Required for stay length" : "Mandatory option"}
                               </Badge>
                             )}
                           </div>
@@ -944,10 +953,15 @@ function BookingsCheckoutContent() {
                               Available exclusively for Pro subscribers. Upgrade to Pro to book this deal.
                             </p>
                           )}
+                          {hasMandatoryRule && !isAllowedByRule && (
+                            <p className="text-xs text-muted-foreground italic">
+                              Not eligible for {nights} {nights === 1 ? "night" : "nights"} stay length.
+                            </p>
+                          )}
                         </div>
 
                         <span className="mt-0.5 shrink-0 font-heading text-sm font-semibold">
-                          +R {price.toLocaleString()}
+                          R {price.toLocaleString()}
                         </span>
                       </button>
                     );

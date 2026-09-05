@@ -1,7 +1,19 @@
 export interface MandatoryRule {
-  packageId: string;
+  packageId?: string;
+  packageIds?: string[];
   operator: "equals" | "greater" | "less" | "greater_or_equal" | "less_or_equal";
   nights: number;
+}
+
+export function getRulePackageIds(rule?: MandatoryRule | null): string[] {
+  if (!rule) return [];
+  if (Array.isArray(rule.packageIds) && rule.packageIds.length > 0) {
+    return rule.packageIds;
+  }
+  if (rule.packageId) {
+    return [rule.packageId];
+  }
+  return [];
 }
 
 export interface Property {

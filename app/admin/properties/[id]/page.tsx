@@ -52,7 +52,7 @@ import {
   InputGroupInput,
   InputGroupText,
 } from "@/components/ui/input-group";
-import { MandatoryRule, PropertyPackage } from "@/lib/types";
+import { MandatoryRule, PropertyPackage, getRulePackageIds } from "@/lib/types";
 import {
   Empty,
   EmptyContent,
@@ -256,8 +256,14 @@ function EditPropertyContent({ id }: { id: string }) {
           setSlots(
             result.data.slots?.length ? result.data.slots : ["09:00", "13:00"]
           );
-          setLocation(result.data.location || "");
-          setMandatoryRules(result.data.mandatoryRules || []);
+          const normalizedRules: MandatoryRule[] = (result.data.mandatoryRules || []).map((r: any) => ({
+            ...r,
+            packageIds: Array.isArray(r.packageIds) && r.packageIds.length > 0
+              ? r.packageIds
+              : (r.packageId ? [r.packageId] : []),
+            packageId: r.packageId || (Array.isArray(r.packageIds) && r.packageIds[0]) || "",
+          }));
+          setMandatoryRules(normalizedRules);
 
           // Fetch packages for this property
           try {
@@ -465,7 +471,16 @@ function EditPropertyContent({ id }: { id: string }) {
           slots: bookingType === "hourly" ? slots : [],
           location: location.trim(),
           hostId: user?.uid,
-          mandatoryRules,
+          mandatoryRules: mandatoryRules.map((rule) => {
+            const ids = Array.isArray(rule.packageIds) && rule.packageIds.length > 0
+              ? rule.packageIds
+              : (rule.packageId ? [rule.packageId] : []);
+            return {
+              ...rule,
+              packageIds: ids,
+              packageId: ids[0] || "",
+            };
+          }),
         }),
       });
 
@@ -1021,7 +1036,8 @@ function EditPropertyContent({ id }: { id: string }) {
                               variant="outline"
                               size="sm"
                               onClick={() => setMandatoryRules([{
-                                packageId: packages[0].id,
+                                packageIds: packages.length > 0 ? [packages[0].id] : [],
+                                packageId: packages.length > 0 ? packages[0].id : "",
                                 operator: "equals",
                                 nights: 1
                               }])}
@@ -1030,76 +1046,133 @@ function EditPropertyContent({ id }: { id: string }) {
                             </Button>
                           </div>
                         ) : (
-                          <div className="space-y-3">
-                            {mandatoryRules.map((rule, idx) => (
-                              <div
-                                key={idx}
-                                className="flex flex-col gap-3 p-4 border rounded-xl bg-card sm:flex-row sm:items-center"
-                              >
-                                <div className="flex-1">
-                                  <FieldLabel className="text-xs mb-1">If stay duration is</FieldLabel>
-                                  <select
-                                    value={rule.operator}
-                                    onChange={(e) => {
-                                      const next = [...mandatoryRules];
-                                      next[idx].operator = e.target.value as any;
-                                      setMandatoryRules(next);
-                                    }}
-                                    className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
-                                  >
-                                    <option value="equals">exactly (==)</option>
-                                    <option value="greater">greater than (&gt;)</option>
-                                    <option value="less">less than (&lt;)</option>
-                                    <option value="greater_or_equal">greater or equal (&gt;=)</option>
-                                    <option value="less_or_equal">less or equal (&lt;=)</option>
-                                  </select>
-                                </div>
+                          <div className="space-y-4">
+                            {mandatoryRules.map((rule, idx) => {
+                              const selectedIds = Array.isArray(rule.packageIds) && rule.packageIds.length > 0
+                                ? rule.packageIds
+                                : (rule.packageId ? [rule.packageId] : []);
 
-                                <div className="w-24">
-                                  <FieldLabel className="text-xs mb-1">Nights</FieldLabel>
-                                  <Input
-                                    type="number"
-                                    min={1}
-                                    value={rule.nights}
-                                    onChange={(e) => {
-                                      const next = [...mandatoryRules];
-                                      next[idx].nights = Math.max(1, parseInt(e.target.value) || 1);
-                                      setMandatoryRules(next);
-                                    }}
-                                    className="w-full"
-                                  />
-                                </div>
-
-                                <div className="flex-1">
-                                  <FieldLabel className="text-xs mb-1">Then package is mandatory</FieldLabel>
-                                  <select
-                                    value={rule.packageId}
-                                    onChange={(e) => {
-                                      const next = [...mandatoryRules];
-                                      next[idx].packageId = e.target.value;
-                                      setMandatoryRules(next);
-                                    }}
-                                    className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
-                                  >
-                                    {packages.map((p) => (
-                                      <option key={p.id} value={p.id}>
-                                        {p.name} (R {p.price})
-                                      </option>
-                                    ))}
-                                  </select>
-                                </div>
-
-                                <Button
-                                  type="button"
-                                  variant="destructive"
-                                  size="sm"
-                                  className="sm:mt-5 self-end sm:self-auto"
-                                  onClick={() => setMandatoryRules(mandatoryRules.filter((_, i) => i !== idx))}
+                              return (
+                                <div
+                                  key={idx}
+                                  className="flex flex-col gap-4 p-4 border rounded-xl bg-card shadow-xs"
                                 >
-                                  Remove
-                                </Button>
-                              </div>
-                            ))}
+                                  <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between border-b pb-3">
+                                    <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center flex-1 w-full">
+                                      <div className="w-full sm:w-52">
+                                        <FieldLabel className="text-xs mb-1">If stay duration is</FieldLabel>
+                                        <select
+                                          value={rule.operator}
+                                          onChange={(e) => {
+                                            const next = [...mandatoryRules];
+                                            next[idx].operator = e.target.value as any;
+                                            setMandatoryRules(next);
+                                          }}
+                                          className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+                                        >
+                                          <option value="equals">exactly (==)</option>
+                                          <option value="greater">greater than (&gt;)</option>
+                                          <option value="less">less than (&lt;)</option>
+                                          <option value="greater_or_equal">greater or equal (&gt;=)</option>
+                                          <option value="less_or_equal">less or equal (&lt;=)</option>
+                                        </select>
+                                      </div>
+
+                                      <div className="w-full sm:w-28">
+                                        <FieldLabel className="text-xs mb-1">Nights</FieldLabel>
+                                        <Input
+                                          type="number"
+                                          min={1}
+                                          value={rule.nights}
+                                          onChange={(e) => {
+                                            const next = [...mandatoryRules];
+                                            next[idx].nights = Math.max(1, parseInt(e.target.value) || 1);
+                                            setMandatoryRules(next);
+                                          }}
+                                          className="w-full"
+                                        />
+                                      </div>
+                                    </div>
+
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      className="text-destructive hover:bg-destructive/10 hover:text-destructive self-end sm:self-center text-xs"
+                                      onClick={() => setMandatoryRules(mandatoryRules.filter((_, i) => i !== idx))}
+                                    >
+                                      Remove Rule
+                                    </Button>
+                                  </div>
+
+                                  <div>
+                                    <div className="flex items-center justify-between mb-2">
+                                      <FieldLabel className="text-xs">
+                                        Allowed Mandatory Packages <span className="text-muted-foreground font-normal">(guests must pick from selected)</span>
+                                      </FieldLabel>
+                                      <span className="text-[11px] font-medium text-muted-foreground">
+                                        {selectedIds.length} of {packages.length} selected
+                                      </span>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 p-2.5 rounded-lg border bg-muted/20">
+                                      {packages.map((pkg) => {
+                                        const isChecked = selectedIds.includes(pkg.id);
+                                        const isPkgPro = Boolean(pkg.isPro || pkg.category === "pro");
+                                        return (
+                                          <label
+                                            key={pkg.id}
+                                            className={`flex items-start gap-2.5 p-2 rounded-lg border cursor-pointer select-none transition-all ${
+                                              isChecked
+                                                ? "bg-primary/10 border-primary text-foreground font-medium shadow-xs"
+                                                : "bg-background border-border text-muted-foreground hover:bg-accent/40"
+                                            }`}
+                                          >
+                                            <input
+                                              type="checkbox"
+                                              checked={isChecked}
+                                              onChange={(e) => {
+                                                const next = [...mandatoryRules];
+                                                let currentIds = next[idx].packageIds && next[idx].packageIds!.length > 0
+                                                  ? [...next[idx].packageIds!]
+                                                  : (next[idx].packageId ? [next[idx].packageId!] : []);
+                                                if (e.target.checked) {
+                                                  currentIds = Array.from(new Set([...currentIds, pkg.id]));
+                                                } else {
+                                                  currentIds = currentIds.filter((id) => id !== pkg.id);
+                                                }
+                                                next[idx].packageIds = currentIds;
+                                                next[idx].packageId = currentIds[0] || "";
+                                                setMandatoryRules(next);
+                                              }}
+                                              className="mt-0.5 rounded border-input text-primary focus:ring-primary h-4 w-4 shrink-0"
+                                            />
+                                            <div className="flex flex-col min-w-0 flex-1">
+                                              <div className="flex items-center gap-1.5 flex-wrap">
+                                                <span className="text-xs font-semibold truncate text-foreground">{pkg.name}</span>
+                                                {isPkgPro && (
+                                                  <span className="text-[9px] uppercase px-1 py-0.2 rounded bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold">
+                                                    PRO
+                                                  </span>
+                                                )}
+                                              </div>
+                                              <span className="text-[11px] text-muted-foreground">
+                                                R {pkg.price.toLocaleString()} • {pkg.category || "standard"}
+                                              </span>
+                                            </div>
+                                          </label>
+                                        );
+                                      })}
+                                    </div>
+                                    {selectedIds.length === 0 && (
+                                      <p className="text-[11px] text-destructive mt-1.5 font-medium">
+                                        ⚠️ Select at least one mandatory package for this rule.
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
 
                             <div className="flex justify-end pt-2">
                               <Button
@@ -1109,7 +1182,8 @@ function EditPropertyContent({ id }: { id: string }) {
                                 onClick={() => setMandatoryRules([
                                   ...mandatoryRules,
                                   {
-                                    packageId: packages[0].id,
+                                    packageIds: packages.length > 0 ? [packages[0].id] : [],
+                                    packageId: packages.length > 0 ? packages[0].id : "",
                                     operator: "equals",
                                     nights: 1
                                   }

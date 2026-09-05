@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { formatDisplayDate } from "@/lib/utils";
 
-import { MandatoryRule } from "@/lib/types";
+import { MandatoryRule, getRulePackageIds } from "@/lib/types";
 
 interface Property {
   id: string;
@@ -182,27 +182,42 @@ export default function SmartEstimateBlock({
   );
   const nights = isHourly ? stayHours : stayNights;
 
-  const mandatoryPackageId = React.useMemo(() => {
+  const matchingRule = React.useMemo(() => {
     if (!selectedProperty || isHourly) return null;
-    const rule = selectedProperty.mandatoryRules?.find(r => {
-      switch (r.operator) {
-        case "equals": return nights === r.nights;
-        case "greater": return nights > r.nights;
-        case "less": return nights < r.nights;
-        case "greater_or_equal": return nights >= r.nights;
-        case "less_or_equal": return nights <= r.nights;
-        default: return false;
-      }
-    });
-    return rule?.packageId || null;
+    return (
+      selectedProperty.mandatoryRules?.find((r) => {
+        switch (r.operator) {
+          case "equals":
+            return nights === r.nights;
+          case "greater":
+            return nights > r.nights;
+          case "less":
+            return nights < r.nights;
+          case "greater_or_equal":
+            return nights >= r.nights;
+          case "less_or_equal":
+            return nights <= r.nights;
+          default:
+            return false;
+        }
+      }) || null
+    );
   }, [selectedProperty, nights, isHourly]);
 
+  const mandatoryPackageIds = React.useMemo(() => {
+    return getRulePackageIds(matchingRule);
+  }, [matchingRule]);
+
+  const hasMandatoryRule = mandatoryPackageIds.length > 0;
+
   useEffect(() => {
-    if (mandatoryPackageId) {
+    if (hasMandatoryRule) {
       setBookingMode("predefined");
-      setSelectedPackageId(mandatoryPackageId);
+      if (!mandatoryPackageIds.includes(selectedPackageId)) {
+        setSelectedPackageId(mandatoryPackageIds[0] || "");
+      }
     }
-  }, [mandatoryPackageId]);
+  }, [hasMandatoryRule, mandatoryPackageIds, selectedPackageId]);
 
   const basePricePerNight = selectedProperty ? selectedProperty.basePricePerNight : 1500;
   
@@ -329,24 +344,24 @@ export default function SmartEstimateBlock({
       {/* Booking Mode Selector */}
       <div className="mb-6 grid grid-cols-2 gap-2 rounded-xl bg-white/5 p-1 border border-white/5">
         <button
-          onClick={() => !mandatoryPackageId && setBookingMode("predefined")}
-          disabled={!!mandatoryPackageId}
+          onClick={() => !hasMandatoryRule && setBookingMode("predefined")}
+          disabled={hasMandatoryRule}
           className={`rounded-lg py-2.5 text-xs font-bold transition-all ${
             bookingMode === "predefined"
               ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-teal-500/20"
               : "text-white/60 hover:text-white"
-          } ${mandatoryPackageId ? "opacity-50 cursor-not-allowed" : ""}`}
+          } ${hasMandatoryRule ? "opacity-90" : ""}`}
         >
           🎁 Package Deals ({packages.length})
         </button>
         <button
-          onClick={() => !mandatoryPackageId && setBookingMode("custom")}
-          disabled={!!mandatoryPackageId}
+          onClick={() => !hasMandatoryRule && setBookingMode("custom")}
+          disabled={hasMandatoryRule}
           className={`rounded-lg py-2.5 text-xs font-bold transition-all ${
             bookingMode === "custom"
               ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-teal-500/20"
               : "text-white/60 hover:text-white"
-          } ${mandatoryPackageId ? "opacity-50 cursor-not-allowed" : ""}`}
+          } ${hasMandatoryRule ? "opacity-50 cursor-not-allowed" : ""}`}
         >
           ⚙️ Custom Stay Rates
         </button>
@@ -417,18 +432,23 @@ export default function SmartEstimateBlock({
                   <select
                     value={selectedPackageId}
                     onChange={(e) => setSelectedPackageId(e.target.value)}
-                    disabled={!!mandatoryPackageId}
+                    disabled={hasMandatoryRule && mandatoryPackageIds.length === 1}
                     className="w-full rounded-xl border border-white/10 bg-black/40 px-3.5 py-2.5 text-sm text-white focus:border-teal-500 focus:outline-none disabled:opacity-75 disabled:cursor-not-allowed"
                   >
-                    {packages.map((pkg) => (
+                    {(hasMandatoryRule
+                      ? packages.filter((pkg) => mandatoryPackageIds.includes(pkg.id))
+                      : packages
+                    ).map((pkg) => (
                       <option key={pkg.id} value={pkg.id} className="bg-zinc-900">
                         {pkg.name} (R {pkg.price.toLocaleString()})
                       </option>
                     ))}
                   </select>
-                  {mandatoryPackageId && (
+                  {hasMandatoryRule && (
                     <p className="mt-1.5 text-[11px] text-amber-400 font-semibold flex items-center gap-1 animate-pulse">
-                      ⚠️ This package deal is mandatory for stays of {nights} {nights === 1 ? "night" : "nights"}.
+                      {mandatoryPackageIds.length === 1
+                        ? `⚠️ This package deal is mandatory for stays of ${nights} ${nights === 1 ? "night" : "nights"}.`
+                        : `⚠️ A package deal is mandatory for stays of ${nights} ${nights === 1 ? "night" : "nights"} (choose from allowed options above).`}
                     </p>
                   )}
                 </>

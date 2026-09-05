@@ -10,6 +10,16 @@
       "isEnabled": true
     },
     {
+      "id": "photo_studio",
+      "propertyId": "shack",
+      "price": 2500,
+      "name": "📸 Photo Studio",
+      "description": "Wifi and parking for 4 hours",
+      "category": "standard",
+      "isPro": true,
+      "isEnabled": true
+    },
+    {
       "id": "shack_stack",
       "propertyId": "shack",
       "price": 8500,
@@ -133,6 +143,10 @@
       "mandatoryRules": [
         {
           "packageId": "host_stay",
+          "packageIds": [
+            "host_stay",
+            "photo_studio"
+          ],
           "operator": "equals",
           "nights": 1
         }

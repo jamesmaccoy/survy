@@ -40,7 +40,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
 
-import { MandatoryRule } from "@/lib/types";
+import { MandatoryRule, getRulePackageIds } from "@/lib/types";
 
 interface Property {
   id: string;
@@ -258,18 +258,25 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
         
         // Find matching rule
         if (property.mandatoryRules) {
-          const rule = property.mandatoryRules.find(r => {
+          const rule = property.mandatoryRules.find((r) => {
             switch (r.operator) {
-              case "equals": return stayNights === r.nights;
-              case "greater": return stayNights > r.nights;
-              case "less": return stayNights < r.nights;
-              case "greater_or_equal": return stayNights >= r.nights;
-              case "less_or_equal": return stayNights <= r.nights;
-              default: return false;
+              case "equals":
+                return stayNights === r.nights;
+              case "greater":
+                return stayNights > r.nights;
+              case "less":
+                return stayNights < r.nights;
+              case "greater_or_equal":
+                return stayNights >= r.nights;
+              case "less_or_equal":
+                return stayNights <= r.nights;
+              default:
+                return false;
             }
           });
           if (rule) {
-            matchedMandatoryPackageId = rule.packageId;
+            const allowedIds = getRulePackageIds(rule);
+            matchedMandatoryPackageId = allowedIds[0] || null;
           }
         }
 
