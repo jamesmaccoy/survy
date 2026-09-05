@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     // Resolve target customer credentials (passed from checkout redirect fallback or fallback to estimate owner)
     const targetEmail = customerEmail || estimate.customerEmail;
     const targetId = customerId || estimate.customerId;
-    const targetName = customerName || estimate.customerName;
+    const targetName = (customerName && customerName !== "Guest") ? customerName : (estimate.customerName || customerName || "Guest");
 
     // Check if booking already exists for this estimateId & customer
     const existingBookings = await listBookings();
@@ -35,6 +35,14 @@ export async function POST(request: NextRequest) {
     });
 
     if (existingBooking) {
+      if ((paymentStatus === "paid" || existingBooking.paymentStatus === "paid") && !existingBooking.confirmationEmailSent) {
+        console.log(`[confirm route] Existing booking ${existingBooking.id} found without confirmation email. Sending now...`);
+        try {
+          await sendBookingConfirmationEmail(existingBooking);
+        } catch (err) {
+          console.error("[confirm route] Error sending confirmation email for existing booking:", err);
+        }
+      }
       return NextResponse.json({ success: true, booking: existingBooking, message: "Booking already confirmed." });
     }
 
@@ -59,13 +67,11 @@ export async function POST(request: NextRequest) {
       await updateEstimateStatus(estimateId, "paid");
     }
 
-    // Trigger email notification asynchronously
+    // Trigger email notification with await to prevent premature serverless termination
     try {
-      sendBookingConfirmationEmail(booking).catch((err) => {
-        console.error("[confirm route] Error in sendBookingConfirmationEmail promise:", err);
-      });
+      await sendBookingConfirmationEmail(booking);
     } catch (err) {
-      console.warn("[confirm route] Failed to trigger sendBookingConfirmationEmail:", err);
+      console.error("[confirm route] Failed to send sendBookingConfirmationEmail:", err);
     }
 
     return NextResponse.json({ success: true, booking, message: "Booking confirmed successfully!" }, { status: 201 });

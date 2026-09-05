@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { updateBookingStatus, getEstimate, updateEstimateStatus, createBooking, listBookings, promoteUserToAdmin, getProperty } from "@/lib/firebase";
+import { updateBookingStatus, getEstimate, updateEstimateStatus, createBooking, listBookings, promoteUserToAdmin, getProperty, getBooking } from "@/lib/firebase";
 import { sendBookingConfirmationEmail } from "@/lib/email";
 
 export async function POST(request: NextRequest) {
@@ -37,6 +37,14 @@ export async function POST(request: NextRequest) {
       if (bookingId) {
         console.log(`[Yoco Webhook] Payment succeeded for booking ${bookingId}`);
         await updateBookingStatus(bookingId, "paid");
+        const bk = await getBooking(bookingId);
+        if (bk && !bk.confirmationEmailSent) {
+          try {
+            await sendBookingConfirmationEmail({ ...bk, paymentStatus: "paid" });
+          } catch (err) {
+            console.error("[Yoco Webhook] Error sending confirmation email for bookingId:", err);
+          }
+        }
       } else if (estimateId) {
         console.log(`[Yoco Webhook] Payment succeeded for estimate ${estimateId}. Creating booking.`);
         const estimate = await getEstimate(estimateId);
@@ -77,18 +85,24 @@ export async function POST(request: NextRequest) {
               await updateEstimateStatus(estimateId, "paid");
             }
 
-            // Trigger email notification asynchronously
+            // Trigger email notification with await
             try {
-              sendBookingConfirmationEmail(booking).catch((err) => {
-                console.error("[Yoco Webhook] Error in sendBookingConfirmationEmail promise:", err);
-              });
+              await sendBookingConfirmationEmail(booking);
             } catch (err) {
-              console.warn("[Yoco Webhook] Failed to trigger sendBookingConfirmationEmail:", err);
+              console.error("[Yoco Webhook] Failed to send sendBookingConfirmationEmail:", err);
             }
             
             console.log(`[Yoco Webhook] Booking created successfully from estimate ${estimateId}`);
           } else {
             console.log(`[Yoco Webhook] Booking already exists for estimate ${estimateId}`);
+            const existing = existingBookings.find((b: any) => isHourly ? (b.estimateId === estimateId && (b.customerEmail === targetEmail || b.customerId === targetId)) : (b.estimateId === estimateId));
+            if (existing && !existing.confirmationEmailSent) {
+              try {
+                await sendBookingConfirmationEmail(existing);
+              } catch (err) {
+                console.error("[Yoco Webhook] Error sending email for existing booking:", err);
+              }
+            }
           }
         } else {
           console.warn(`[Yoco Webhook] Estimate ${estimateId} not found.`);

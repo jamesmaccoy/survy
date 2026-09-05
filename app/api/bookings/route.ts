@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createBooking, listBookings, getProperty, updateBookingStatus, getPackage, getUserProfile, isUserAdmin } from "@/lib/firebase";
+import { createBooking, listBookings, getProperty, updateBookingStatus, getPackage, getUserProfile, isUserAdmin, getBooking } from "@/lib/firebase";
+import { sendBookingConfirmationEmail } from "@/lib/email";
 
 // In-memory cache for external feeds keyed by URL to support multiple properties
 interface CacheEntry {
@@ -266,6 +267,17 @@ export async function PATCH(request: NextRequest) {
         { success: false, error: `Booking with ID ${bookingId} not found.` },
         { status: 404 }
       );
+    }
+
+    if (paymentStatus === "paid") {
+      try {
+        const bk = await getBooking(bookingId);
+        if (bk && !bk.confirmationEmailSent) {
+          await sendBookingConfirmationEmail({ ...bk, paymentStatus: "paid" });
+        }
+      } catch (emailErr) {
+        console.error("[PATCH /api/bookings] Error triggering sendBookingConfirmationEmail:", emailErr);
+      }
     }
 
     return NextResponse.json({ success: true, message: `Booking status updated to ${paymentStatus}.` });

@@ -523,33 +523,37 @@ export async function listBookings(propertyId?: string): Promise<any[]> {
   }
 }
 
-export async function updateBookingStatus(id: string, paymentStatus: string): Promise<boolean> {
+export async function updateBooking(id: string, updates: Record<string, any>): Promise<boolean> {
   const db = getFirestore();
   if (isMockMode || !db) {
     const dbData = readMockDb();
     const index = dbData.bookings.findIndex((b: any) => b.id === id);
     if (index >= 0) {
-      dbData.bookings[index].paymentStatus = paymentStatus;
+      dbData.bookings[index] = { ...dbData.bookings[index], ...updates };
       writeMockDb(dbData);
       return true;
     }
     return false;
   }
   try {
-    await db.collection("bookings").doc(id).update({ paymentStatus });
+    await db.collection("bookings").doc(id).set(updates, { merge: true });
     return true;
   } catch (err) {
-    console.error(`[Firebase] updateBookingStatus error for id ${id}:`, err);
+    console.error(`[Firebase] updateBooking error for id ${id}:`, err);
     // Fallback locally
     const dbData = readMockDb();
     const index = dbData.bookings.findIndex((b: any) => b.id === id);
     if (index >= 0) {
-      dbData.bookings[index].paymentStatus = paymentStatus;
+      dbData.bookings[index] = { ...dbData.bookings[index], ...updates };
       writeMockDb(dbData);
       return true;
     }
     return false;
   }
+}
+
+export async function updateBookingStatus(id: string, paymentStatus: string): Promise<boolean> {
+  return updateBooking(id, { paymentStatus });
 }
 
 export async function saveUserDates(uid: string, fromDate: string, toDate: string): Promise<any> {

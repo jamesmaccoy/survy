@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { updateBookingStatus } from "@/lib/firebase";
+import { updateBookingStatus, getBooking } from "@/lib/firebase";
+import { sendBookingConfirmationEmail } from "@/lib/email";
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,6 +20,14 @@ export async function POST(request: NextRequest) {
       // Fallback: If no keys are set, simulate successful charge for development
       console.warn("⚠️ No Yoco API keys found. Simulating successful backend charge.");
       await updateBookingStatus(bookingId, "paid");
+      const bk = await getBooking(bookingId);
+      if (bk && !bk.confirmationEmailSent) {
+        try {
+          await sendBookingConfirmationEmail({ ...bk, paymentStatus: "paid" });
+        } catch (emailErr) {
+          console.error("[charge route] Error triggering confirmation email:", emailErr);
+        }
+      }
       return NextResponse.json({ success: true, simulated: true });
     }
 
@@ -51,6 +60,14 @@ export async function POST(request: NextRequest) {
 
     if (data.status === "successful") {
       await updateBookingStatus(bookingId, "paid");
+      const bk = await getBooking(bookingId);
+      if (bk && !bk.confirmationEmailSent) {
+        try {
+          await sendBookingConfirmationEmail({ ...bk, paymentStatus: "paid" });
+        } catch (emailErr) {
+          console.error("[charge route] Error triggering confirmation email:", emailErr);
+        }
+      }
       return NextResponse.json({ success: true, data });
     } else {
       await updateBookingStatus(bookingId, "failed");

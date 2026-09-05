@@ -1,4 +1,4 @@
-import { getProperty, getUserProfile } from "./firebase";
+import { getProperty, getUserProfile, updateBooking } from "./firebase";
 
 function formatIcsDate(date: Date): string {
   return date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
@@ -17,6 +17,11 @@ export async function sendBookingConfirmationEmail(booking: {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     console.warn("[Resend] RESEND_API_KEY is not defined in environment.");
+    return false;
+  }
+
+  if (!booking || !booking.customerEmail) {
+    console.warn("[Resend] Cannot send booking confirmation email: missing booking or customerEmail.", booking);
     return false;
   }
 
@@ -117,6 +122,11 @@ export async function sendBookingConfirmationEmail(booking: {
 
     const base64Ics = Buffer.from(icsContent).toString("base64");
 
+    const hostSubdomain = hostProfile?.subdomain;
+    const bookingUrl = hostSubdomain
+      ? `https://${hostSubdomain}.simpleplek.co.za/bookings/${booking.id}`
+      : `https://simpleplek.co.za/bookings/${booking.id}`;
+
     const subject = isHourly
       ? `Booking Paid & Confirmed - ${property?.title || "Slot"}`
       : `Booking Paid & Confirmed - ${property?.title || "Stay"}`;
@@ -153,9 +163,13 @@ export async function sendBookingConfirmationEmail(booking: {
             </tr>
             <tr style="border-top: 1px solid #e2e8f0;">
               <td style="padding: 10px 0 0 0; font-weight: bold;">Amount Paid:</td>
-              <td style="padding: 10px 0 0 0; font-weight: bold; text-align: right; color: #0d9488; font-size: 16px;">R ${booking.total.toLocaleString()}</td>
+              <td style="padding: 10px 0 0 0; font-weight: bold; text-align: right; color: #0d9488; font-size: 16px;">R ${Number(booking.total || 0).toLocaleString()}</td>
             </tr>
           </table>
+        </div>
+
+        <div style="margin: 25px 0; text-align: center;">
+          <a href="${bookingUrl}" style="background-color: #0d9488; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block;">View Booking Overview</a>
         </div>
         
         <p>A calendar event file (.ics) has been attached to this email. You can open it to add this reservation to your calendar.</p>
@@ -191,13 +205,32 @@ export async function sendBookingConfirmationEmail(booking: {
     const responseData = await res.json();
     if (res.ok) {
       console.log(`[Resend] Confirmation email sent successfully. ID: ${responseData.id}`);
+      if (booking.id) {
+        await updateBooking(booking.id, {
+          confirmationEmailSent: true,
+          confirmationEmailSentAt: new Date().toISOString(),
+          confirmationEmailId: responseData.id
+        }).catch((err) => console.warn("[Resend] Could not update booking email flag:", err));
+      }
       return true;
     } else {
       console.error("[Resend] Failed to send email via API:", responseData);
+      if (booking.id) {
+        await updateBooking(booking.id, {
+          confirmationEmailSent: false,
+          confirmationEmailError: JSON.stringify(responseData)
+        }).catch((err) => console.warn("[Resend] Could not update booking email flag:", err));
+      }
       return false;
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error("[Resend] Error in sendBookingConfirmationEmail:", error);
+    if (booking?.id) {
+      await updateBooking(booking.id, {
+        confirmationEmailSent: false,
+        confirmationEmailError: error?.message || "Unknown error"
+      }).catch((err) => console.warn("[Resend] Could not update booking email flag:", err));
+    }
     return false;
   }
 }
