@@ -13,6 +13,7 @@ import {
   HouseIcon,
   KeyRoundIcon,
   LinkIcon,
+  LockIcon,
   PinIcon,
   ShieldXIcon,
   TriangleAlertIcon,
@@ -101,12 +102,33 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
   const [selectedPackageId, setSelectedPackageId] = useState<string>(estimate.packageId || "");
   const [isUpdatingPackage, setIsUpdatingPackage] = useState(false);
   const [packageError, setPackageError] = useState<string | null>(null);
+  const [isProUser, setIsProUser] = useState<boolean>(false);
 
   const [hasUserPaid, setHasUserPaid] = useState(false);
   const [isLoadingPaymentStatus, setIsLoadingPaymentStatus] = useState(true);
 
   const [latestEstimate, setLatestEstimate] = useState<any | null>(null);
   const [latestEstimatePropertyTitle, setLatestEstimatePropertyTitle] = useState<string>("");
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      setIsProUser(false);
+      return;
+    }
+    const fetchProfile = async () => {
+      try {
+        const res = await fetch(`/api/user/profile?userId=${user.uid}&email=${user.email || ""}`);
+        const result = await res.json();
+        if (result.success && result.data) {
+          setIsProUser(result.data.plan === "pro" || Boolean(result.data.isAdmin));
+        }
+      } catch (err) {
+        console.error("Failed to load user profile in estimate client:", err);
+      }
+    };
+    fetchProfile();
+  }, [user, authLoading]);
 
   const from = new Date(estimate.fromDate);
   const to = new Date(estimate.toDate);
@@ -143,7 +165,19 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
   const packagePrice = currentSelectedPackage ? (currentSelectedPackage.price || 0) : 0;
   const finalTotal = baseCost + packagePrice;
 
+  const isPackagePro = (p: Package) => Boolean(p.isPro || p.category === "pro");
+  const availablePackages = packages.filter((p) => !isPackagePro(p) || isProUser);
+  const proPackages = packages.filter((p) => isPackagePro(p));
+
   const handlePackageChange = async (packageId: string) => {
+    if (packageId) {
+      const activePkg = packages.find((p) => p.id === packageId);
+      if (activePkg && isPackagePro(activePkg) && !isProUser) {
+        setPackageError("This package is exclusively available to Pro subscribers.");
+        return;
+      }
+    }
+
     setSelectedPackageId(packageId);
     setIsUpdatingPackage(true);
     setPackageError(null);
@@ -201,11 +235,37 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
 
   const hasMandatoryRule = mandatoryPackageIds.length > 0;
 
+  const userAllowedMandatoryIds = React.useMemo(() => {
+    return mandatoryPackageIds.filter((id) => {
+      const pkg = packages.find((p) => p.id === id);
+      if (!pkg) return true;
+      return !isPackagePro(pkg) || isProUser;
+    });
+  }, [mandatoryPackageIds, packages, isProUser]);
+
   useEffect(() => {
-    if (hasMandatoryRule && !mandatoryPackageIds.includes(selectedPackageId)) {
-      handlePackageChange(mandatoryPackageIds[0] || "");
+    if (hasMandatoryRule) {
+      if (userAllowedMandatoryIds.length > 0) {
+        if (!userAllowedMandatoryIds.includes(selectedPackageId)) {
+          handlePackageChange(userAllowedMandatoryIds[0] || "");
+        }
+      } else {
+        if (selectedPackageId) {
+          const selPkg = packages.find((p) => p.id === selectedPackageId);
+          if (selPkg && isPackagePro(selPkg) && !isProUser) {
+            handlePackageChange("");
+          }
+        }
+      }
+    } else {
+      if (!isProUser && selectedPackageId) {
+        const selPkg = packages.find((p) => p.id === selectedPackageId);
+        if (selPkg && isPackagePro(selPkg)) {
+          handlePackageChange("");
+        }
+      }
     }
-  }, [hasMandatoryRule, mandatoryPackageIds, selectedPackageId]);
+  }, [hasMandatoryRule, mandatoryPackageIds, userAllowedMandatoryIds, selectedPackageId, packages, isProUser]);
 
   // Fetch packages for the property
   useEffect(() => {
@@ -554,13 +614,13 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
                 type="button"
                 role="radio"
                 aria-checked={selectedPackageId === ""}
-                disabled={isUpdatingPackage || isPaid || hasMandatoryRule}
+                disabled={isUpdatingPackage || isPaid || (hasMandatoryRule && userAllowedMandatoryIds.length > 0)}
                 onClick={() => handlePackageChange("")}
                 className={`flex w-full items-start justify-between gap-4 rounded-lg border p-4 text-left transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-70 ${
                   selectedPackageId === ""
                     ? "border-primary bg-primary/5"
                     : "bg-muted/30 hover:bg-muted/60"
-                } ${hasMandatoryRule ? "opacity-50 cursor-not-allowed" : ""}`}
+                } ${(hasMandatoryRule && userAllowedMandatoryIds.length > 0) ? "opacity-50 cursor-not-allowed" : ""}`}
               >
                 <span
                   aria-hidden="true"
@@ -588,72 +648,109 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
                 <span className="mt-0.5 shrink-0 font-heading text-sm font-semibold">R 0</span>
               </button>
 
-              {packages
-                .filter((p) => p.category !== "addon")
-                .map((pkg) => {
-                  const isSelected = selectedPackageId === pkg.id;
-                  const isAllowedByRule = !hasMandatoryRule || mandatoryPackageIds.includes(pkg.id);
-                  const isDisabled = isUpdatingPackage || isPaid || !isAllowedByRule;
-                  const price = pkg.price || 0;
+              {availablePackages.map((pkg) => {
+                const isSelected = selectedPackageId === pkg.id;
+                const isAllowedByRule = !hasMandatoryRule || mandatoryPackageIds.includes(pkg.id);
+                const isDisabled = isUpdatingPackage || isPaid || !isAllowedByRule;
+                const price = pkg.price || 0;
 
-                  return (
-                    <button
-                      key={pkg.id}
-                      type="button"
-                      role="radio"
-                      aria-checked={isSelected}
-                      disabled={isDisabled}
-                      onClick={() => !isDisabled && handlePackageChange(pkg.id)}
-                      className={`flex w-full items-start justify-between gap-4 rounded-lg border p-4 text-left transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-70 ${
+                return (
+                  <button
+                    key={pkg.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={isSelected}
+                    disabled={isDisabled}
+                    onClick={() => !isDisabled && handlePackageChange(pkg.id)}
+                    className={`flex w-full items-start justify-between gap-4 rounded-lg border p-4 text-left transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-70 ${
+                      isSelected
+                        ? "border-primary bg-primary/5"
+                        : "bg-muted/30 hover:bg-muted/60"
+                    } ${!isAllowedByRule ? "opacity-50 cursor-not-allowed" : ""}`}
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border ${
                         isSelected
-                          ? "border-primary bg-primary/5"
-                          : "bg-muted/30 hover:bg-muted/60"
-                      } ${!isAllowedByRule ? "opacity-50 cursor-not-allowed" : ""}`}
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-input"
+                      }`}
                     >
-                      <span
-                        aria-hidden="true"
-                        className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border ${
-                          isSelected
-                            ? "border-primary bg-primary text-primary-foreground"
-                            : "border-input"
-                        }`}
-                      >
-                        {isSelected && <CheckIcon className="size-3" />}
-                      </span>
+                      {isSelected && <CheckIcon className="size-3" />}
+                    </span>
 
-                      <div className="flex flex-1 flex-col gap-1.5">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-heading text-sm font-medium">{pkg.name}</span>
-                          {pkg.category && <Badge variant="outline">{pkg.category}</Badge>}
-                          {(pkg.isPro || pkg.category === "pro") && (
-                            <Badge className="border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-bold uppercase">
-                              Pro
-                            </Badge>
-                          )}
-                          {hasMandatoryRule && mandatoryPackageIds.includes(pkg.id) && (
-                            <Badge variant="destructive" className="bg-amber-500 hover:bg-amber-600 text-black border-none font-semibold">
-                              {mandatoryPackageIds.length === 1 ? "Required for stay length" : "Mandatory option"}
-                            </Badge>
-                          )}
-                        </div>
-                        {pkg.description && (
-                          <p className="text-sm leading-relaxed text-muted-foreground">
-                            {pkg.description}
-                          </p>
+                    <div className="flex flex-1 flex-col gap-1.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-heading text-sm font-medium">{pkg.name}</span>
+                        {pkg.category && <Badge variant="outline">{pkg.category}</Badge>}
+                        {(pkg.isPro || pkg.category === "pro") && (
+                          <Badge className="border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-bold uppercase">
+                            Pro
+                          </Badge>
                         )}
-                        {hasMandatoryRule && !isAllowedByRule && (
-                          <p className="text-xs text-muted-foreground italic">
-                            Not eligible for {nights} {nights === 1 ? "night" : "nights"} stay length.
-                          </p>
+                        {hasMandatoryRule && mandatoryPackageIds.includes(pkg.id) && (
+                          <Badge variant="destructive" className="bg-amber-500 hover:bg-amber-600 text-black border-none font-semibold">
+                            {userAllowedMandatoryIds.length === 1 ? "Required for stay length" : "Mandatory option"}
+                          </Badge>
                         )}
                       </div>
+                      {pkg.description && (
+                        <p className="text-sm leading-relaxed text-muted-foreground">
+                          {pkg.description}
+                        </p>
+                      )}
+                      {hasMandatoryRule && !isAllowedByRule && (
+                        <p className="text-xs text-muted-foreground italic">
+                          Not eligible for {nights} {nights === 1 ? "night" : "nights"} stay length.
+                        </p>
+                      )}
+                    </div>
 
-                      <span className="mt-0.5 shrink-0 font-heading text-sm font-semibold">
-                        +R {price.toLocaleString()}
-                      </span>
-                    </button>
-                  );
-                })}
+                    <span className="mt-0.5 shrink-0 font-heading text-sm font-semibold">
+                      +R {price.toLocaleString()}
+                    </span>
+                  </button>
+                );
+              })}
+
+              {/* Locked Pro-exclusive Packages Teaser for Non-Pro Users */}
+              {!isProUser && proPackages.length > 0 && (
+                <div className="mt-2 flex flex-col gap-3 rounded-xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-amber-500/20 text-amber-600 dark:text-amber-400">
+                        <LockIcon className="size-3.5" />
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                          {proPackages.length} Pro-Exclusive Package{proPackages.length > 1 ? "s" : ""}
+                        </p>
+                        <p className="text-xs font-semibold text-foreground">
+                          Available for Pro subscribers only
+                        </p>
+                      </div>
+                    </div>
+
+                    <Link href="/subscribe">
+                      <Button size="sm" className="h-7 bg-amber-500 hover:bg-amber-600 text-black text-xs font-bold px-3">
+                        Unlock with Pro
+                      </Button>
+                    </Link>
+                  </div>
+
+                  <div className="flex flex-col gap-2 pt-1 border-t border-amber-500/20">
+                    {proPackages.map((pkg) => (
+                      <div key={pkg.id} className="flex items-center justify-between text-xs text-muted-foreground">
+                        <div className="flex items-center gap-1.5">
+                          <LockIcon className="size-3 text-amber-500/70" />
+                          <span className="font-medium text-foreground">{pkg.name}</span>
+                        </div>
+                        <span className="font-semibold text-amber-600 dark:text-amber-400">R {pkg.price.toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { formatDisplayDate } from "@/lib/utils";
+import { useAuth } from "@/components/auth";
 
 import { MandatoryRule, getRulePackageIds } from "@/lib/types";
 
@@ -68,6 +69,8 @@ export default function SmartEstimateBlock({
   selectedPropertyId,
   onPropertyChange
 }: SmartEstimateBlockProps) {
+  const { user, loading: authLoading } = useAuth();
+  const [isProUser, setIsProUser] = useState<boolean>(false);
   const [bookingMode, setBookingMode] = useState<"predefined" | "custom">("predefined");
 
   // Dynamic Packages States
@@ -75,6 +78,26 @@ export default function SmartEstimateBlock({
   const [selectedPackageId, setSelectedPackageId] = useState<string>("");
   const [isLoadingPackages, setIsLoadingPackages] = useState<boolean>(false);
   const [packagesError, setPackagesError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      setIsProUser(false);
+      return;
+    }
+    const fetchProfile = async () => {
+      try {
+        const res = await fetch(`/api/user/profile?userId=${user.uid}&email=${user.email || ""}`);
+        const result = await res.json();
+        if (result.success && result.data) {
+          setIsProUser(result.data.plan === "pro" || Boolean(result.data.isAdmin));
+        }
+      } catch (err) {
+        console.error("Failed to load user profile in SmartEstimateBlock:", err);
+      }
+    };
+    fetchProfile();
+  }, [user, authLoading]);
 
   // Custom Stay Mode States
   const [customFromDate, setCustomFromDate] = useState<string>("2026-06-16");
@@ -182,6 +205,13 @@ export default function SmartEstimateBlock({
   );
   const nights = isHourly ? stayHours : stayNights;
 
+  const isPackagePro = (p: PackageData) => Boolean(p.isPro || p.category === "pro");
+  const isPackageAddon = (p: PackageData) => p.category === "addon";
+
+  const availablePackages = packages.filter(
+    (p) => !isPackageAddon(p) && (!isPackagePro(p) || isProUser)
+  );
+
   const matchingRule = React.useMemo(() => {
     if (!selectedProperty || isHourly) return null;
     return (
@@ -210,14 +240,38 @@ export default function SmartEstimateBlock({
 
   const hasMandatoryRule = mandatoryPackageIds.length > 0;
 
+  const userAllowedMandatoryIds = React.useMemo(() => {
+    return mandatoryPackageIds.filter((id) => {
+      const pkg = packages.find((p) => p.id === id);
+      if (!pkg) return true;
+      return !isPackagePro(pkg) || isProUser;
+    });
+  }, [mandatoryPackageIds, packages, isProUser]);
+
   useEffect(() => {
     if (hasMandatoryRule) {
       setBookingMode("predefined");
-      if (!mandatoryPackageIds.includes(selectedPackageId)) {
-        setSelectedPackageId(mandatoryPackageIds[0] || "");
+      if (userAllowedMandatoryIds.length > 0) {
+        if (!userAllowedMandatoryIds.includes(selectedPackageId)) {
+          setSelectedPackageId(userAllowedMandatoryIds[0] || "");
+        }
+      } else {
+        if (selectedPackageId) {
+          const selPkg = packages.find((p) => p.id === selectedPackageId);
+          if (selPkg && isPackagePro(selPkg) && !isProUser) {
+            setSelectedPackageId(availablePackages[0]?.id || "");
+          }
+        }
+      }
+    } else {
+      if (!isProUser && selectedPackageId) {
+        const selPkg = packages.find((p) => p.id === selectedPackageId);
+        if (selPkg && isPackagePro(selPkg)) {
+          setSelectedPackageId(availablePackages[0]?.id || "");
+        }
       }
     }
-  }, [hasMandatoryRule, mandatoryPackageIds, selectedPackageId]);
+  }, [hasMandatoryRule, mandatoryPackageIds, userAllowedMandatoryIds, selectedPackageId, packages, isProUser, availablePackages]);
 
   const basePricePerNight = selectedProperty ? selectedProperty.basePricePerNight : 1500;
   
@@ -432,12 +486,12 @@ export default function SmartEstimateBlock({
                   <select
                     value={selectedPackageId}
                     onChange={(e) => setSelectedPackageId(e.target.value)}
-                    disabled={hasMandatoryRule && mandatoryPackageIds.length === 1}
+                    disabled={hasMandatoryRule && userAllowedMandatoryIds.length === 1}
                     className="w-full rounded-xl border border-white/10 bg-black/40 px-3.5 py-2.5 text-sm text-white focus:border-teal-500 focus:outline-none disabled:opacity-75 disabled:cursor-not-allowed"
                   >
-                    {(hasMandatoryRule
-                      ? packages.filter((pkg) => mandatoryPackageIds.includes(pkg.id))
-                      : packages
+                    {(hasMandatoryRule && userAllowedMandatoryIds.length > 0
+                      ? availablePackages.filter((pkg) => userAllowedMandatoryIds.includes(pkg.id))
+                      : availablePackages
                     ).map((pkg) => (
                       <option key={pkg.id} value={pkg.id} className="bg-zinc-900">
                         {pkg.name} (R {pkg.price.toLocaleString()})
@@ -446,7 +500,7 @@ export default function SmartEstimateBlock({
                   </select>
                   {hasMandatoryRule && (
                     <p className="mt-1.5 text-[11px] text-amber-400 font-semibold flex items-center gap-1 animate-pulse">
-                      {mandatoryPackageIds.length === 1
+                      {userAllowedMandatoryIds.length === 1
                         ? `⚠️ This package deal is mandatory for stays of ${nights} ${nights === 1 ? "night" : "nights"}.`
                         : `⚠️ A package deal is mandatory for stays of ${nights} ${nights === 1 ? "night" : "nights"} (choose from allowed options above).`}
                     </p>

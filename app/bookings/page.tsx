@@ -169,11 +169,47 @@ function BookingsCheckoutContent() {
 
   const hasMandatoryRule = mandatoryPackageIds.length > 0;
 
+  const isPackagePro = (p: PackageData) => Boolean(p.isPro || p.category === "pro");
+  const isPackageAddon = (p: PackageData) => p.category === "addon";
+
+  const availableStayPackages = packages.filter(
+    (pkg) => !isPackageAddon(pkg) && (!isPackagePro(pkg) || isProUser)
+  );
+  const proStayPackages = packages.filter(
+    (pkg) => !isPackageAddon(pkg) && isPackagePro(pkg)
+  );
+
+  const userAllowedMandatoryIds = React.useMemo(() => {
+    return mandatoryPackageIds.filter((id) => {
+      const pkg = packages.find((p) => p.id === id);
+      if (!pkg) return true;
+      return !isPackagePro(pkg) || isProUser;
+    });
+  }, [mandatoryPackageIds, packages, isProUser]);
+
   useEffect(() => {
-    if (hasMandatoryRule && !mandatoryPackageIds.includes(selectedPackageId)) {
-      setSelectedPackageId(mandatoryPackageIds[0] || "");
+    if (hasMandatoryRule) {
+      if (userAllowedMandatoryIds.length > 0) {
+        if (!userAllowedMandatoryIds.includes(selectedPackageId)) {
+          setSelectedPackageId(userAllowedMandatoryIds[0] || "");
+        }
+      } else {
+        if (selectedPackageId) {
+          const selPkg = packages.find((p) => p.id === selectedPackageId);
+          if (selPkg && isPackagePro(selPkg) && !isProUser) {
+            setSelectedPackageId("");
+          }
+        }
+      }
+    } else {
+      if (!isProUser && selectedPackageId) {
+        const selPkg = packages.find((p) => p.id === selectedPackageId);
+        if (selPkg && isPackagePro(selPkg)) {
+          setSelectedPackageId("");
+        }
+      }
     }
-  }, [hasMandatoryRule, mandatoryPackageIds, selectedPackageId]);
+  }, [hasMandatoryRule, mandatoryPackageIds, userAllowedMandatoryIds, selectedPackageId, packages, isProUser]);
 
   // Load property, user dates, and packages
   useEffect(() => {
@@ -391,6 +427,11 @@ function BookingsCheckoutContent() {
   const handleBookNow = async () => {
     if (dateConflict) {
       setCheckoutError("Please resolve the date conflict before proceeding.");
+      return;
+    }
+
+    if (selectedPackage && isPackagePro(selectedPackage) && !isProUser) {
+      setCheckoutError("This package is exclusively available to Pro subscribers. Upgrade to Pro to book this deal.");
       return;
     }
 
@@ -853,8 +894,8 @@ function BookingsCheckoutContent() {
                   type="button"
                   role="radio"
                   aria-checked={selectedPackageId === ""}
-                  disabled={hasMandatoryRule}
-                  onClick={() => !hasMandatoryRule && setSelectedPackageId("")}
+                  disabled={hasMandatoryRule && userAllowedMandatoryIds.length > 0}
+                  onClick={() => !(hasMandatoryRule && userAllowedMandatoryIds.length > 0) && setSelectedPackageId("")}
                   className={`flex w-full items-start gap-4 rounded-lg border p-4 text-left transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-70 disabled:cursor-not-allowed ${
                     selectedPackageId === ""
                       ? "border-primary bg-accent/50"
@@ -885,87 +926,113 @@ function BookingsCheckoutContent() {
                   <span className="mt-0.5 shrink-0 font-heading text-sm font-semibold">R 0</span>
                 </button>
 
-                {/* Dynamic Package Tiles */}
-                {packages
-                  .filter((p) => p.category !== "addon")
-                  .map((pkg) => {
-                    const isPkgPro = Boolean(pkg.isPro || pkg.category === "pro");
-                    const isProLocked = isPkgPro && !isProUser;
-                    const isAllowedByRule = !hasMandatoryRule || mandatoryPackageIds.includes(pkg.id);
-                    const isSelected = selectedPackageId === pkg.id;
-                    const isDisabled = isProLocked || !isAllowedByRule;
-                    const price = pkg.price || 0;
+                {/* Dynamic Stay Package Tiles - Available for this user */}
+                {availableStayPackages.map((pkg) => {
+                  const isPkgPro = isPackagePro(pkg);
+                  const isAllowedByRule = !hasMandatoryRule || mandatoryPackageIds.includes(pkg.id);
+                  const isSelected = selectedPackageId === pkg.id;
+                  const isDisabled = !isAllowedByRule;
+                  const price = pkg.price || 0;
 
-                    return (
-                      <button
-                        key={pkg.id}
-                        type="button"
-                        role="radio"
-                        aria-checked={isSelected}
-                        disabled={isDisabled}
-                        onClick={() => {
-                          if (!isDisabled) setSelectedPackageId(pkg.id);
-                        }}
-                        className={`flex w-full items-start gap-4 rounded-lg border p-4 text-left transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none ${
-                          isProLocked
-                            ? "border-amber-500/30 bg-amber-500/5 opacity-80 cursor-not-allowed"
-                            : isSelected
-                              ? "border-primary bg-accent/50"
-                              : "bg-card hover:border-primary/50"
-                        } ${isDisabled && !isProLocked ? "opacity-60 cursor-not-allowed" : ""}`}
+                  return (
+                    <button
+                      key={pkg.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={isSelected}
+                      disabled={isDisabled}
+                      onClick={() => {
+                        if (!isDisabled) setSelectedPackageId(pkg.id);
+                      }}
+                      className={`flex w-full items-start gap-4 rounded-lg border p-4 text-left transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none ${
+                        isSelected
+                          ? "border-primary bg-accent/50"
+                          : "bg-card hover:border-primary/50"
+                      } ${isDisabled ? "opacity-60 cursor-not-allowed" : ""}`}
+                    >
+                      <span
+                        aria-hidden="true"
+                        className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border ${
+                          isSelected
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-input"
+                        }`}
                       >
-                        <span
-                          aria-hidden="true"
-                          className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border ${
-                            isProLocked
-                              ? "border-amber-500/40 text-amber-600 dark:text-amber-400"
-                              : isSelected
-                                ? "border-primary bg-primary text-primary-foreground"
-                                : "border-input"
-                          }`}
-                        >
-                          {isProLocked ? <LockIcon className="size-2.5" /> : isSelected && <CheckIcon className="size-3" />}
-                        </span>
+                        {isSelected && <CheckIcon className="size-3" />}
+                      </span>
 
-                        <div className="flex flex-1 flex-col gap-1.5">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-heading text-sm font-medium">{pkg.name}</span>
-                            {pkg.category && <Badge variant="secondary">{pkg.category}</Badge>}
-                            {isPkgPro && (
-                              <Badge className="border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-bold uppercase flex items-center gap-1">
-                                {isProLocked ? <LockIcon className="size-2.5" /> : null}
-                                Pro Exclusive
-                              </Badge>
-                            )}
-                            {hasMandatoryRule && mandatoryPackageIds.includes(pkg.id) && (
-                              <Badge variant="destructive" className="bg-amber-500 hover:bg-amber-600 text-black border-none font-semibold">
-                                {mandatoryPackageIds.length === 1 ? "Required for stay length" : "Mandatory option"}
-                              </Badge>
-                            )}
-                          </div>
-                          {pkg.description && (
-                            <p className="text-sm leading-relaxed text-muted-foreground">
-                              {pkg.description}
-                            </p>
+                      <div className="flex flex-1 flex-col gap-1.5">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-heading text-sm font-medium">{pkg.name}</span>
+                          {pkg.category && <Badge variant="secondary">{pkg.category}</Badge>}
+                          {isPkgPro && (
+                            <Badge className="border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-bold uppercase">
+                              Pro Exclusive
+                            </Badge>
                           )}
-                          {isProLocked && (
-                            <p className="text-xs font-semibold text-amber-600 dark:text-amber-400">
-                              Available exclusively for Pro subscribers. Upgrade to Pro to book this deal.
-                            </p>
-                          )}
-                          {hasMandatoryRule && !isAllowedByRule && (
-                            <p className="text-xs text-muted-foreground italic">
-                              Not eligible for {nights} {nights === 1 ? "night" : "nights"} stay length.
-                            </p>
+                          {hasMandatoryRule && mandatoryPackageIds.includes(pkg.id) && (
+                            <Badge variant="destructive" className="bg-amber-500 hover:bg-amber-600 text-black border-none font-semibold">
+                              {userAllowedMandatoryIds.length === 1 ? "Required for stay length" : "Mandatory option"}
+                            </Badge>
                           )}
                         </div>
+                        {pkg.description && (
+                          <p className="text-sm leading-relaxed text-muted-foreground">
+                            {pkg.description}
+                          </p>
+                        )}
+                        {hasMandatoryRule && !isAllowedByRule && (
+                          <p className="text-xs text-muted-foreground italic">
+                            Not eligible for {nights} {nights === 1 ? "night" : "nights"} stay length.
+                          </p>
+                        )}
+                      </div>
 
-                        <span className="mt-0.5 shrink-0 font-heading text-sm font-semibold">
-                          R {price.toLocaleString()}
-                        </span>
-                      </button>
-                    );
-                  })}
+                      <span className="mt-0.5 shrink-0 font-heading text-sm font-semibold">
+                        R {price.toLocaleString()}
+                      </span>
+                    </button>
+                  );
+                })}
+
+                {/* Locked Pro-exclusive Packages Teaser for Non-Pro Users */}
+                {!isProUser && proStayPackages.length > 0 && (
+                  <div className="mt-2 flex flex-col gap-3 rounded-xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-amber-500/20 text-amber-600 dark:text-amber-400">
+                          <LockIcon className="size-3.5" />
+                        </div>
+                        <div>
+                          <p className="text-[11px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                            {proStayPackages.length} Pro-Exclusive Package{proStayPackages.length > 1 ? "s" : ""}
+                          </p>
+                          <p className="text-xs font-semibold text-foreground">
+                            Available for Pro subscribers only
+                          </p>
+                        </div>
+                      </div>
+
+                      <Link href="/subscribe">
+                        <Button size="sm" className="h-7 bg-amber-500 hover:bg-amber-600 text-black text-xs font-bold px-3">
+                          Unlock with Pro
+                        </Button>
+                      </Link>
+                    </div>
+
+                    <div className="flex flex-col gap-2 pt-1 border-t border-amber-500/20">
+                      {proStayPackages.map((pkg) => (
+                        <div key={pkg.id} className="flex items-center justify-between text-xs text-muted-foreground">
+                          <div className="flex items-center gap-1.5">
+                            <LockIcon className="size-3 text-amber-500/70" />
+                            <span className="font-medium text-foreground">{pkg.name}</span>
+                          </div>
+                          <span className="font-semibold text-amber-600 dark:text-amber-400">R {pkg.price.toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
