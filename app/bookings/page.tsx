@@ -147,7 +147,7 @@ function BookingsCheckoutContent() {
   const finalTotal = baseCost + packagePrice;
 
   const mandatoryPackageIds = React.useMemo(() => {
-    if (!property || isHourly) return [];
+    if (!property) return [];
     const rule = property.mandatoryRules?.find((r) => {
       switch (r.operator) {
         case "equals":
@@ -165,7 +165,7 @@ function BookingsCheckoutContent() {
       }
     });
     return getRulePackageIds(rule);
-  }, [property, nights, isHourly]);
+  }, [property, nights]);
 
   const hasMandatoryRule = mandatoryPackageIds.length > 0;
 
@@ -972,7 +972,9 @@ function BookingsCheckoutContent() {
                           )}
                           {hasMandatoryRule && mandatoryPackageIds.includes(pkg.id) && (
                             <Badge variant="destructive" className="bg-amber-500 hover:bg-amber-600 text-black border-none font-semibold">
-                              {userAllowedMandatoryIds.length === 1 ? "Required for stay length" : "Mandatory option"}
+                              {userAllowedMandatoryIds.length === 1
+                                ? (isHourly ? "Required for booking" : "Required for stay length")
+                                : "Mandatory option"}
                             </Badge>
                           )}
                         </div>
@@ -983,7 +985,7 @@ function BookingsCheckoutContent() {
                         )}
                         {hasMandatoryRule && !isAllowedByRule && (
                           <p className="text-xs text-muted-foreground italic">
-                            Not eligible for {nights} {nights === 1 ? "night" : "nights"} stay length.
+                            Not eligible for {nights} {isHourly ? (nights === 1 ? "slot" : "slots") : (nights === 1 ? "night" : "nights")}.
                           </p>
                         )}
                       </div>

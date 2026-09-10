@@ -1014,7 +1014,7 @@ function EditPropertyContent({ id }: { id: string }) {
                           Conditional Mandatory Packages
                         </h3>
                         <p className="text-xs text-muted-foreground">
-                          Enforce selecting specific package deals when guest duration matches a stay length criteria.
+                          Enforce selecting specific package deals when guest booking duration matches a stay or slot criteria.
                         </p>
                       </div>
 
@@ -1060,7 +1060,9 @@ function EditPropertyContent({ id }: { id: string }) {
                                   <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between border-b pb-3">
                                     <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center flex-1 w-full">
                                       <div className="w-full sm:w-52">
-                                        <FieldLabel className="text-xs mb-1">If stay duration is</FieldLabel>
+                                        <FieldLabel className="text-xs mb-1">
+                                          {bookingType === "hourly" ? "If slot count is" : "If stay duration is"}
+                                        </FieldLabel>
                                         <select
                                           value={rule.operator}
                                           onChange={(e) => {
@@ -1079,7 +1081,9 @@ function EditPropertyContent({ id }: { id: string }) {
                                       </div>
 
                                       <div className="w-full sm:w-28">
-                                        <FieldLabel className="text-xs mb-1">Nights</FieldLabel>
+                                        <FieldLabel className="text-xs mb-1">
+                                          {bookingType === "hourly" ? "Slots" : "Nights"}
+                                        </FieldLabel>
                                         <Input
                                           type="number"
                                           min={1}

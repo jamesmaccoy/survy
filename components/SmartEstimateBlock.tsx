@@ -213,7 +213,7 @@ export default function SmartEstimateBlock({
   );
 
   const matchingRule = React.useMemo(() => {
-    if (!selectedProperty || isHourly) return null;
+    if (!selectedProperty) return null;
     return (
       selectedProperty.mandatoryRules?.find((r) => {
         switch (r.operator) {
@@ -232,7 +232,7 @@ export default function SmartEstimateBlock({
         }
       }) || null
     );
-  }, [selectedProperty, nights, isHourly]);
+  }, [selectedProperty, nights]);
 
   const mandatoryPackageIds = React.useMemo(() => {
     return getRulePackageIds(matchingRule);
@@ -501,8 +501,8 @@ export default function SmartEstimateBlock({
                   {hasMandatoryRule && (
                     <p className="mt-1.5 text-[11px] text-amber-400 font-semibold flex items-center gap-1 animate-pulse">
                       {userAllowedMandatoryIds.length === 1
-                        ? `⚠️ This package deal is mandatory for stays of ${nights} ${nights === 1 ? "night" : "nights"}.`
-                        : `⚠️ A package deal is mandatory for stays of ${nights} ${nights === 1 ? "night" : "nights"} (choose from allowed options above).`}
+                        ? `⚠️ This package deal is mandatory for ${isHourly ? `${nights} ${nights === 1 ? "hour/slot" : "hours/slots"}` : `stays of ${nights} ${nights === 1 ? "night" : "nights"}`}.`
+                        : `⚠️ A package deal is mandatory for ${isHourly ? `${nights} ${nights === 1 ? "hour/slot" : "hours/slots"}` : `stays of ${nights} ${nights === 1 ? "night" : "nights"}`} (choose from allowed options above).`}
                     </p>
                   )}
                 </>

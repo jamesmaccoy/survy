@@ -251,50 +251,54 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
       let estimatedTotal = 0;
       let matchedMandatoryPackageId: string | null = null;
 
-      if (property.bookingType === "hourly") {
-        estimatedTotal = property.basePricePerNight;
-      } else {
-        const stayNights = Math.max(1, Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
-        
-        // Find matching rule
-        if (property.mandatoryRules) {
-          const rule = property.mandatoryRules.find((r) => {
-            switch (r.operator) {
-              case "equals":
-                return stayNights === r.nights;
-              case "greater":
-                return stayNights > r.nights;
-              case "less":
-                return stayNights < r.nights;
-              case "greater_or_equal":
-                return stayNights >= r.nights;
-              case "less_or_equal":
-                return stayNights <= r.nights;
-              default:
-                return false;
-            }
-          });
-          if (rule) {
-            const allowedIds = getRulePackageIds(rule);
-            matchedMandatoryPackageId = allowedIds[0] || null;
-          }
-        }
+      const isHourly = property.bookingType === "hourly";
+      const stayDuration = isHourly
+        ? 1
+        : Math.max(1, Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
 
-        const mandatoryPackage = matchedMandatoryPackageId ? packages.find(p => p.id === matchedMandatoryPackageId) : null;
-        if (mandatoryPackage) {
-          estimatedTotal = mandatoryPackage.price;
-        } else {
-          let baseCost = property.basePricePerNight * stayNights;
-          const weeklyDiscount = property.weeklyDiscount ?? 0;
-          const monthlyDiscount = property.monthlyDiscount ?? 0;
-          if (stayNights >= 28 && monthlyDiscount > 0) {
-            baseCost = baseCost * (1 - monthlyDiscount / 100);
-          } else if (stayNights >= 7 && weeklyDiscount > 0) {
-            baseCost = baseCost * (1 - weeklyDiscount / 100);
+      if (property.mandatoryRules) {
+        const rule = property.mandatoryRules.find((r) => {
+          switch (r.operator) {
+            case "equals":
+              return stayDuration === r.nights;
+            case "greater":
+              return stayDuration > r.nights;
+            case "less":
+              return stayDuration < r.nights;
+            case "greater_or_equal":
+              return stayDuration >= r.nights;
+            case "less_or_equal":
+              return stayDuration <= r.nights;
+            default:
+              return false;
           }
-          estimatedTotal = baseCost;
+        });
+        if (rule) {
+          const allowedIds = getRulePackageIds(rule);
+          const isPkgPro = (p: PackageData) => Boolean(p.isPro || p.category === "pro");
+          const userAllowedIds = allowedIds.filter((id) => {
+            const pkg = packages.find((p) => p.id === id);
+            if (!pkg) return true;
+            return !isPkgPro(pkg) || isProUser;
+          });
+          matchedMandatoryPackageId = userAllowedIds[0] || allowedIds[0] || null;
         }
       }
+
+      const mandatoryPackage = matchedMandatoryPackageId ? packages.find((p) => p.id === matchedMandatoryPackageId) : null;
+      const packagePrice = mandatoryPackage ? (mandatoryPackage.price || 0) : 0;
+
+      let baseCost = property.basePricePerNight * stayDuration;
+      if (!isHourly) {
+        const weeklyDiscount = property.weeklyDiscount ?? 0;
+        const monthlyDiscount = property.monthlyDiscount ?? 0;
+        if (stayDuration >= 28 && monthlyDiscount > 0) {
+          baseCost = baseCost * (1 - monthlyDiscount / 100);
+        } else if (stayDuration >= 7 && weeklyDiscount > 0) {
+          baseCost = baseCost * (1 - weeklyDiscount / 100);
+        }
+      }
+      estimatedTotal = baseCost + packagePrice;
 
       const estRes = await fetch("/api/estimates", {
         method: "POST",
