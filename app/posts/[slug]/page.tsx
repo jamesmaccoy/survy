@@ -428,11 +428,10 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
                     onClick={() => setActiveImageIndex(idx)}
                     aria-label={`View image ${idx + 1}`}
                     aria-current={idx === activeImageIndex}
-                    className={`relative aspect-video w-20 shrink-0 overflow-hidden rounded-md ring-2 transition-opacity ${
-                      idx === activeImageIndex
-                        ? "ring-primary"
-                        : "opacity-60 ring-transparent hover:opacity-100"
-                    }`}
+                    className={`relative aspect-video w-20 shrink-0 overflow-hidden rounded-md ring-2 transition-opacity ${idx === activeImageIndex
+                      ? "ring-primary"
+                      : "opacity-60 ring-transparent hover:opacity-100"
+                      }`}
                   >
                     <img
                       src={img || "/placeholder.svg"}
@@ -749,7 +748,7 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
                     className="w-full"
                     onClick={() => setSavedDates(null)}
                   >
-                    Change stay dates
+                    Change dates
                   </Button>
                 </div>
               ) : (

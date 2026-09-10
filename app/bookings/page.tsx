@@ -916,7 +916,6 @@ function BookingsCheckoutContent() {
                   <div className="flex flex-1 flex-col gap-1.5">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-heading text-sm font-medium">Standard stay</span>
-                      <Badge variant="outline">Basic</Badge>
                     </div>
                     <p className="text-sm leading-relaxed text-muted-foreground">
                       Standard booking with base amenities included. No additional package added.
@@ -964,14 +963,13 @@ function BookingsCheckoutContent() {
                       <div className="flex flex-1 flex-col gap-1.5">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-heading text-sm font-medium">{pkg.name}</span>
-                          {pkg.category && <Badge variant="secondary">{pkg.category}</Badge>}
                           {isPkgPro && (
                             <Badge className="border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-bold uppercase">
                               Pro Exclusive
                             </Badge>
                           )}
                           {hasMandatoryRule && mandatoryPackageIds.includes(pkg.id) && (
-                            <Badge variant="destructive" className="bg-amber-500 hover:bg-amber-600 text-black border-none font-semibold">
+                            <Badge variant="secondary" className="font-medium text-muted-foreground">
                               {userAllowedMandatoryIds.length === 1
                                 ? (isHourly ? "Required for booking" : "Required for stay length")
                                 : "Mandatory option"}

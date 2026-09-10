@@ -140,8 +140,8 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
   );
 
   const nights = isHourly ? 1 : stayNights;
-  const isPaid = isHourly 
-    ? hasUserPaid 
+  const isPaid = isHourly
+    ? hasUserPaid
     : (estimate.paymentStatus === "paid" || estimate.paymentStatus === "success" || hasUserPaid);
 
   const basePricePerNight = property ? property.basePricePerNight : 1500;
@@ -185,7 +185,7 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
     try {
       const activePkg = packages.find(p => p.id === packageId);
       const activePrice = activePkg ? (activePkg.price || 0) : 0;
-      
+
       const newTotal = baseCost + activePrice;
 
       const res = await fetch("/api/estimates", {
@@ -202,7 +202,7 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
       if (!res.ok || !result.success) {
         throw new Error(result.error || "Failed to update package option in database.");
       }
-      
+
       estimate.total = newTotal;
       estimate.packageId = packageId || null;
     } catch (err: any) {
@@ -358,12 +358,12 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
     setPayError(null);
 
     try {
-      const targetType = currentSelectedPackage 
-        ? currentSelectedPackage.id 
-        : (packages.length > 0 
-            ? packages[0].id 
-            : (estimate.propertyId === "cottage" ? "long_weekend_at_the_Cottage" : "shack_stack")
-          );
+      const targetType = currentSelectedPackage
+        ? currentSelectedPackage.id
+        : (packages.length > 0
+          ? packages[0].id
+          : (estimate.propertyId === "cottage" ? "long_weekend_at_the_Cottage" : "shack_stack")
+        );
 
       const linkRes = await fetch("/api/v1/generate_checkout_link", {
         method: "POST",
@@ -554,10 +554,10 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
                 <span className="font-heading text-base font-semibold">
                   {isHourly
                     ? from.toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        hour12: false,
-                      })
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      hour12: false,
+                    })
                     : "From 14:00"}
                 </span>
                 <span className="text-xs text-muted-foreground">
@@ -616,19 +616,17 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
                 aria-checked={selectedPackageId === ""}
                 disabled={isUpdatingPackage || isPaid || (hasMandatoryRule && userAllowedMandatoryIds.length > 0)}
                 onClick={() => handlePackageChange("")}
-                className={`flex w-full items-start justify-between gap-4 rounded-lg border p-4 text-left transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-70 ${
-                  selectedPackageId === ""
-                    ? "border-primary bg-primary/5"
-                    : "bg-muted/30 hover:bg-muted/60"
-                } ${(hasMandatoryRule && userAllowedMandatoryIds.length > 0) ? "opacity-50 cursor-not-allowed" : ""}`}
+                className={`flex w-full items-start justify-between gap-4 rounded-lg border p-4 text-left transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-70 ${selectedPackageId === ""
+                  ? "border-primary bg-primary/5"
+                  : "bg-muted/30 hover:bg-muted/60"
+                  } ${(hasMandatoryRule && userAllowedMandatoryIds.length > 0) ? "opacity-50 cursor-not-allowed" : ""}`}
               >
                 <span
                   aria-hidden="true"
-                  className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border ${
-                    selectedPackageId === ""
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-input"
-                  }`}
+                  className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border ${selectedPackageId === ""
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-input"
+                    }`}
                 >
                   {selectedPackageId === "" && <CheckIcon className="size-3" />}
                 </span>
@@ -662,19 +660,17 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
                     aria-checked={isSelected}
                     disabled={isDisabled}
                     onClick={() => !isDisabled && handlePackageChange(pkg.id)}
-                    className={`flex w-full items-start justify-between gap-4 rounded-lg border p-4 text-left transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-70 ${
-                      isSelected
-                        ? "border-primary bg-primary/5"
-                        : "bg-muted/30 hover:bg-muted/60"
-                    } ${!isAllowedByRule ? "opacity-50 cursor-not-allowed" : ""}`}
+                    className={`flex w-full items-start justify-between gap-4 rounded-lg border p-4 text-left transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-70 ${isSelected
+                      ? "border-primary bg-primary/5"
+                      : "bg-muted/30 hover:bg-muted/60"
+                      } ${!isAllowedByRule ? "opacity-50 cursor-not-allowed" : ""}`}
                   >
                     <span
                       aria-hidden="true"
-                      className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border ${
-                        isSelected
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-input"
-                      }`}
+                      className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border ${isSelected
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-input"
+                        }`}
                     >
                       {isSelected && <CheckIcon className="size-3" />}
                     </span>
@@ -689,7 +685,7 @@ function EstimateClientContent({ estimate, property, selectedPackage }: Estimate
                           </Badge>
                         )}
                         {hasMandatoryRule && mandatoryPackageIds.includes(pkg.id) && (
-                          <Badge variant="destructive" className="bg-amber-500 hover:bg-amber-600 text-black border-none font-semibold">
+                          <Badge variant="destructive" className="bg--500 hover:bg-amber-600 text-black border-none font-semibold">
                             {userAllowedMandatoryIds.length === 1
                               ? (isHourly ? "Required for booking" : "Required for stay length")
                               : "Mandatory option"}
