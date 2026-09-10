@@ -533,13 +533,11 @@ function PropertyDetailsContent({ slug }: PropertyDetailsContentProps) {
                             >
                               <div className="flex flex-col items-start gap-1.5">
                                 <div className="flex flex-wrap items-center gap-1.5">
-                                  {isProPackage ? (
+                                  {isProPackage && (
                                     <Badge className="bg-amber-500 hover:bg-amber-500 text-black border-none font-bold text-[10px] uppercase flex items-center gap-1">
                                       <SparklesIcon className="size-3" />
                                       Pro Exclusive
                                     </Badge>
-                                  ) : (
-                                    pkg.category && <Badge variant="outline">{pkg.category}</Badge>
                                   )}
                                 </div>
                                 <h4 className="font-heading text-sm font-medium">{pkg.name}</h4>

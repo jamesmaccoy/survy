@@ -65,12 +65,14 @@ function PackageRow({
             <div className="flex items-start justify-between gap-3">
                 <div className="flex min-w-0 flex-col gap-1.5">
                     <div className="flex flex-wrap items-center gap-1.5">
-                        <Badge
-                            variant={pkg.category === "standard" ? "secondary" : "outline"}
-                            className="text-[10px] font-bold tracking-wider uppercase"
-                        >
-                            {pkg.category === "addon" ? "Add-on" : "Standard"}
-                        </Badge>
+                        {pkg.category === "addon" && (
+                            <Badge
+                                variant="outline"
+                                className="text-[10px] font-bold tracking-wider uppercase"
+                            >
+                                Add-on
+                            </Badge>
+                        )}
                         {(pkg.isPro || pkg.category === "pro") && (
                             <Badge className="border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-bold tracking-wider uppercase">
                                 Pro Only

@@ -78,12 +78,14 @@ export function SuggestedPackages({ suggested, properties, onCopy }: SuggestedPa
                   <div>
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <Badge
-                          variant={pkg.category === "standard" ? "secondary" : "outline"}
-                          className="text-[9px] font-bold tracking-wider uppercase animate-fade-in"
-                        >
-                          {pkg.category === "addon" ? "Add-on" : "Standard"}
-                        </Badge>
+                        {pkg.category === "addon" && (
+                          <Badge
+                            variant="outline"
+                            className="text-[9px] font-bold tracking-wider uppercase animate-fade-in"
+                          >
+                            Add-on
+                          </Badge>
+                        )}
                         {(pkg.isPro || pkg.category === "pro") && (
                           <Badge className="border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[9px] font-bold tracking-wider uppercase animate-fade-in">
                             Pro Only
