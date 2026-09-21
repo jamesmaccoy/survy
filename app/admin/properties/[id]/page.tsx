@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, use, Suspense, useRef, useCallback } from "react";
+import React, { useState, useEffect, use, useMemo, Suspense, useRef, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -19,6 +19,9 @@ import {
   Trash2,
   Copy,
   Check,
+  Sun,
+  Sunset,
+  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -102,7 +105,13 @@ type FieldName = "title" | "slug" | "basePrice" | "slots";
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp", "image/avif"];
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const TIME_SLOTS = ["08:00", "09:00", "10:00", "12:00", "13:00", "14:00", "16:00", "18:00"];
+// 30-minute interval slots from 06:00 to 22:00
+const ALL_TIME_SLOTS = Array.from({ length: 33 }, (_, i) => {
+  const totalMinutes = 6 * 60 + i * 30; // 06:00 to 22:00
+  const h = String(Math.floor(totalMinutes / 60)).padStart(2, "0");
+  const m = String(totalMinutes % 60).padStart(2, "0");
+  return `${h}:${m}`;
+});
 
 function slugify(value: string) {
   return value
@@ -186,6 +195,7 @@ function EditPropertyContent({ id }: { id: string }) {
   const [isDragging, setIsDragging] = useState(false);
   const [bookingType, setBookingType] = useState<"nightly" | "hourly">("nightly");
   const [slots, setSlots] = useState<string[]>(["09:00", "13:00"]);
+  const [slotAlignment, setSlotAlignment] = useState<"hourly" | "halfHour" | "all">("hourly");
 
   const [activeTab, setActiveTab] = useState<"details" | "pricing" | "availability">("details");
   const [mandatoryRules, setMandatoryRules] = useState<MandatoryRule[]>([]);
@@ -213,6 +223,39 @@ function EditPropertyContent({ id }: { id: string }) {
       return next;
     });
   }, []);
+
+  const visibleSlots = useMemo(() => {
+    if (slotAlignment === "hourly") return ALL_TIME_SLOTS.filter((s) => s.endsWith(":00"));
+    if (slotAlignment === "halfHour") return ALL_TIME_SLOTS.filter((s) => s.endsWith(":30"));
+    return ALL_TIME_SLOTS;
+  }, [slotAlignment]);
+
+  const morningSlots = useMemo(
+    () => visibleSlots.filter((s) => Number.parseInt(s.split(":")[0], 10) < 12),
+    [visibleSlots]
+  );
+
+  const afternoonSlots = useMemo(
+    () => visibleSlots.filter((s) => Number.parseInt(s.split(":")[0], 10) >= 12),
+    [visibleSlots]
+  );
+
+  const hiddenSelectedCount = useMemo(() => {
+    const visibleSet = new Set(visibleSlots);
+    return slots.filter((s) => !visibleSet.has(s)).length;
+  }, [slots, visibleSlots]);
+
+  const toggleSlot = useCallback(
+    (slotTime: string) => {
+      setSlots((prev) => {
+        const exists = prev.includes(slotTime);
+        const next = exists ? prev.filter((s) => s !== slotTime) : [...prev, slotTime].sort();
+        if (next.length > 0) clearFieldError("slots");
+        return next;
+      });
+    },
+    [clearFieldError]
+  );
 
   useEffect(() => {
     if (statusMessage) {
@@ -253,9 +296,17 @@ function EditPropertyContent({ id }: { id: string }) {
           setDescription(result.data.description || "");
           setImages(result.data.images || []);
           setBookingType(result.data.bookingType || "nightly");
-          setSlots(
-            result.data.slots?.length ? result.data.slots : ["09:00", "13:00"]
-          );
+          const loadedSlots = result.data.slots?.length ? result.data.slots : ["09:00", "13:00"];
+          setSlots(loadedSlots);
+          const hasHalf = loadedSlots.some((s: string) => s.endsWith(":30"));
+          const hasHourly = loadedSlots.some((s: string) => s.endsWith(":00"));
+          if (hasHalf && hasHourly) {
+            setSlotAlignment("all");
+          } else if (hasHalf) {
+            setSlotAlignment("halfHour");
+          } else {
+            setSlotAlignment("hourly");
+          }
           const normalizedRules: MandatoryRule[] = (result.data.mandatoryRules || []).map((r: any) => ({
             ...r,
             packageIds: Array.isArray(r.packageIds) && r.packageIds.length > 0
@@ -977,31 +1028,226 @@ function EditPropertyContent({ id }: { id: string }) {
                       )}
 
                       {bookingType === "hourly" && (
-                        <FieldSet data-invalid={fieldErrors.slots ? true : undefined}>
-                          <FieldLegend variant="label">Available time slots</FieldLegend>
-                          <ToggleGroup
-                            multiple
-                            variant="outline"
-                            className="flex-wrap"
-                            value={slots}
-                            onValueChange={(value) => {
-                              setSlots([...value].sort());
-                              if (value.length > 0) clearFieldError("slots");
-                            }}
-                          >
-                            {TIME_SLOTS.map((slotTime) => (
-                              <ToggleGroupItem key={slotTime} value={slotTime}>
-                                {formatSlotLabel(slotTime)}
-                              </ToggleGroupItem>
-                            ))}
-                          </ToggleGroup>
+                        <FieldSet data-invalid={fieldErrors.slots ? true : undefined} className="space-y-4">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div>
+                              <FieldLegend variant="label">Available time slots</FieldLegend>
+                              <FieldDescription>
+                                Guests can book any of the time slots you activate below.
+                              </FieldDescription>
+                            </div>
+                            <div className="flex items-center gap-1.5 self-start sm:self-auto">
+                              <Badge variant={slots.length > 0 ? "secondary" : "outline"} className="text-xs font-normal">
+                                <Clock className="h-3 w-3 mr-1" />
+                                {slots.length} {slots.length === 1 ? "slot" : "slots"} active
+                              </Badge>
+                              {slots.length > 0 && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="xs"
+                                  className="text-xs text-muted-foreground hover:text-destructive h-7 px-2"
+                                  onClick={() => setSlots([])}
+                                >
+                                  Clear all
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* 1-Click Quick Presets */}
+                          <div className="flex flex-col gap-2 rounded-lg border bg-muted/30 p-3">
+                            <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                              <Zap className="h-3.5 w-3.5 text-amber-500" />
+                              <span>Quick Presets</span>
+                            </div>
+                            <div className="flex flex-wrap gap-1.5">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="xs"
+                                className="h-7 text-xs bg-background hover:bg-muted"
+                                onClick={() => {
+                                  setSlots(["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00"]);
+                                  setSlotAlignment("hourly");
+                                  clearFieldError("slots");
+                                }}
+                              >
+                                08:00 – 17:00 (Hourly)
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="xs"
+                                className="h-7 text-xs bg-background hover:bg-muted font-medium text-primary border-primary/30"
+                                onClick={() => {
+                                  setSlots(["08:30", "09:30", "10:30", "11:30", "12:30", "13:30", "14:30", "15:30", "16:30", "17:30"]);
+                                  setSlotAlignment("halfHour");
+                                  clearFieldError("slots");
+                                }}
+                              >
+                                08:30 – 17:30 (Half-hour shift)
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="xs"
+                                className="h-7 text-xs bg-background hover:bg-muted"
+                                onClick={() => {
+                                  const morning = visibleSlots.filter((s) => Number.parseInt(s.split(":")[0], 10) < 12);
+                                  setSlots((prev) => Array.from(new Set([...prev, ...morning])).sort());
+                                  clearFieldError("slots");
+                                }}
+                              >
+                                + Add Morning ({slotAlignment === "halfHour" ? "08:30-11:30" : "08:00-11:00"})
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="xs"
+                                className="h-7 text-xs bg-background hover:bg-muted"
+                                onClick={() => {
+                                  const afternoon = visibleSlots.filter((s) => Number.parseInt(s.split(":")[0], 10) >= 12);
+                                  setSlots((prev) => Array.from(new Set([...prev, ...afternoon])).sort());
+                                  clearFieldError("slots");
+                                }}
+                              >
+                                + Add Afternoon ({slotAlignment === "halfHour" ? "12:30-17:30" : "12:00-17:00"})
+                              </Button>
+                            </div>
+                          </div>
+
+                          {/* Alignment / Filter Segmented Switch */}
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-2">
+                            <span className="text-xs font-semibold text-foreground">
+                              Slot Alignment:
+                            </span>
+                            <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-lg">
+                              <button
+                                type="button"
+                                onClick={() => setSlotAlignment("hourly")}
+                                className={cn(
+                                  "px-2.5 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer",
+                                  slotAlignment === "hourly"
+                                    ? "bg-background text-foreground shadow-xs"
+                                    : "text-muted-foreground hover:text-foreground"
+                                )}
+                              >
+                                On the Hour (:00)
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setSlotAlignment("halfHour")}
+                                className={cn(
+                                  "px-2.5 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer",
+                                  slotAlignment === "halfHour"
+                                    ? "bg-background text-foreground shadow-xs"
+                                    : "text-muted-foreground hover:text-foreground"
+                                )}
+                              >
+                                Half-Past (:30)
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setSlotAlignment("all")}
+                                className={cn(
+                                  "px-2.5 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer",
+                                  slotAlignment === "all"
+                                    ? "bg-background text-foreground shadow-xs"
+                                    : "text-muted-foreground hover:text-foreground"
+                                )}
+                              >
+                                All (Every 30m)
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Slot Pills Grouped by AM / PM */}
+                          <div className="space-y-3">
+                            {/* Morning Group */}
+                            {morningSlots.length > 0 && (
+                              <div className="space-y-1.5">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                                    <Sun className="h-3.5 w-3.5 text-amber-500" /> Morning (AM)
+                                  </span>
+                                </div>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {morningSlots.map((slotTime) => {
+                                    const isSelected = slots.includes(slotTime);
+                                    return (
+                                      <button
+                                        key={slotTime}
+                                        type="button"
+                                        onClick={() => toggleSlot(slotTime)}
+                                        className={cn(
+                                          "px-2.5 py-1 text-xs rounded-md border font-medium transition-all cursor-pointer",
+                                          isSelected
+                                            ? "bg-primary text-primary-foreground border-primary shadow-xs font-semibold"
+                                            : "bg-background hover:bg-muted text-muted-foreground hover:text-foreground border-border"
+                                        )}
+                                      >
+                                        {formatSlotLabel(slotTime)}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Afternoon Group */}
+                            {afternoonSlots.length > 0 && (
+                              <div className="space-y-1.5">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                                    <Sunset className="h-3.5 w-3.5 text-orange-500" /> Afternoon & Evening (PM)
+                                  </span>
+                                </div>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {afternoonSlots.map((slotTime) => {
+                                    const isSelected = slots.includes(slotTime);
+                                    return (
+                                      <button
+                                        key={slotTime}
+                                        type="button"
+                                        onClick={() => toggleSlot(slotTime)}
+                                        className={cn(
+                                          "px-2.5 py-1 text-xs rounded-md border font-medium transition-all cursor-pointer",
+                                          isSelected
+                                            ? "bg-primary text-primary-foreground border-primary shadow-xs font-semibold"
+                                            : "bg-background hover:bg-muted text-muted-foreground hover:text-foreground border-border"
+                                        )}
+                                      >
+                                        {formatSlotLabel(slotTime)}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Selected in hidden view notice */}
+                            {hiddenSelectedCount > 0 && (
+                              <div className="flex items-center justify-between text-xs text-muted-foreground bg-muted/40 px-3 py-2 rounded-md">
+                                <span>
+                                  💡 <strong>{hiddenSelectedCount}</strong> other selected slot(s) currently hidden by this alignment filter.
+                                </span>
+                                <Button
+                                  type="button"
+                                  variant="link"
+                                  size="xs"
+                                  className="h-auto p-0 text-xs"
+                                  onClick={() => setSlotAlignment("all")}
+                                >
+                                  Switch to All view
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+
                           {fieldErrors.slots ? (
                             <FieldError errors={[{ message: fieldErrors.slots }]} />
-                          ) : (
-                            <FieldDescription>
-                              Guests can book any of the slots you select.
-                            </FieldDescription>
-                          )}
+                          ) : null}
                         </FieldSet>
                       )}
                     </FieldGroup>
